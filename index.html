@@ -1,0 +1,797 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Sutton House Points</title>
+<meta name="theme-color" content="#1F5FAE">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="House Points">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="robots" content="noindex,nofollow">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: sticky two-person scoreboard on top, tabbed work area below; each person owns one color throughout. */
+:root{
+  --bg:#EDF0F4; --surface:#FFFFFF; --ink:#1B2230; --muted:#5E6777; --line:#D3D9E2;
+  --a:#1F5FAE; --a-soft:#DDE8F7; --b:#B3336A; --b-soft:#F6DFE9;
+  --good:#2C7A4D; --warn:#A46200; --shadow:0 1px 2px rgba(27,34,48,.08);
+  --me:var(--a);
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11151C; --surface:#1A202A; --ink:#E7EBF1; --muted:#9AA3B2; --line:#2B3341;
+  --a:#73A9F0; --a-soft:#1C2C44; --b:#F07CAD; --b-soft:#3A1F2D;
+  --good:#5FC48A; --warn:#E3A44A; --shadow:none; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#11151C; --surface:#1A202A; --ink:#E7EBF1; --muted:#9AA3B2; --line:#2B3341;
+  --a:#73A9F0; --a-soft:#1C2C44; --b:#F07CAD; --b-soft:#3A1F2D;
+  --good:#5FC48A; --warn:#E3A44A; --shadow:none; color-scheme:dark }
+*{box-sizing:border-box}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+html,body{background:var(--bg);color:var(--ink)}
+body{font-family:var(--f-body);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 48px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:960px;margin:0 auto}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.15}
+h2{font-size:1.25rem;font-weight:700}
+h3{font-size:1rem;font-weight:700}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--a);outline-offset:2px}
+.num{font-family:var(--f-display);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.small{font-size:.85rem}
+.label{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+
+/* header */
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:14px 10px;border-bottom:1px solid var(--line)}
+.titlebar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.titlebar h1{font-size:1.35rem;font-weight:800;letter-spacing:-.01em}
+.whoami{display:flex;align-items:center;gap:8px;font-size:.85rem}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-weight:700;font-size:.8rem}
+.chip.a{background:var(--a-soft);color:var(--a)} .chip.b{background:var(--b-soft);color:var(--b)}
+.linkbtn{background:none;border:none;color:var(--muted);text-decoration:underline;padding:0;font-size:.8rem}
+.board{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.score{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:grid;gap:6px;min-width:0;position:relative;overflow:hidden}
+.score::before{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:var(--pc)}
+.score.a{--pc:var(--a);--ps:var(--a-soft)} .score.b{--pc:var(--b);--ps:var(--b-soft)}
+.score .top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.score .name{font-family:var(--f-display);font-weight:700;color:var(--pc);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.score .bal{font-size:1.9rem;font-weight:800;line-height:1}
+.score .bal small{font-size:.75rem;font-weight:500;color:var(--muted);margin-left:3px}
+.bar{height:8px;border-radius:99px;background:var(--ps);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--pc);border-radius:99px;transition:width .3s}
+.score .wk{display:flex;justify-content:space-between;font-size:.78rem;color:var(--muted)}
+
+nav.tabs{display:flex;gap:4px;margin-top:12px;overflow-x:auto}
+nav.tabs button{background:none;border:none;padding:7px 12px;border-radius:8px;font-weight:700;color:var(--muted);white-space:nowrap;display:flex;gap:6px;align-items:center}
+nav.tabs button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow);border:1px solid var(--line)}
+.badge{background:var(--warn);color:var(--surface);border-radius:99px;font-size:.7rem;padding:0 6px;line-height:1.5}
+
+main{padding-top:18px;display:grid;gap:22px}
+section{display:grid;gap:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.spread{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+
+/* tasks */
+.tasks{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.task{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:left;display:grid;gap:8px;min-height:84px;align-content:space-between;transition:transform .08s, border-color .15s}
+.task:hover{border-color:var(--me)}
+.task:active{transform:scale(.97)}
+.task .tn{font-weight:700;line-height:1.25}
+.task .tp{display:flex;align-items:baseline;gap:4px;color:var(--me);font-family:var(--f-display);font-weight:800;font-size:1.25rem}
+.task .tp span{font-size:.72rem;font-weight:500;color:var(--muted)}
+.task .cnt{font-size:.75rem;color:var(--muted)}
+button.task:active{transform:scale(.97)}
+.task.split:active{transform:none}
+.task.split:hover{border-color:var(--line)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.half{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:5px 6px;display:grid;justify-items:start;font-size:.72rem;color:var(--muted);font-weight:700;transition:transform .08s,border-color .15s}
+.half b{font-family:var(--f-display);font-size:1.15rem;color:var(--me);line-height:1.1}
+.half:hover{border-color:var(--me)} .half:active{transform:scale(.95)}
+.half.full{border-color:color-mix(in srgb,var(--me) 45%,var(--line))}
+.cat{display:grid;gap:8px}
+details.cat > summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px;padding:2px 0}
+details.cat > summary::-webkit-details-marker{display:none}
+details.cat > summary::before{content:"";width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(-45deg);transition:transform .15s}
+details.cat[open] > summary::before{transform:rotate(45deg)}
+details.cat[open]{gap:8px}
+.goals{display:grid;gap:10px}
+.glist{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px 18px}
+.grow-row{display:grid;gap:4px;min-width:0}
+.grow-row .t{font-weight:700}
+.grow-row .ok{color:var(--good);font-weight:700}
+.gbar{height:10px;border-radius:99px;background:var(--line);display:flex;overflow:hidden}
+.gbar i{display:block;height:100%}
+.gbar .ga{background:var(--a)} .gbar .gb{background:var(--b)}
+.goaltag{font-variant-numeric:tabular-nums}
+.goaltag.met{color:var(--good);font-weight:700}
+.gtasks{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:2px 12px;padding:6px 0;font-size:.85rem}
+.gtasks label{display:flex;gap:6px;align-items:center}
+.thanks-card{border-color:var(--good)}
+.thanks-card .label{color:var(--good)}
+.btn.thank{border-color:var(--good);color:var(--good)}
+.boardnote{grid-column:1/-1;margin:0;text-align:center}
+.wk + .wk{margin-top:-4px}
+.setgrid{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1.3fr) 62px 62px auto;gap:8px;align-items:center}
+.setgrid input[type=number]{width:100%}
+.setgrid-h{padding-bottom:4px}
+@media (max-width:640px){
+  .setgrid{grid-template-columns:1fr 1fr}
+  .setgrid > :first-child{grid-column:1/-1}
+  .setgrid-h{display:none}
+}
+
+.list{display:grid;gap:0}
+.item{display:flex;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.item:first-child{border-top:none}
+.item .grow{flex:1;min-width:0}
+.item .t{font-weight:700}
+.dot{width:10px;height:10px;border-radius:50%;flex:none}
+.dot.a{background:var(--a)} .dot.b{background:var(--b)}
+.pts{font-family:var(--f-display);font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 12px;font-weight:700}
+.btn.primary{background:var(--me);border-color:var(--me);color:var(--surface)}
+.btn.good{background:var(--good);border-color:var(--good);color:var(--surface)}
+.btn.ghost{background:none}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.sm{padding:4px 9px;font-size:.82rem}
+input[type=text],input[type=number],input[type=date],select,textarea{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 10px;min-width:0}
+input[type=number]{width:84px}
+textarea{width:100%;resize:vertical}
+.field{display:grid;gap:4px}
+.formgrid{display:grid;grid-template-columns:2fr 1fr;gap:10px}
+.formgrid .full{grid-column:1/-1}
+
+.attn{border-color:var(--warn);background:linear-gradient(0deg,var(--surface),var(--surface))}
+.attn .label{color:var(--warn)}
+.pill{font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:99px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.pill.wait{border-color:var(--warn);color:var(--warn)}
+.pill.ok{border-color:var(--good);color:var(--good)}
+.note{font-size:.85rem;color:var(--muted);max-width:65ch}
+
+/* calendar */
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.cal .dow{font-size:.7rem;text-align:center;color:var(--muted);font-weight:700;letter-spacing:.06em}
+.day{background:var(--surface);border:1px solid var(--line);border-radius:8px;min-height:68px;padding:4px 5px;text-align:left;display:flex;flex-direction:column;gap:3px}
+.day.out{opacity:.35}
+.day.today{border-color:var(--ink)}
+.day.sel{outline:2px solid var(--ink);outline-offset:-1px}
+.day .dn{font-size:.75rem;font-weight:700}
+.day .bars{display:grid;gap:2px;margin-top:auto}
+.day .bars div{display:flex;align-items:center;gap:3px;font-size:.68rem;font-variant-numeric:tabular-nums}
+.day .bars i{height:5px;border-radius:3px;display:block;min-width:2px}
+.day .bars .ba i{background:var(--a)} .day .bars .bb i{background:var(--b)}
+.share{display:flex;height:14px;border-radius:99px;overflow:hidden;background:var(--line)}
+.share .sa{background:var(--a)} .share .sb{background:var(--b)}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat{display:grid;gap:2px}
+.stat .v{font-size:1.5rem;font-weight:800}
+
+.overlay{position:fixed;inset:0;background:rgba(10,14,20,.55);display:grid;place-items:center;z-index:20;padding:20px}
+.overlay .card{max-width:380px;width:100%;display:grid;gap:14px;text-align:center}
+.pick{display:grid;gap:10px}
+.pick button{padding:14px;border-radius:12px;font-family:var(--f-display);font-size:1.15rem;font-weight:800;border:2px solid}
+.pick .a{border-color:var(--a);color:var(--a);background:var(--a-soft)}
+.pick .b{border-color:var(--b);color:var(--b);background:var(--b-soft)}
+
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);border-radius:10px;padding:10px 14px;display:flex;gap:14px;align-items:center;z-index:30;max-width:calc(100% - 32px);box-shadow:0 4px 18px rgba(0,0,0,.25)}
+.toast button{background:none;border:none;color:var(--bg);font-weight:700;text-decoration:underline}
+.banner{padding:10px 12px;border-radius:10px;border:1px dashed var(--warn);color:var(--warn);font-size:.88rem}
+
+@media (max-width:560px){
+  .score .bal{font-size:1.5rem}
+  .formgrid{grid-template-columns:1fr}
+  .day{min-height:54px;padding:3px}
+  .day .bars span{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="titlebar">
+      <h1>Sutton House Points</h1>
+      <div class="whoami" id="whoami"></div>
+    </div>
+    <div class="board" id="board"></div>
+    <nav class="tabs" role="tablist" id="tabs"></nav>
+  </header>
+  <main id="main"><p class="muted">Loading your household…</p></main>
+</div>
+<div id="overlay"></div>
+<div id="toast"></div>
+
+<script>
+/* ===== SETUP: paste your Google Apps Script web app URL between the quotes ===== */
+const API_URL = 'PASTE_YOUR_WEB_APP_URL_HERE';
+/* ============================================================================== */
+const SEED = {"config":{"main":{"goals":[{"count":5,"id":"g-dishes","name":"Loads of dishes","tasks":["x-load-the-dishwasher","x-hand-wash-dishes"]},{"count":3,"id":"g-laundry","name":"Loads of laundry washed","tasks":["x-start-a-load-wash","x-do-a-load-start-to-finish"]},{"count":3,"id":"g-putaway","name":"Laundry folded & put away","tasks":["x-fold-laundry","x-do-a-load-start-to-finish"]},{"count":5,"id":"g-kitchen","name":"Kitchen cleaned up after dinner","tasks":["x-clean-up-after-dinner","x-wipe-counters-stove"]},{"count":2,"id":"g-trash","name":"Trash taken out","tasks":["x-take-out-the-trash"]},{"count":3,"id":"g-catbox","name":"Cat box scooped","tasks":["x-scoop-the-cat-box"]},{"count":3,"id":"g-dinner","name":"Home-cooked dinners","tasks":["x-cook-dinner","x-meal-prep-for-the-week"]},{"count":3,"id":"g-tidy","name":"Rooms picked up","tasks":["x-great-room","x-gemma-s-room","x-play-room","x-bedroom","x-living-room","x-study","x-tidy-declutter"]}],"names":{"a":"Robert","b":"Erica"},"quota":{"a":60,"b":60}}},"tasks":{"x-put-away-groceries":{"cat":"Kitchen & dishes","name":"Put away groceries","order":13,"partial":0,"points":3},"x-wash-the-car":{"cat":"Errands & household","name":"Wash the car","order":9,"partial":4,"points":8},"x-take-out-the-trash":{"cat":"Trash & pets","name":"Take out the trash","order":1,"partial":0,"points":1},"x-clean-up-after-dinner":{"cat":"Kitchen & dishes","name":"Clean up after dinner","order":5,"partial":0,"points":4},"x-kitchen-deep-clean":{"cat":"Rooms","name":"Kitchen deep clean","order":7,"partial":6,"points":12},"x-load-the-dishwasher":{"cat":"Kitchen & dishes","name":"Load the dishwasher","order":6,"partial":0,"points":2},"x-feed-the-pets":{"cat":"Trash & pets","name":"Feed the pets","order":7,"partial":0,"points":1},"x-mop-a-room":{"cat":"Floors & surfaces","name":"Mop a room","order":3,"partial":0,"points":3},"x-change-all-the-cat-litter":{"cat":"Trash & pets","name":"Change all the cat litter","order":6,"partial":0,"points":4},"x-wipe-baseboards":{"cat":"Floors & surfaces","name":"Wipe baseboards","order":7,"partial":4,"points":8},"x-make-breakfast":{"cat":"Kitchen & dishes","name":"Make breakfast","order":2,"partial":0,"points":3},"x-wipe-switches-door-handles":{"cat":"Floors & surfaces","name":"Wipe switches & door handles","order":8,"partial":0,"points":2},"x-water-houseplants":{"cat":"Errands & household","name":"Water houseplants","order":6,"partial":0,"points":1},"x-pay-the-bills":{"cat":"Errands & household","name":"Pay the bills","order":4,"partial":0,"points":4},"x-start-a-load-wash":{"cat":"Laundry","name":"Start a load (wash)","order":2,"partial":0,"points":1},"x-clean-out-the-car":{"cat":"Errands & household","name":"Clean out the car","order":10,"partial":2,"points":4},"x-put-away-laundry":{"cat":"Laundry","name":"Put away laundry","order":6,"partial":1,"points":2},"x-make-coffee":{"cat":"Kitchen & dishes","name":"Make coffee","order":1,"partial":0,"points":1},"x-take-the-trash-to-the-curb":{"cat":"Trash & pets","name":"Take the trash to the curb","order":2,"partial":0,"points":2},"x-take-out-recycling":{"cat":"Trash & pets","name":"Take out recycling","order":4,"partial":0,"points":1},"x-rake-leaves":{"cat":"Yard & outside","name":"Rake leaves","order":3,"partial":7,"points":14},"x-fold-laundry":{"cat":"Laundry","name":"Fold laundry","order":5,"partial":1,"points":3},"x-entryway":{"cat":"Rooms","name":"Entryway","order":9,"partial":1,"points":3},"x-clean-the-gutters":{"cat":"Yard & outside","name":"Clean the gutters","order":8,"partial":10,"points":20},"x-change-bed-sheets":{"cat":"Laundry","name":"Change bed sheets","order":7,"partial":0,"points":3},"x-wipe-down-the-table":{"cat":"Kitchen & dishes","name":"Wipe down the table","order":10,"partial":0,"points":1},"x-mow-the-grass":{"cat":"Yard & outside","name":"Mow the grass","order":1,"partial":7,"points":14},"x-plan-meals-grocery-list":{"cat":"Errands & household","name":"Plan meals & grocery list","order":2,"partial":0,"points":4},"x-pack-lunches":{"cat":"Kitchen & dishes","name":"Pack lunches","order":3,"partial":0,"points":3},"x-sweep-porch-walkway":{"cat":"Yard & outside","name":"Sweep porch & walkway","order":6,"partial":0,"points":2},"x-clean-out-the-fridge":{"cat":"Kitchen & dishes","name":"Clean out the fridge","order":12,"partial":3,"points":6},"x-wash-pet-bowls":{"cat":"Trash & pets","name":"Wash pet bowls","order":8,"partial":0,"points":1},"x-run-an-errand":{"cat":"Errands & household","name":"Run an errand","order":2,"partial":0,"points":5},"x-restock-toiletries-supplies":{"cat":"Errands & household","name":"Restock toiletries & supplies","order":5,"partial":0,"points":3},"x-bedroom":{"cat":"Rooms","name":"Bedroom","order":4,"partial":3,"points":6},"x-laundry-room":{"cat":"Rooms","name":"Laundry room","order":10,"partial":1,"points":3},"x-shovel-snow":{"cat":"Yard & outside","name":"Shovel snow","order":7,"partial":5,"points":10},"x-bring-the-bins-back":{"cat":"Trash & pets","name":"Bring the bins back","order":3,"partial":0,"points":1},"x-make-calls-appointments":{"cat":"Errands & household","name":"Make calls / book appointments","order":5,"partial":0,"points":3},"x-unload-the-dishwasher":{"cat":"Kitchen & dishes","name":"Unload the dishwasher","order":7,"partial":0,"points":2},"x-play-room":{"cat":"Rooms","name":"Play room","order":3,"partial":3,"points":7},"x-tidy-declutter":{"cat":"Floors & surfaces","name":"Tidy & declutter","order":9,"partial":2,"points":4},"x-scoop-the-cat-box":{"cat":"Trash & pets","name":"Scoop the cat box","order":5,"partial":0,"points":2},"x-hand-wash-dishes":{"cat":"Kitchen & dishes","name":"Hand-wash dishes","order":8,"partial":2,"points":4},"x-sweep-dust-mop-a-room":{"cat":"Floors & surfaces","name":"Sweep / dust-mop a room","order":2,"partial":0,"points":2},"x-make-the-bed":{"cat":"Errands & household","name":"Make the bed","order":3,"partial":0,"points":1},"x-iron-clothes":{"cat":"Laundry","name":"Iron clothes","order":9,"partial":2,"points":4},"x-pull-weeds":{"cat":"Yard & outside","name":"Pull weeds","order":4,"partial":3,"points":6},"x-sort-laundry":{"cat":"Laundry","name":"Sort laundry","order":1,"partial":0,"points":1},"x-water-the-garden":{"cat":"Yard & outside","name":"Water the garden","order":5,"partial":0,"points":2},"x-bathroom":{"cat":"Rooms","name":"Bathroom","order":8,"partial":3,"points":7},"x-hand-wash-delicates":{"cat":"Laundry","name":"Hand-wash delicates","order":8,"partial":0,"points":3},"x-great-room":{"cat":"Rooms","name":"Great room","order":1,"partial":5,"points":10},"x-clean-off-the-computer-desk":{"cat":"Floors & surfaces","name":"Clean off the computer desk","order":5,"partial":0,"points":2},"x-clean-the-microwave":{"cat":"Kitchen & dishes","name":"Clean the microwave","order":11,"partial":0,"points":2},"x-grocery-run":{"cat":"Errands & household","name":"Grocery run","order":1,"partial":0,"points":10},"x-cook-dinner":{"cat":"Kitchen & dishes","name":"Cook dinner","order":4,"partial":0,"points":8},"x-gemma-s-room":{"cat":"Rooms","name":"Gemma's room","order":2,"partial":3,"points":6},"x-dust-shelves-surfaces":{"cat":"Floors & surfaces","name":"Dust shelves & surfaces","order":4,"partial":2,"points":4},"x-weed-eat":{"cat":"Yard & outside","name":"Weed-eat","order":2,"partial":3,"points":7},"x-living-room":{"cat":"Rooms","name":"Living room","order":5,"partial":3,"points":7},"x-change-a-bulb-or-filter":{"cat":"Errands & household","name":"Change a bulb or filter","order":7,"partial":0,"points":2},"x-meal-prep-for-the-week":{"cat":"Kitchen & dishes","name":"Meal prep for the week","order":5,"partial":10,"points":20},"x-clean-windows-mirrors":{"cat":"Floors & surfaces","name":"Clean windows & mirrors","order":6,"partial":2,"points":5},"x-wipe-counters-stove":{"cat":"Kitchen & dishes","name":"Wipe counters & stove","order":9,"partial":0,"points":2},"x-study":{"cat":"Rooms","name":"Study","order":6,"partial":2,"points":5},"x-small-fix-it-job":{"cat":"Errands & household","name":"Small fix-it job","order":8,"partial":0,"points":8},"x-move-to-dryer-hang-dry":{"cat":"Laundry","name":"Move to dryer / hang dry","order":3,"partial":0,"points":1},"x-clean-all-floors-sweep-mop":{"cat":"Floors & surfaces","name":"Clean all floors (sweep & mop)","order":1,"partial":6,"points":12},"x-do-a-load-start-to-finish":{"cat":"Laundry","name":"Do a load start to finish","order":4,"partial":0,"points":8}}};
+let PASS = ''; try{ PASS = localStorage.getItem('hp-pass') || ''; }catch(e){}
+(function(){
+const P = ['a','b'];
+const SIZES = {small:{label:'Small treat',weeks:.3,hint:'about 2 days of chores'},medium:{label:'Medium',weeks:.7,hint:'about 5 days'},big:{label:'Big ask',weeks:1.5,hint:'about a week and a half'},huge:{label:'Grand prize',weeks:4,hint:'about a month'}};
+const S = { db:null, ready:false, cfg:null, tasks:[], rewards:[], days:{}, reds:[], tab:'today', logDay:null, calMonth:null, calSel:null, readOnly:false };
+let ME = null; try{ ME = localStorage.getItem('hp-who'); }catch(e){}
+if(!P.includes(ME)) ME = null;
+try{ const t = localStorage.getItem('hp-tab'); if(t) S.tab = t; }catch(e){}
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2,'0');
+const dkey = d => d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const parseKey = k => { const [y,m,d] = k.split('-').map(Number); return new Date(y,m-1,d); };
+const today = () => dkey(new Date());
+const other = p => p==='a'?'b':'a';
+const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+S.logDay = today();
+const now = new Date(); S.calMonth = new Date(now.getFullYear(), now.getMonth(), 1); S.calSel = today();
+
+function cfg(){
+  const c = S.cfg || {};
+  return {
+    names: { a: (c.names && c.names.a) || 'Robert', b: (c.names && c.names.b) || 'Erica' },
+    quota: { a: Number(c.quota && c.quota.a) || 60, b: Number(c.quota && c.quota.b) || 60 }
+  };
+}
+const nm = p => cfg().names[p];
+
+/* ---------- derived numbers ---------- */
+function allEntries(){
+  const out = [];
+  for(const [day, doc] of Object.entries(S.days)){
+    const ents = (doc && doc.entries) || {};
+    for(const [id, e] of Object.entries(ents)){
+      if(!e || e.deleted || !P.includes(e.who)) continue;
+      out.push({ id, day, ...e, pts: Number(e.pts)||0 });
+    }
+  }
+  return out;
+}
+function weekStart(d){ const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); const wd = (x.getDay()+6)%7; x.setDate(x.getDate()-wd); return x; }
+const THANKS_PTS = 1, QUOTA_BONUS = 10, TEAM_BONUS = 5;
+function totals(){
+  const ents = allEntries(), q = cfg().quota;
+  const ws = dkey(weekStart(new Date()));
+  const weeks = {};   // weekKey -> {a,b}
+  ents.forEach(e => { const wk = dkey(weekStart(parseKey(e.day))); (weeks[wk] ||= {a:0,b:0})[e.who] += e.pts; });
+  const t = {};
+  for(const p of P){
+    const o = other(p);
+    const work = ents.filter(e=>e.who===p).reduce((s,e)=>s+e.pts,0);
+    const thanks = ents.filter(e=>e.who===p && e.thankedBy===o).length * THANKS_PTS;
+    let quotaB = 0, teamB = 0;
+    for(const [wk, v] of Object.entries(weeks)){
+      if(wk > ws) continue;
+      if(q[p] > 0 && v[p] >= q[p]){ quotaB += QUOTA_BONUS; if(q[o] > 0 && v[o] >= q[o]) teamB += TEAM_BONUS; }
+    }
+    const spent = S.reds.filter(r=>r.who===p && (r.status==='requested'||r.status==='done')).reduce((s,r)=>s+(Number(r.cost)||0),0);
+    const week = (weeks[ws] && weeks[ws][p]) || 0;
+    const earned = work + thanks + quotaB + teamB;
+    t[p] = { work, thanks, quotaB, teamB, earned, spent, bal: earned-spent, week, streak: streak(ents, p) };
+  }
+  return t;
+}
+function streak(ents, p){
+  const days = new Set(ents.filter(e=>e.who===p).map(e=>e.day));
+  const d = new Date(); if(!days.has(dkey(d))) d.setDate(d.getDate()-1);
+  let n = 0; while(days.has(dkey(d))){ n++; d.setDate(d.getDate()-1); }
+  return n;
+}
+function goals(){ return (S.cfg && Array.isArray(S.cfg.goals)) ? S.cfg.goals : []; }
+function goalProgress(){
+  const ws = dkey(weekStart(new Date())), we = dkey(new Date(parseKey(ws).getTime()+6*864e5));
+  const wk = allEntries().filter(e => e.day >= ws && e.day <= we);
+  return goals().map(g => {
+    const ids = new Set(g.tasks||[]), got = {a:0,b:0};
+    wk.forEach(e => { if(ids.has(e.taskId)) got[e.who] += (e.part || /\(partial\)$/.test(e.name||'')) ? .5 : 1; });
+    return { ...g, count: Number(g.count)||0, got, total: got.a+got.b };
+  });
+}
+const fmtN = n => Number.isInteger(n) ? String(n) : n.toFixed(1);
+function avgTaskPts(){
+  const ts = S.tasks.filter(t=>Number(t.points)>0);
+  if(!ts.length) return 5;
+  return ts.reduce((s,t)=>s+Number(t.points),0)/ts.length;
+}
+function avgQuota(){ const q = cfg().quota; return ((q.a||0)+(q.b||0))/2 || 60; }
+function suggest(size){
+  const f = (SIZES[size]||SIZES.medium).weeks;
+  return Math.max(5, Math.round(avgQuota()*f/5)*5);
+}
+
+/* ---------- writes (serialized) ---------- */
+let chain = Promise.resolve();
+function write(fn){
+  if(!S.db || S.readOnly){ toast('Still connecting. Try again in a moment.'); return Promise.resolve(); }
+  chain = chain.then(fn).catch(err => {
+    console.error(err);
+    if(err && err.code==='bad_passcode'){ askPass('The household passcode changed. Enter the new one.'); }
+    else if(err && err.code==='quota_exceeded'){ toast('Storage is full. Delete old entries to keep logging.'); }
+    else toast('Couldn’t save that. Try again in a moment.');
+  });
+  return chain;
+}
+async function addEntry(day, entry){
+  const id = 'e'+uid();
+  await write(async () => {
+    const ref = S.db.doc('days/'+day);
+    let exists = !!S.days[day];
+    if(!exists){ const snap = await ref.get(); exists = snap.exists; }
+    if(exists) await ref.update({ entries: { [id]: entry } });
+    else await ref.set({ day, entries: { [id]: entry } });
+  });
+  return id;
+}
+function removeEntry(day, id){
+  return write(() => S.db.doc('days/'+day).update({ entries: { [id]: { deleted: true } } }));
+}
+
+/* ---------- toast ---------- */
+let toastTimer;
+function toast(msg, undo){
+  const el = $('toast');
+  el.innerHTML = '<div class="toast" role="status"><span>'+esc(msg)+'</span>'+(undo?'<button id="undoBtn">Undo</button>':'')+'</div>';
+  if(undo) $('undoBtn').onclick = () => { el.innerHTML=''; undo(); };
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>{ el.innerHTML=''; }, 5000);
+}
+
+/* ---------- render ---------- */
+let pendingRender = false;
+document.addEventListener('submit', () => { const a = document.activeElement; if(a && a.blur) a.blur(); }, true);
+document.addEventListener('focusout', () => { setTimeout(() => { if(pendingRender) render(); }, 0); });
+function render(force){
+  renderWho(); renderBoard(); renderTabs();
+  if(S.needPass){ renderPass(); } else if(!ME){ renderPicker(); }
+  const m = $('main');
+  if(!S.ready){
+    m.innerHTML = S.loadMsg ? '<div class="banner">'+esc(S.loadMsg)+'</div>' : '<p class="muted">Loading your household…</p>';
+    return;
+  }
+  const ae = document.activeElement;
+  if(!force && ae && m.contains(ae) && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName) && ae.type!=='date'){ pendingRender = true; return; }
+  pendingRender = false;
+  const html = S.tab==='rewards' ? viewRewards() : S.tab==='calendar' ? viewCalendar() : S.tab==='setup' ? viewSetup() : viewToday();
+  m.innerHTML = (S.readOnly?'<div class="banner">View only: you can see everything, but changes won’t save.</div>':'') + html;
+  bind();
+}
+function renderWho(){
+  const el = $('whoami');
+  if(!ME){ el.innerHTML=''; return; }
+  el.innerHTML = '<span class="muted">Logging as</span> <span class="chip '+ME+'">'+esc(nm(ME))+'</span> <button class="linkbtn" id="switchWho">switch</button>';
+  $('switchWho').onclick = () => { ME=null; try{localStorage.removeItem('hp-who')}catch(e){}; render(); };
+  document.documentElement.style.setProperty('--me', ME==='a'?'var(--a)':'var(--b)');
+}
+function renderBoard(){
+  const t = totals(), q = cfg().quota;
+  $('board').innerHTML = P.map(p => {
+    const pct = Math.min(100, Math.round(t[p].week / q[p] * 100));
+    return '<div class="score '+p+'"><div class="top"><span class="name">'+esc(nm(p))+(p===ME?' (you)':'')+'</span><span class="bal num">'+t[p].bal+'<small>pts</small></span></div>'+
+      '<div class="bar" title="This week vs. quota"><i style="width:'+pct+'%"></i></div>'+
+      '<div class="wk"><span>This week'+(t[p].week>=q[p]?' · quota met':'')+'</span><span class="num">'+t[p].week+' / '+q[p]+'</span></div>'+
+      '<div class="wk"><span>'+(t[p].streak?t[p].streak+'-day streak':'No streak yet')+'</span><span>'+(t[p].thanks?t[p].thanks+' thanks':'')+'</span></div></div>';
+  }).join('');
+  const both = P.every(p=>t[p].week>=q[p]);
+  $('board').insertAdjacentHTML('beforeend', '<p class="boardnote small muted">'+(both
+    ? 'You both hit quota this week: +'+QUOTA_BONUS+' each, plus a +'+TEAM_BONUS+' team bonus.'
+    : 'Hit your weekly quota for +'+QUOTA_BONUS+'. If you both hit it, you each get +'+TEAM_BONUS+' more.')+'</p>');
+}
+function pendingForMe(){ return ME ? S.reds.filter(r=>r.who===other(ME) && r.status==='requested') : []; }
+function unpricedForMe(){ return ME ? S.rewards.filter(r=>r.owner===other(ME) && !(Number(r.price)>0)) : []; }
+function renderTabs(){
+  const n1 = pendingForMe().length, n2 = unpricedForMe().length;
+  const tabs = [['today','Today',n1],['rewards','Rewards',n2],['calendar','Calendar',0],['setup','Setup',0]];
+  $('tabs').innerHTML = tabs.map(([k,l,n]) => '<button role="tab" data-tab="'+k+'" aria-selected="'+(S.tab===k)+'">'+l+(n?'<span class="badge">'+n+'</span>':'')+'</button>').join('');
+  $('tabs').querySelectorAll('button').forEach(b => b.onclick = () => { S.tab=b.dataset.tab; try{localStorage.setItem('hp-tab',S.tab)}catch(e){}; render(); });
+}
+function renderPicker(){
+  $('overlay').innerHTML = '<div class="overlay"><div class="card"><h2>Who’s using this device?</h2><p class="muted small">Your pick is remembered on this phone or computer. You can switch anytime.</p><div class="pick">'+
+    P.map(p=>'<button class="'+p+'" data-who="'+p+'">I’m '+esc(nm(p))+'</button>').join('')+'</div></div></div>';
+  $('overlay').querySelectorAll('[data-who]').forEach(b => b.onclick = () => {
+    ME = b.dataset.who; try{localStorage.setItem('hp-who',ME)}catch(e){}; $('overlay').innerHTML=''; render();
+  });
+}
+
+/* ---------- Today ---------- */
+function viewToday(){
+  if(!ME) return '';
+  const o = other(ME), day = S.logDay;
+  const dayEnts = allEntries().filter(e=>e.day===day).sort((x,y)=>(y.at||'').localeCompare(x.at||''));
+  const counts = {}; dayEnts.filter(e=>e.who===ME).forEach(e=>{ counts[e.taskId]=(counts[e.taskId]||0)+1; });
+  const reqs = pendingForMe();
+  let h = '';
+  if(reqs.length){
+    h += '<section class="card attn"><span class="label">'+esc(nm(o))+' cashed in</span><div class="list">'+
+      reqs.map(r=>'<div class="item"><div class="grow"><div class="t">'+esc(r.title)+'</div><div class="small muted">'+fmtWhen(r.at)+' · '+r.cost+' pts</div></div>'+
+        '<button class="btn good sm" data-fulfill="'+r.id+'">Done</button><button class="btn ghost sm" data-decline="'+r.id+'">Not now</button></div>').join('')+
+      '</div><p class="note">“Not now” returns the points to '+esc(nm(o))+'. Rewards are offers, never obligations.</p></section>';
+  }
+  const cutoff = dkey(new Date(Date.now()-3*864e5));
+  const unthanked = allEntries().filter(e=>e.who===o && !e.thankedBy && e.day>=cutoff).sort((x,y)=>(y.at||'').localeCompare(x.at||''));
+  if(unthanked.length){
+    h += '<section class="card thanks-card"><div class="spread"><span class="label">'+esc(nm(o))+' pitched in · '+unthanked.length+' not thanked yet</span>'+
+      '<button class="btn sm thank" id="thankAll">Thank for all ('+'+'+unthanked.length*THANKS_PTS+' to '+esc(nm(o))+')</button></div>'+
+      '<div class="list">'+unthanked.slice(0,6).map(e=>entryRow(e,false)).join('')+'</div>'+
+      (unthanked.length>6?'<p class="small muted">and '+(unthanked.length-6)+' more</p>':'')+'</section>';
+  }
+  h += goalsCard();
+  const isToday = day===today();
+  h += '<section><div class="spread"><h2>'+(isToday?'What did you just do?':'Logging for '+fmtDay(day))+'</h2>'+
+       '<label class="row small muted">Date <input type="date" id="logDay" value="'+day+'" max="'+today()+'"></label></div>';
+  if(!S.tasks.length) h += '<div class="card muted">No tasks yet. Add some under Setup.</div>';
+  else {
+    const gp = goalProgress(), ld = {};
+    gp.forEach(g => (g.tasks||[]).forEach(id => { ld[id] = g; }));
+    h += groupTasks().map(([cat, ts]) => '<details class="cat" '+(openCats[cat]===false?'':'open')+' data-cat="'+esc(cat)+'"><summary class="label">'+esc(cat)+'</summary><div class="tasks">'+ts.map(t=>taskTile(t,counts,ld)).join('')+'</div></details>').join('');
+  }
+  h += '</section>';
+  h += '<section class="card"><div class="spread"><h3>'+(isToday?'Today':fmtDay(day))+'</h3><span class="small muted">'+P.map(p=>esc(nm(p))+' '+dayEnts.filter(e=>e.who===p).reduce((s,e)=>s+e.pts,0)).join(' · ')+'</span></div>';
+  h += dayEnts.length ? '<div class="list">'+dayEnts.map(e=>entryRow(e, true)).join('')+'</div>' : '<p class="muted small">Nothing logged yet.</p>';
+  h += '</section>';
+  return h;
+}
+const CATS = ['Rooms','Kitchen & dishes','Laundry','Floors & surfaces','Trash & pets','Yard & outside','Errands & household','Other'];
+function groupTasks(){
+  const g = {};
+  S.tasks.forEach(t => { const c = CATS.includes(t.cat) ? t.cat : 'Other'; (g[c] ||= []).push(t); });
+  return CATS.filter(c=>g[c]).map(c => [c, g[c].sort((a,b)=>(a.order??99)-(b.order??99)||String(a.name).localeCompare(b.name))]);
+}
+function catOptions(sel){ return CATS.map(c=>'<option'+(c===(sel||'Other')?' selected':'')+'>'+esc(c)+'</option>').join(''); }
+function taskTile(t, counts, ld){
+  const full = Number(t.points)||0, part = Number(t.partial)||0, c = counts[t.id];
+  const g = ld[t.id];
+  const cnt = (c ? '<span class="cnt">×'+c+' today</span>' : '') + (g && g.count ? '<span class="cnt goaltag'+(g.total>=g.count?' met':'')+'">'+fmtN(g.total)+'/'+g.count+' wk</span>' : '');
+  if(part>0) return '<div class="task split"><span class="spread"><span class="tn">'+esc(t.name)+'</span>'+cnt+'</span><span class="two">'+
+    '<button class="half" data-log="'+t.id+'|partial">Partial<b>+'+part+'</b></button><button class="half full" data-log="'+t.id+'|full">Full<b>+'+full+'</b></button></span></div>';
+  return '<button class="task" data-log="'+t.id+'|full"><span class="tn">'+esc(t.name)+'</span><span class="spread"><span class="tp">+'+full+'<span>pts</span></span>'+cnt+'</span></button>';
+}
+let openCats = {}; try{ openCats = JSON.parse(localStorage.getItem('hp-cats')||'{}')||{}; }catch(e){}
+function goalsCard(){
+  const gp = goalProgress().filter(g=>g.count>0);
+  if(!gp.length) return '';
+  const met = gp.filter(g=>g.total>=g.count).length;
+  return '<section class="card goals"><div class="spread"><h3>This week’s household goals</h3><span class="small muted">'+met+' of '+gp.length+' met</span></div>'+
+    '<p class="note">Shared targets for the high-traffic stuff. Whoever gets to it counts toward the same goal; a partial counts as half.</p><div class="glist">'+
+    gp.map(g => {
+      const wa = Math.min(100, g.got.a/g.count*100), wb = Math.min(100-wa, g.got.b/g.count*100), done = g.total>=g.count;
+      return '<div class="grow-row"><div class="spread"><span class="t">'+esc(g.name)+'</span><span class="num small'+(done?' ok':'')+'">'+(done?'Met · ':'')+fmtN(g.total)+' / '+g.count+'</span></div>'+
+        '<div class="gbar" title="'+esc(nm('a'))+' '+fmtN(g.got.a)+', '+esc(nm('b'))+' '+fmtN(g.got.b)+'"><i class="ga" style="width:'+wa+'%"></i><i class="gb" style="width:'+wb+'%"></i></div></div>';
+    }).join('')+'</div></section>';
+}
+function entryRow(e, canDel){
+  const o = ME && e.who===other(ME);
+  const thanks = e.thankedBy ? '<span class="pill ok">Thanked +'+THANKS_PTS+'</span>'
+    : o ? '<button class="btn sm thank" data-thank="'+e.day+'|'+e.id+'">Thank '+esc(nm(e.who))+'</button>' : '';
+  return '<div class="item"><span class="dot '+e.who+'"></span><div class="grow"><div class="t">'+esc(e.name)+'</div><div class="small muted">'+esc(nm(e.who))+(e.at?' · '+fmtTime(e.at):'')+'</div></div>'+thanks+'<span class="pts">+'+e.pts+'</span>'+
+    (canDel && e.who===ME ? '<button class="btn ghost sm" data-unlog="'+e.day+'|'+e.id+'" aria-label="Remove">Remove</button>' : '')+'</div>';
+}
+
+/* ---------- Rewards ---------- */
+function viewRewards(){
+  if(!ME) return '';
+  const o = other(ME), t = totals();
+  const mine = S.rewards.filter(r=>r.owner===ME).sort(byCreated);
+  const theirs = S.rewards.filter(r=>r.owner===o).sort((a,b)=>(Number(a.price)>0)-(Number(b.price)>0)||byCreated(a,b));
+  let h = '<section><div class="spread"><h2>Rewards I want</h2><span class="small muted">Balance <b class="num">'+t[ME].bal+'</b> pts</span></div>'+
+    '<p class="note">Add what you’d love from '+esc(nm(o))+'. '+esc(nm(o))+' sets what each one costs, so neither of you has to guess.</p><div class="card">';
+  h += mine.length ? '<div class="list">'+mine.map(r => {
+      const priced = Number(r.price)>0, short = priced ? Math.max(0, r.price - t[ME].bal) : 0;
+      return '<div class="item"><div class="grow"><div class="t">'+esc(r.title)+'</div>'+(r.note?'<div class="small muted">'+esc(r.note)+'</div>':'')+
+        '<div class="row small" style="margin-top:4px">'+(priced?'<span class="pill ok">'+r.price+' pts</span>':'<span class="pill wait">Waiting on '+esc(nm(o))+' to price it</span>')+'<span class="muted">'+esc((SIZES[r.size]||SIZES.medium).label)+'</span></div></div>'+
+        (priced ? '<button class="btn primary sm" data-redeem="'+r.id+'" '+(short?'disabled title="Need '+short+' more"':'')+'>'+(short?'Need '+short:'Cash in')+'</button>' : '')+
+        '<button class="btn ghost sm" data-delrew="'+r.id+'" aria-label="Delete reward">Delete</button></div>';
+    }).join('')+'</div>' : '<p class="muted small">No rewards yet. Add your first one below.</p>';
+  h += '<form id="addRew" class="formgrid" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">'+
+    '<label class="field"><span class="label">Reward</span><input type="text" id="rwTitle" required maxlength="80" placeholder="Something you’d love from '+esc(nm(o))+'"></label>'+
+    '<label class="field"><span class="label">How big an ask?</span><select id="rwSize">'+Object.entries(SIZES).map(([k,v])=>'<option value="'+k+'"'+(k==='medium'?' selected':'')+'>'+v.label+' ('+v.hint+')</option>').join('')+'</select></label>'+
+    '<label class="field full"><span class="label">Details (optional)</span><input type="text" id="rwNote" maxlength="200" placeholder="Anything that helps them get it right"></label>'+
+    '<div class="full"><button class="btn primary" type="submit">Add reward</button></div></form></div></section>';
+
+  h += '<section><h2>'+esc(nm(o))+'’s rewards: you set the price</h2>'+
+    '<p class="note">Suggestions are based on your average weekly quota ('+Math.round(avgQuota())+' pts): a small treat is about 2 days of chores, a big ask about a week and a half. Change any price whenever you like.</p><div class="card">';
+  h += theirs.length ? '<div class="list">'+theirs.map(r => {
+      const sug = suggest(r.size), priced = Number(r.price)>0;
+      return '<div class="item"><div class="grow"><div class="t">'+esc(r.title)+(priced?'':' <span class="pill wait">needs a price</span>')+'</div>'+(r.note?'<div class="small muted">'+esc(r.note)+'</div>':'')+
+        '<div class="small muted">'+esc((SIZES[r.size]||SIZES.medium).label)+' · suggested '+sug+' pts</div></div>'+
+        '<input type="number" min="1" step="1" id="price-'+r.id+'" value="'+(priced?r.price:sug)+'" aria-label="Price in points">'+
+        '<button class="btn primary sm" data-setprice="'+r.id+'">'+(priced?'Update':'Set')+'</button></div>';
+    }).join('')+'</div>' : '<p class="muted small">'+esc(nm(o))+' hasn’t added any rewards yet.</p>';
+  h += '</div></section>';
+
+  const hist = S.reds.slice().sort((a,b)=>(b.at||'').localeCompare(a.at||'')).slice(0,30);
+  h += '<section><h2>Cash-in history</h2><div class="card">'+(hist.length?'<div class="list">'+hist.map(r=>{
+      const st = r.status==='done'?'<span class="pill ok">Done</span>':r.status==='declined'?'<span class="pill">Not now · refunded</span>':r.status==='cancelled'?'<span class="pill">Cancelled</span>':'<span class="pill wait">Waiting on '+esc(nm(other(r.who)))+'</span>';
+      return '<div class="item"><span class="dot '+r.who+'"></span><div class="grow"><div class="t">'+esc(r.title)+'</div><div class="small muted">'+esc(nm(r.who))+' · '+fmtWhen(r.at)+'</div></div><span class="pts">−'+r.cost+'</span>'+st+
+        (r.who===ME && r.status==='requested' ? '<button class="btn ghost sm" data-cancel="'+r.id+'">Cancel</button>':'')+'</div>';
+    }).join('')+'</div>':'<p class="muted small">No rewards cashed in yet.</p>')+'</div></section>';
+  return h;
+}
+const byCreated = (a,b)=>(a.created||'').localeCompare(b.created||'');
+
+/* ---------- Calendar ---------- */
+function viewCalendar(){
+  const m = S.calMonth, y = m.getFullYear(), mo = m.getMonth();
+  const first = new Date(y, mo, 1), start = weekStart(first);
+  const ents = allEntries();
+  const byDay = {}; ents.forEach(e => { (byDay[e.day] ||= {a:0,b:0,n:0})[e.who]+=e.pts; });
+  const monthKey = y+'-'+pad(mo+1);
+  const monthEnts = ents.filter(e=>e.day.startsWith(monthKey));
+  let max = 1; Object.entries(byDay).forEach(([k,v])=>{ if(k.startsWith(monthKey)) max = Math.max(max, v.a, v.b); });
+  const mt = {a:0,b:0}, mc = {a:0,b:0}; monthEnts.forEach(e=>{ mt[e.who]+=e.pts; mc[e.who]++; });
+  const tot = mt.a+mt.b, sa = tot? Math.round(mt.a/tot*100) : 50;
+
+  let h = '<section><div class="spread"><h2>'+m.toLocaleDateString(undefined,{month:'long',year:'numeric'})+'</h2><div class="row"><button class="btn sm" id="calPrev">Previous</button><button class="btn sm" id="calNow">This month</button><button class="btn sm" id="calNext">Next</button></div></div>';
+  h += '<div class="card"><div class="stats">'+P.map(p=>'<div class="stat"><span class="label" style="color:var(--'+p+')">'+esc(nm(p))+'</span><span class="v num">'+mt[p]+' <span class="small muted">pts</span></span><span class="small muted">'+mc[p]+' tasks</span></div>').join('')+'</div>'+
+    '<div style="margin-top:12px;display:grid;gap:4px"><div class="share" title="Share of points this month"><div class="sa" style="width:'+(tot?sa:50)+'%"></div><div class="sb" style="width:'+(tot?100-sa:50)+'%"></div></div><div class="spread small muted"><span>'+(tot?sa:0)+'%</span><span>Share of this month’s points</span><span>'+(tot?100-sa:0)+'%</span></div></div></div>';
+  h += '<div class="cal" role="grid">'+['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d=>'<div class="dow">'+d+'</div>').join('');
+  const d = new Date(start);
+  const dim = new Date(y, mo+1, 0).getDate(), offset = (first.getDay()+6)%7, cells = Math.ceil((offset+dim)/7)*7;
+  for(let i=0;i<cells;i++){
+    const k = dkey(d), v = byDay[k], out = d.getMonth()!==mo;
+    h += '<button class="day'+(out?' out':'')+(k===today()?' today':'')+(k===S.calSel?' sel':'')+'" data-day="'+k+'"><span class="dn">'+d.getDate()+'</span>'+
+      (v?'<span class="bars"><div class="ba"><i style="width:'+Math.round(v.a/max*70)+'%"></i><span>'+(v.a||'')+'</span></div><div class="bb"><i style="width:'+Math.round(v.b/max*70)+'%"></i><span>'+(v.b||'')+'</span></div></span>':'')+'</button>';
+    d.setDate(d.getDate()+1);
+  }
+  h += '</div></section>';
+
+  const sel = S.calSel, selEnts = ents.filter(e=>e.day===sel).sort((x,y)=>(x.at||'').localeCompare(y.at||''));
+  const selReds = S.reds.filter(r=>r.at && dkey(new Date(r.at))===sel);
+  h += '<section class="card"><div class="spread"><h3>'+fmtDay(sel)+'</h3><span class="small muted">'+P.map(p=>esc(nm(p))+' '+selEnts.filter(e=>e.who===p).reduce((s,e)=>s+e.pts,0)).join(' · ')+'</span></div>';
+  h += (selEnts.length||selReds.length) ? '<div class="list">'+selEnts.map(e=>entryRow(e,false)).join('')+
+      selReds.map(r=>'<div class="item"><span class="dot '+r.who+'"></span><div class="grow"><div class="t">Cashed in: '+esc(r.title)+'</div><div class="small muted">'+esc(nm(r.who))+' · '+fmtTime(r.at)+' · '+esc(r.status)+'</div></div><span class="pts">−'+r.cost+'</span></div>').join('')+'</div>'
+    : '<p class="muted small">Nothing logged this day.</p>';
+  h += '</section>';
+  return h;
+}
+
+/* ---------- Setup ---------- */
+function viewSetup(){
+  const c = cfg();
+  let h = '<section><h2>Household</h2><div class="card"><form id="cfgForm" class="formgrid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">'+
+    P.map(p=>'<label class="field"><span class="label" style="color:var(--'+p+')">Person '+(p==='a'?'1':'2')+' name</span><input type="text" id="name-'+p+'" value="'+esc(c.names[p])+'" maxlength="24"></label>'+
+      '<label class="field"><span class="label">'+esc(c.names[p])+'’s weekly quota (pts)</span><input type="number" id="quota-'+p+'" value="'+c.quota[p]+'" min="0" style="width:100%"></label>').join('')+
+    '<div class="full"><button class="btn primary" type="submit">Save household</button></div></form></div></section>';
+  const taskChecks = (gid, sel) => '<div class="gtasks">'+groupTasks().flatMap(([c,ts])=>ts).map(t=>'<label><input type="checkbox" name="gt-'+gid+'" value="'+t.id+'"'+(sel.includes(t.id)?' checked':'')+'> '+esc(t.name)+'</label>').join('')+'</div>';
+  h += '<section><h2>Weekly household goals</h2><p class="note">Shared weekly targets for the chores that pile up fastest. Pick which tasks count toward each goal; anything either of you logs adds to it. Goals reset every Monday.</p><div class="card"><div class="list">'+
+    goals().map(g=>'<div class="item" style="display:grid;gap:6px"><div class="row"><input type="text" id="gn-'+g.id+'" value="'+esc(g.name)+'" maxlength="40" style="flex:1" aria-label="Goal name"><label class="row small muted">Per week <input type="number" id="gc-'+g.id+'" value="'+(Number(g.count)||0)+'" min="0"></label>'+
+      '<button class="btn sm" data-savegoal="'+g.id+'">Save</button><button class="btn ghost sm" data-delgoal="'+g.id+'">Delete</button></div>'+
+      '<details><summary class="small muted" style="cursor:pointer">Counts: '+esc((g.tasks||[]).map(id=>(S.tasks.find(t=>t.id===id)||{}).name).filter(Boolean).join(', ')||'no tasks yet')+'</summary>'+taskChecks(g.id, g.tasks||[])+'</details></div>').join('')+
+    '</div><form id="addGoal" class="item" style="display:grid;gap:6px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)"><div class="row"><input type="text" id="ngName" placeholder="New goal, e.g. Bathrooms cleaned" maxlength="40" required style="flex:1" aria-label="New goal name"><label class="row small muted">Per week <input type="number" id="ngCount" value="1" min="1"></label><button class="btn primary sm" type="submit">Add goal</button></div>'+
+    '<details><summary class="small muted" style="cursor:pointer">Choose the tasks that count</summary>'+taskChecks('new', [])+'</details></form></div></section>';
+  h += '<section><h2>Tasks and point values</h2><p class="note">Either of you can edit these. “Partial” points are optional; fill them in and the task gets Partial and Full buttons. Changing a value only affects new entries.</p>'+
+    '<div class="card"><div class="setgrid setgrid-h label"><span>Task</span><span>Category</span><span>Full</span><span>Partial</span><span></span></div>'+
+    groupTasks().map(([cat, ts]) => '<div class="label" style="margin-top:14px">'+esc(cat)+'</div><div class="list">'+ts.map(t=>
+      '<div class="item setgrid"><input type="text" id="tn-'+t.id+'" value="'+esc(t.name)+'" maxlength="40" aria-label="Task name"><select id="tc-'+t.id+'" aria-label="Category">'+catOptions(t.cat)+'</select>'+
+      '<input type="number" id="tp-'+t.id+'" value="'+(Number(t.points)||0)+'" min="0" aria-label="Full points"><input type="number" id="tq-'+t.id+'" value="'+(Number(t.partial)>0?t.partial:'')+'" min="0" placeholder="—" aria-label="Partial points">'+
+      '<span class="row" style="gap:4px;flex-wrap:nowrap"><button class="btn sm" data-savetask="'+t.id+'">Save</button><button class="btn ghost sm" data-deltask="'+t.id+'">Delete</button></span></div>').join('')+'</div>').join('')+
+    '<form id="addTask" class="item setgrid" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)"><input type="text" id="ntName" placeholder="New task, e.g. Clean the garage" maxlength="40" required aria-label="New task name"><select id="ntCat" aria-label="Category">'+catOptions('Other')+'</select>'+
+    '<input type="number" id="ntPts" value="5" min="0" aria-label="Full points"><input type="number" id="ntPart" min="0" placeholder="—" aria-label="Partial points"><button class="btn primary sm" type="submit">Add task</button></form></div></section>';
+  return h;
+}
+
+/* ---------- formatting ---------- */
+function fmtDay(k){ return parseKey(k).toLocaleDateString(undefined,{weekday:'long',month:'short',day:'numeric'}); }
+function fmtTime(iso){ try{ return new Date(iso).toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'}); }catch(e){ return ''; } }
+function fmtWhen(iso){ try{ return new Date(iso).toLocaleDateString(undefined,{month:'short',day:'numeric'})+' '+fmtTime(iso); }catch(e){ return ''; } }
+
+/* ---------- events ---------- */
+function bind(){
+  const m = $('main');
+  const ld = $('logDay'); if(ld) ld.onchange = () => { if(ld.value) { S.logDay = ld.value > today() ? today() : ld.value; render(); } };
+  m.querySelectorAll('[data-log]').forEach(b => b.onclick = async () => {
+    const [tid, kind] = b.dataset.log.split('|');
+    const t = S.tasks.find(x=>x.id===tid); if(!t || !ME) return;
+    const hasPart = Number(t.partial)>0, isPart = kind==='partial' && hasPart;
+    const day = S.logDay, pts = isPart ? Number(t.partial) : (Number(t.points)||0);
+    const label = t.name + (isPart ? ' (partial)' : hasPart ? ' (full)' : '');
+    const at = day===today() ? new Date().toISOString() : new Date(parseKey(day).getTime()+12*36e5).toISOString();
+    const id = await addEntry(day, { who: ME, taskId: t.id, name: label, pts, at, part: isPart });
+    toast('+'+pts+' for '+label, () => removeEntry(day, id));
+  });
+  m.querySelectorAll('[data-thank]').forEach(b => b.onclick = () => {
+    const [day,id] = b.dataset.thank.split('|');
+    write(()=>S.db.doc('days/'+day).update({ entries: { [id]: { thankedBy: ME } } })).then(()=>toast('Thanks sent: +'+THANKS_PTS+' to '+nm(other(ME))));
+  });
+  const ta = $('thankAll'); if(ta) ta.onclick = () => {
+    const cutoff = dkey(new Date(Date.now()-3*864e5));
+    const list = allEntries().filter(e=>e.who===other(ME) && !e.thankedBy && e.day>=cutoff);
+    const byDay = {}; list.forEach(e => { (byDay[e.day] ||= {})[e.id] = { thankedBy: ME }; });
+    Object.entries(byDay).forEach(([day, ents]) => write(()=>S.db.doc('days/'+day).update({ entries: ents })));
+    toast('Thanked '+nm(other(ME))+' for '+list.length+' things');
+  };
+  m.querySelectorAll('details[data-cat]').forEach(d => d.ontoggle = () => {
+    openCats[d.dataset.cat] = d.open; try{ localStorage.setItem('hp-cats', JSON.stringify(openCats)); }catch(e){}
+  });
+  m.querySelectorAll('[data-unlog]').forEach(b => b.onclick = () => { const [day,id] = b.dataset.unlog.split('|'); removeEntry(day,id); });
+  m.querySelectorAll('[data-fulfill]').forEach(b => b.onclick = () => write(()=>S.db.doc('redemptions/'+b.dataset.fulfill).update({status:'done', closedAt:new Date().toISOString()})));
+  m.querySelectorAll('[data-decline]').forEach(b => b.onclick = () => write(()=>S.db.doc('redemptions/'+b.dataset.decline).update({status:'declined', closedAt:new Date().toISOString()})));
+  m.querySelectorAll('[data-cancel]').forEach(b => b.onclick = () => write(()=>S.db.doc('redemptions/'+b.dataset.cancel).update({status:'cancelled', closedAt:new Date().toISOString()})));
+  m.querySelectorAll('[data-redeem]').forEach(b => b.onclick = () => {
+    const r = S.rewards.find(x=>x.id===b.dataset.redeem); if(!r) return;
+    if(totals()[ME].bal < r.price) return;
+    write(()=>S.db.collection('redemptions').doc('r'+uid()).set({ who: ME, rewardId: r.id, title: r.title, cost: Number(r.price), at: new Date().toISOString(), status:'requested' }))
+      .then(()=>toast('Sent to '+nm(other(ME))+': '+r.title));
+  });
+  m.querySelectorAll('[data-delrew]').forEach(b => b.onclick = () => {
+    const r = S.rewards.find(x=>x.id===b.dataset.delrew); if(!r) return;
+    write(()=>S.db.doc('rewards/'+r.id).delete()).then(()=>toast('Deleted “'+r.title+'”', ()=>write(()=>S.db.doc('rewards/'+r.id).set(stripId(r)))));
+  });
+  m.querySelectorAll('[data-setprice]').forEach(b => b.onclick = () => {
+    const v = Math.round(Number($('price-'+b.dataset.setprice).value));
+    if(!(v>0)) { toast('Enter a price above zero.'); return; }
+    write(()=>S.db.doc('rewards/'+b.dataset.setprice).update({ price: v, pricedAt: new Date().toISOString() })).then(()=>toast('Price set to '+v+' pts'));
+  });
+  const ar = $('addRew'); if(ar) ar.onsubmit = e => { e.preventDefault();
+    const title = $('rwTitle').value.trim(); if(!title) return;
+    write(()=>S.db.collection('rewards').doc('w'+uid()).set({ owner: ME, title, note: $('rwNote').value.trim(), size: $('rwSize').value, price: null, created: new Date().toISOString() }))
+      .then(()=>toast('Added. '+nm(other(ME))+' will set the price.'));
+  };
+  m.querySelectorAll('.day[data-day]').forEach(b => b.onclick = () => { S.calSel = b.dataset.day; render(); });
+  const cp=$('calPrev'), cn=$('calNext'), cw=$('calNow');
+  if(cp) cp.onclick = () => { S.calMonth = new Date(S.calMonth.getFullYear(), S.calMonth.getMonth()-1, 1); render(); };
+  if(cn) cn.onclick = () => { S.calMonth = new Date(S.calMonth.getFullYear(), S.calMonth.getMonth()+1, 1); render(); };
+  if(cw) cw.onclick = () => { const n=new Date(); S.calMonth = new Date(n.getFullYear(), n.getMonth(), 1); S.calSel = today(); render(); };
+  const saveGoals = arr => write(()=>S.db.doc('config/main').update({ goals: arr }));
+  const checked = gid => [...m.querySelectorAll('input[name="gt-'+gid+'"]:checked')].map(i=>i.value);
+  m.querySelectorAll('[data-savegoal]').forEach(b => b.onclick = () => {
+    const id = b.dataset.savegoal, name = $('gn-'+id).value.trim(), count = Math.max(0, Math.round(Number($('gc-'+id).value)||0));
+    if(!name) return; saveGoals(goals().map(g => g.id===id ? { ...g, name, count, tasks: checked(id) } : g)).then(()=>toast('Saved '+name));
+  });
+  m.querySelectorAll('[data-delgoal]').forEach(b => b.onclick = () => {
+    const old = goals(), g = old.find(x=>x.id===b.dataset.delgoal); if(!g) return;
+    saveGoals(old.filter(x=>x.id!==g.id)).then(()=>toast('Deleted '+g.name, ()=>saveGoals(goals().concat([g]))));
+  });
+  const ag = $('addGoal'); if(ag) ag.onsubmit = e => { e.preventDefault();
+    const name = $('ngName').value.trim(), count = Math.max(1, Math.round(Number($('ngCount').value)||1)); if(!name) return;
+    const g = { id: 'g'+uid(), name, count, tasks: checked('new') };
+    write(()=>S.cfg ? S.db.doc('config/main').update({ goals: goals().concat([g]) }) : S.db.doc('config/main').set({ goals: [g] })).then(()=>toast('Added goal: '+name));
+  };
+  const cf = $('cfgForm'); if(cf) cf.onsubmit = e => { e.preventDefault();
+    const body = { names:{}, quota:{} };
+    P.forEach(p => { body.names[p] = $('name-'+p).value.trim() || cfg().names[p]; body.quota[p] = Math.max(0, Math.round(Number($('quota-'+p).value)||0)); });
+    write(()=>S.cfg ? S.db.doc('config/main').update(body) : S.db.doc('config/main').set(body)).then(()=>toast('Household saved'));
+  };
+  m.querySelectorAll('[data-savetask]').forEach(b => b.onclick = () => {
+    const id = b.dataset.savetask, name = $('tn-'+id).value.trim(), points = Math.max(0, Math.round(Number($('tp-'+id).value)||0));
+    const partial = Math.max(0, Math.round(Number($('tq-'+id).value)||0)), cat = $('tc-'+id).value;
+    if(!name) return; write(()=>S.db.doc('tasks/'+id).update({ name, points, partial, cat })).then(()=>toast('Saved '+name));
+  });
+  m.querySelectorAll('[data-deltask]').forEach(b => b.onclick = () => {
+    const t = S.tasks.find(x=>x.id===b.dataset.deltask); if(!t) return;
+    write(()=>S.db.doc('tasks/'+t.id).delete()).then(()=>toast('Deleted '+t.name, ()=>write(()=>S.db.doc('tasks/'+t.id).set(stripId(t)))));
+  });
+  const at = $('addTask'); if(at) at.onsubmit = e => { e.preventDefault();
+    const name = $('ntName').value.trim(), points = Math.max(0, Math.round(Number($('ntPts').value)||0)); if(!name) return;
+    const partial = Math.max(0, Math.round(Number($('ntPart').value)||0)), cat = $('ntCat').value;
+    write(()=>S.db.collection('tasks').doc('t'+uid()).set({ name, points, partial, cat, order: 100 })).then(()=>toast('Added '+name));
+  };
+}
+const stripId = o => { const c = {...o}; delete c.id; return c; };
+
+/* ---------- sync with the household Google Sheet ---------- */
+function renderPass(msg){
+  $('overlay').innerHTML = '<div class="overlay"><form class="card" id="passForm"><h2>Household passcode</h2>'+
+    '<p class="muted small">Enter the passcode you and your partner chose. This phone will remember it.</p>'+
+    (S.passMsg?'<p class="small" style="color:var(--warn)">'+esc(S.passMsg)+'</p>':'')+
+    '<input type="password" id="passIn" autocomplete="current-password" placeholder="Passcode" style="text-align:center;font-size:1.1rem">'+
+    '<button class="btn primary" type="submit" style="padding:12px">Unlock</button></form></div>';
+  const f = $('passForm'); f.onsubmit = e => { e.preventDefault();
+    const v = $('passIn').value.trim(); if(!v) return;
+    PASS = v; try{ localStorage.setItem('hp-pass', v); }catch(err){}
+    S.needPass = false; S.passMsg = ''; $('overlay').innerHTML=''; boot();
+  };
+  setTimeout(()=>{ const i=$('passIn'); if(i) i.focus(); }, 50);
+}
+function askPass(msg){ PASS=''; try{ localStorage.removeItem('hp-pass'); }catch(e){} S.needPass = true; S.passMsg = msg||''; render(); }
+
+async function api(body){
+  const r = await fetch(API_URL, { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body: JSON.stringify({ ...body, passcode: PASS }) });
+  let j; try{ j = await r.json(); }catch(e){ const err = new Error('bad_response'); err.code='unavailable'; throw err; }
+  if(!j.ok){ const err = new Error(j.error||'error'); err.code = j.error==='bad_passcode' ? 'bad_passcode' : 'unavailable'; throw err; }
+  return j;
+}
+function makeDB(){
+  let store = {}, loaded = false, pending = 0, writeSeq = 0, queue = Promise.resolve();
+  const subs = new Set();
+  const isObj = v => v && typeof v==='object' && !Array.isArray(v);
+  const merge = (t, src) => { const o = isObj(t) ? { ...t } : {}; for(const k in src) o[k] = isObj(src[k]) && isObj(o[k]) ? merge(o[k], src[k]) : src[k]; return o; };
+  const col = c => (store[c] ||= {});
+  const notify = () => subs.forEach(fn => { try{ fn(); }catch(e){ console.error(e); } });
+  const snapOf = (c, id) => { const d = col(c)[id]; return { id, exists: d!==undefined, data: () => d, metadata:{ fromCache:false, hasPendingWrites: pending>0 } }; };
+  const newId = () => 'd'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+  function send(ops){
+    ops.forEach(o => {
+      if(o.op==='delete') delete col(o.c)[o.id];
+      else if(o.op==='update') col(o.c)[o.id] = merge(col(o.c)[o.id], o.data);
+      else col(o.c)[o.id] = JSON.parse(JSON.stringify(o.data));
+    });
+    pending++; writeSeq++; notify();
+    const p = queue.then(() => api({ action:'write', ops })).finally(() => { pending--; });
+    queue = p.catch(() => {});
+    p.catch(() => { setTimeout(() => refresh().catch(()=>{}), 500); });
+    return p;
+  }
+  async function refresh(){
+    const seq = writeSeq;
+    const j = await api({ action:'load' });
+    if(pending > 0 || seq !== writeSeq) return;
+    store = j.data || {}; notify();
+  }
+  function docRef(c, id){
+    return { id, path: c+'/'+id,
+      get: async () => snapOf(c, id),
+      set: data => send([{ op:'set', c, id, data }]),
+      update: data => { if(col(c)[id]===undefined){ const e = new Error('missing'); e.code='invalid_argument'; return Promise.reject(e); } return send([{ op:'update', c, id, data }]); },
+      delete: () => send([{ op:'delete', c, id }]),
+      onSnapshot(next){ const fn = () => next(snapOf(c, id)); subs.add(fn); if(loaded) fn(); return () => subs.delete(fn); }
+    };
+  }
+  function query(c, ord, lim){
+    const run = () => {
+      let docs = Object.keys(col(c)).map(id => snapOf(c, id));
+      if(ord){ const [f, dir] = ord; docs.sort((x, y) => { const a = x.data()[f], b = y.data()[f]; const r = a===undefined ? 1 : b===undefined ? -1 : (a<b?-1:a>b?1:0); return dir==='desc' ? -r : r; }); }
+      if(lim) docs = docs.slice(0, lim);
+      return { docs, size: docs.length, empty: !docs.length, docChanges: () => [], metadata:{} };
+    };
+    return { orderBy: (f, dir='asc') => query(c, [f, dir], lim), limit: n => query(c, ord, n), get: async () => run(),
+      doc: id => docRef(c, id || newId()), add: async data => { const r = docRef(c, newId()); await r.set(data); return r; },
+      onSnapshot(next){ const fn = () => next(run()); subs.add(fn); if(loaded) fn(); return () => subs.delete(fn); } };
+  }
+  return {
+    doc: p => { const [c, id] = p.split('/'); return docRef(c, id); },
+    collection: c => query(c),
+    async start(){ const j = await api({ action:'load' }); store = j.data || {}; loaded = true; notify(); },
+    refresh,
+    isEmpty: () => !Object.keys(store.tasks||{}).length && !Object.keys(store.config||{}).length,
+    seed: data => { const ops = []; for(const c in data) for(const id in data[c]) ops.push({ op:'set', c, id, data: data[c][id] }); return send(ops); }
+  };
+}
+
+let booted = false;
+async function boot(){
+  if(!API_URL || API_URL.indexOf('script.google.com') < 0){ S.loadMsg = 'Setup isn’t finished: paste your Google Apps Script web app URL into API_URL at the top of the script in index.html.'; render(); return; }
+  if(!PASS){ S.needPass = true; render(); return; }
+  if(booted) return;
+  const db = makeDB();
+  S.loadMsg = '';
+  render();
+  try{ await db.start(); }
+  catch(e){
+    if(e && e.code==='bad_passcode'){ askPass('That passcode didn’t match. Try again.'); return; }
+    S.loadMsg = 'Can’t reach the household sheet right now. Check your connection; it will retry automatically.'; render();
+    setTimeout(boot, 15000); return;
+  }
+  booted = true; S.db = db;
+  if(db.isEmpty()) db.seed(SEED).catch(()=>{});
+  const docs = s => s.docs.map(d => ({ id: d.id, ...d.data() }));
+  db.doc('config/main').onSnapshot(s => { S.cfg = s.exists ? s.data() : null; });
+  db.collection('tasks').onSnapshot(s => { S.tasks = docs(s); });
+  db.collection('rewards').onSnapshot(s => { S.rewards = docs(s); });
+  db.collection('days').orderBy('day','desc').limit(1000).onSnapshot(s => { const o = {}; s.docs.forEach(d => { o[d.id] = d.data(); }); S.days = o; });
+  db.collection('redemptions').orderBy('at','desc').limit(1000).onSnapshot(s => { S.reds = docs(s); render(); });
+  S.ready = true; render();
+  const poll = () => { if(!document.hidden) db.refresh().catch(e => { if(e && e.code==='bad_passcode') askPass('The household passcode changed. Enter the new one.'); }); };
+  setInterval(poll, 20000);
+  document.addEventListener('visibilitychange', poll);
+  window.addEventListener('focus', poll);
+}
+render();
+boot();
+})();
+</script>
+</body>
+</html>
