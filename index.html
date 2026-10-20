@@ -209,6 +209,7 @@ textarea{width:100%;resize:vertical}
       <div class="whoami" id="whoami"></div>
     </div>
     <div class="board" id="board"></div>
+    <p class="small muted" id="syncnote" role="status" style="margin:6px 0 0;text-align:center"></p>
     <nav class="tabs" role="tablist" id="tabs"></nav>
   </header>
   <main id="main"><p class="muted">Loading your household…</p></main>
@@ -329,16 +330,12 @@ function write(fn){
 async function addEntry(day, entry){
   const id = 'e'+uid();
   await write(async () => {
-    const ref = S.db.doc('days/'+day);
-    let exists = !!S.days[day];
-    if(!exists){ const snap = await ref.get(); exists = snap.exists; }
-    if(exists) await ref.update({ entries: { [id]: entry } });
-    else await ref.set({ day, entries: { [id]: entry } });
+    await S.db.doc('days/'+day).merge({ day, entries: { [id]: entry } });
   });
   return id;
 }
 function removeEntry(day, id){
-  return write(() => S.db.doc('days/'+day).update({ entries: { [id]: { deleted: true } } }));
+  return write(() => S.db.doc('days/'+day).merge({ entries: { [id]: { deleted: true } } }));
 }
 
 /* ---------- toast ---------- */
@@ -604,13 +601,13 @@ function bind(){
   });
   m.querySelectorAll('[data-thank]').forEach(b => b.onclick = () => {
     const [day,id] = b.dataset.thank.split('|');
-    write(()=>S.db.doc('days/'+day).update({ entries: { [id]: { thankedBy: ME } } })).then(()=>toast('Thanks sent: +'+THANKS_PTS+' to '+nm(other(ME))));
+    write(()=>S.db.doc('days/'+day).merge({ entries: { [id]: { thankedBy: ME } } })).then(()=>toast('Thanks sent: +'+THANKS_PTS+' to '+nm(other(ME))));
   });
   const ta = $('thankAll'); if(ta) ta.onclick = () => {
     const cutoff = dkey(new Date(Date.now()-3*864e5));
     const list = allEntries().filter(e=>e.who===other(ME) && !e.thankedBy && e.day>=cutoff);
     const byDay = {}; list.forEach(e => { (byDay[e.day] ||= {})[e.id] = { thankedBy: ME }; });
-    Object.entries(byDay).forEach(([day, ents]) => write(()=>S.db.doc('days/'+day).update({ entries: ents })));
+    Object.entries(byDay).forEach(([day, ents]) => write(()=>S.db.doc('days/'+day).merge({ entries: ents })));
     toast('Thanked '+nm(other(ME))+' for '+list.length+' things');
   };
   m.querySelectorAll('details[data-cat]').forEach(d => d.ontoggle = () => {
@@ -658,12 +655,12 @@ function bind(){
   const ag = $('addGoal'); if(ag) ag.onsubmit = e => { e.preventDefault();
     const name = $('ngName').value.trim(), count = Math.max(1, Math.round(Number($('ngCount').value)||1)); if(!name) return;
     const g = { id: 'g'+uid(), name, count, tasks: checked('new') };
-    write(()=>S.cfg ? S.db.doc('config/main').update({ goals: goals().concat([g]) }) : S.db.doc('config/main').set({ goals: [g] })).then(()=>toast('Added goal: '+name));
+    write(()=>S.cfg ? S.db.doc('config/main').update({ goals: goals().concat([g]) }) : S.db.doc('config/main').merge({ goals: [g] })).then(()=>toast('Added goal: '+name));
   };
   const cf = $('cfgForm'); if(cf) cf.onsubmit = e => { e.preventDefault();
     const body = { names:{}, quota:{} };
     P.forEach(p => { body.names[p] = $('name-'+p).value.trim() || cfg().names[p]; body.quota[p] = Math.max(0, Math.round(Number($('quota-'+p).value)||0)); });
-    write(()=>S.cfg ? S.db.doc('config/main').update(body) : S.db.doc('config/main').set(body)).then(()=>toast('Household saved'));
+    write(()=>S.cfg ? S.db.doc('config/main').update(body) : S.db.doc('config/main').merge(body)).then(()=>toast('Household saved'));
   };
   m.querySelectorAll('[data-savetask]').forEach(b => b.onclick = () => {
     const id = b.dataset.savetask, name = $('tn-'+id).value.trim(), points = Math.max(0, Math.round(Number($('tp-'+id).value)||0));
@@ -705,37 +702,60 @@ async function api(body){
   return j;
 }
 function makeDB(){
-  let store = {}, loaded = false, pending = 0, writeSeq = 0, queue = Promise.resolve();
+  let server = {}, store = {}, loaded = false, flushing = false;
   const subs = new Set();
+  const OUTBOX = 'hp-outbox';
+  let outbox = []; try{ outbox = JSON.parse(localStorage.getItem(OUTBOX)||'[]') || []; }catch(e){ outbox = []; }
+  const saveOutbox = () => { try{ localStorage.setItem(OUTBOX, JSON.stringify(outbox)); }catch(e){} };
   const isObj = v => v && typeof v==='object' && !Array.isArray(v);
   const merge = (t, src) => { const o = isObj(t) ? { ...t } : {}; for(const k in src) o[k] = isObj(src[k]) && isObj(o[k]) ? merge(o[k], src[k]) : src[k]; return o; };
+  const clone = v => JSON.parse(JSON.stringify(v));
+  const applyOp = (st, o) => {
+    const c = (st[o.c] ||= {});
+    if(o.op==='delete') delete c[o.id];
+    else if(o.op==='update') c[o.id] = merge(c[o.id], o.data);
+    else c[o.id] = clone(o.data);
+  };
+  const rebuild = () => { store = clone(server); outbox.forEach(b => b.ops.forEach(o => applyOp(store, o))); };
   const col = c => (store[c] ||= {});
-  const notify = () => subs.forEach(fn => { try{ fn(); }catch(e){ console.error(e); } });
-  const snapOf = (c, id) => { const d = col(c)[id]; return { id, exists: d!==undefined, data: () => d, metadata:{ fromCache:false, hasPendingWrites: pending>0 } }; };
+  const notify = () => { subs.forEach(fn => { try{ fn(); }catch(e){ console.error(e); } }); setSyncState(); };
+  const snapOf = (c, id) => { const d = col(c)[id]; return { id, exists: d!==undefined, data: () => d, metadata:{ fromCache:false, hasPendingWrites: outbox.length>0 } }; };
   const newId = () => 'd'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+  function setSyncState(){ S.unsynced = outbox.length; const el = $('syncnote'); if(el) el.textContent = outbox.length ? (S.syncErr ? outbox.length+' change'+(outbox.length>1?'s':'')+' waiting to save. Retrying…' : 'Saving…') : ''; }
+  async function flush(){
+    if(flushing || !outbox.length) return;
+    flushing = true;
+    try{
+      while(outbox.length){
+        const batch = outbox[0];
+        await api({ action:'write', ops: batch.ops });
+        batch.ops.forEach(o => applyOp(server, o));
+        outbox.shift(); saveOutbox();
+      }
+      S.syncErr = false;
+    }catch(e){
+      S.syncErr = true;
+      if(e && e.code==='bad_passcode'){ flushing = false; askPass('The household passcode changed. Enter the new one.'); return; }
+      setTimeout(() => { flushing = false; flush(); }, 15000); setSyncState(); return;
+    }
+    flushing = false; setSyncState();
+  }
   function send(ops){
-    ops.forEach(o => {
-      if(o.op==='delete') delete col(o.c)[o.id];
-      else if(o.op==='update') col(o.c)[o.id] = merge(col(o.c)[o.id], o.data);
-      else col(o.c)[o.id] = JSON.parse(JSON.stringify(o.data));
-    });
-    pending++; writeSeq++; notify();
-    const p = queue.then(() => api({ action:'write', ops })).finally(() => { pending--; });
-    queue = p.catch(() => {});
-    p.catch(() => { setTimeout(() => refresh().catch(()=>{}), 500); });
-    return p;
+    outbox.push({ id: newId(), ops }); saveOutbox();
+    ops.forEach(o => applyOp(store, o));
+    notify(); flush();
+    return Promise.resolve();
   }
   async function refresh(){
-    const seq = writeSeq;
     const j = await api({ action:'load' });
-    if(pending > 0 || seq !== writeSeq) return;
-    store = j.data || {}; notify();
+    server = j.data || {}; rebuild(); notify(); flush();
   }
   function docRef(c, id){
     return { id, path: c+'/'+id,
       get: async () => snapOf(c, id),
       set: data => send([{ op:'set', c, id, data }]),
-      update: data => { if(col(c)[id]===undefined){ const e = new Error('missing'); e.code='invalid_argument'; return Promise.reject(e); } return send([{ op:'update', c, id, data }]); },
+      merge: data => send([{ op:'update', c, id, data }]),
+      update: data => send([{ op:'update', c, id, data }]),
       delete: () => send([{ op:'delete', c, id }]),
       onSnapshot(next){ const fn = () => next(snapOf(c, id)); subs.add(fn); if(loaded) fn(); return () => subs.delete(fn); }
     };
@@ -754,10 +774,10 @@ function makeDB(){
   return {
     doc: p => { const [c, id] = p.split('/'); return docRef(c, id); },
     collection: c => query(c),
-    async start(){ const j = await api({ action:'load' }); store = j.data || {}; loaded = true; notify(); },
+    async start(){ const j = await api({ action:'load' }); server = j.data || {}; rebuild(); loaded = true; notify(); flush(); },
     refresh,
-    isEmpty: () => !Object.keys(store.tasks||{}).length && !Object.keys(store.config||{}).length,
-    seed: data => { const ops = []; for(const c in data) for(const id in data[c]) ops.push({ op:'set', c, id, data: data[c][id] }); return send(ops); }
+    isEmpty: () => !Object.keys(server.tasks||{}).length && !Object.keys(server.config||{}).length,
+    seed: data => { const ops = []; for(const c in data) for(const id in data[c]) ops.push({ op:'update', c, id, data: data[c][id] }); return send(ops); }
   };
 }
 
