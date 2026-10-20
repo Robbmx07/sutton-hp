@@ -188,7 +188,7 @@ textarea{width:100%;resize:vertical}
 .pick .a{border-color:var(--a);color:var(--a);background:var(--a-soft)}
 .pick .b{border-color:var(--b);color:var(--b);background:var(--b-soft)}
 
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);border-radius:10px;padding:10px 14px;display:flex;gap:14px;align-items:center;z-index:30;max-width:calc(100% - 32px);box-shadow:0 4px 18px rgba(0,0,0,.25)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);top:calc(12px + env(safe-area-inset-top,0px));background:var(--ink);color:var(--bg);border-radius:10px;padding:10px 14px;display:flex;gap:14px;align-items:center;z-index:30;max-width:calc(100% - 32px);box-shadow:0 4px 18px rgba(0,0,0,.25)}
 .toast button{background:none;border:none;color:var(--bg);font-weight:700;text-decoration:underline}
 .banner{padding:10px 12px;border-radius:10px;border:1px dashed var(--warn);color:var(--warn);font-size:.88rem}
 
@@ -198,6 +198,20 @@ textarea{width:100%;resize:vertical}
   .day{min-height:54px;padding:3px}
   .day .bars span{display:none}
 }
+.tray{position:fixed;left:0;right:0;bottom:0;z-index:25;background:var(--surface);border-top:1px solid var(--line);box-shadow:0 -4px 18px rgba(0,0,0,.12);
+  padding:10px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.tray-head{display:flex;gap:8px;align-items:center;max-width:960px;margin:0 auto}
+.tray-toggle{flex:1;min-width:0;text-align:left;background:none;border:none;padding:8px 0;display:flex;gap:6px;align-items:baseline;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.tray-toggle .num{color:var(--me);font-family:var(--f-display);font-weight:800}
+.tray-toggle .chev{margin-left:auto;color:var(--muted);font-size:.85rem;text-decoration:underline}
+.tray-x{border:1px solid var(--warn);color:var(--warn);background:none;border-radius:8px;padding:8px 12px;font-weight:700;min-height:40px}
+.tray-close{border:1px solid var(--line);background:var(--bg);border-radius:8px;width:40px;height:40px;font-weight:700}
+.tray-list{max-width:960px;margin:0 auto 6px;max-height:45vh;overflow-y:auto;display:grid}
+.tray-item{display:flex;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
+.tray-item .grow{flex:1;min-width:0}
+.tray-all{justify-self:start;margin-top:8px;color:var(--warn)}
+.task.flash,.half.flash{border-color:var(--me);background:color-mix(in srgb,var(--me) 14%,var(--surface))}
+body{padding-bottom:96px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -215,6 +229,7 @@ textarea{width:100%;resize:vertical}
   <main id="main"><p class="muted">Loading your household…</p></main>
 </div>
 <div id="overlay"></div>
+<div id="tray"></div>
 <div id="toast"></div>
 
 <script>
@@ -346,6 +361,38 @@ function toast(msg, undo){
   if(undo) $('undoBtn').onclick = () => { el.innerHTML=''; undo(); };
   clearTimeout(toastTimer); toastTimer = setTimeout(()=>{ el.innerHTML=''; }, 5000);
 }
+
+/* ---------- "Just logged" tray: review and remove recent taps ---------- */
+let recent = [], trayOpen = false, lastTap = { key:'', at:0 };
+const TRAY_MS = 10*60*1000;
+function renderTray(){
+  const cutoff = Date.now() - TRAY_MS;
+  recent = recent.filter(r => r.at > cutoff);
+  const el = $('tray');
+  if(!recent.length){ el.innerHTML = ''; return; }
+  const total = recent.reduce((s,r)=>s+r.pts,0);
+  const head = '<div class="tray-head"><button class="tray-toggle" id="trayToggle" aria-expanded="'+trayOpen+'">'+
+    '<b>Just logged:</b> '+(recent.length===1 ? esc(recent[0].label) : recent.length+' items')+' <span class="num">+'+total+'</span>'+
+    (recent.length>1 ? '<span class="chev">'+(trayOpen?'Hide':'Review')+'</span>' : '')+'</button>'+
+    (recent.length===1 ? '<button class="tray-x" data-unrecent="0">Undo</button>' : '')+
+    '<button class="tray-close" id="trayClose" aria-label="Done reviewing">✓</button></div>';
+  const list = (trayOpen && recent.length>1) ? '<div class="tray-list">'+recent.map((r,i)=>
+      '<div class="tray-item"><span class="grow">'+esc(r.label)+'<span class="small muted"> · '+fmtTime(new Date(r.at).toISOString())+'</span></span><span class="num">+'+r.pts+'</span><button class="tray-x" data-unrecent="'+i+'">Remove</button></div>').join('')+
+    '<button class="btn sm ghost tray-all" id="trayAll">Remove all '+recent.length+'</button></div>' : '';
+  el.innerHTML = '<div class="tray" role="region" aria-label="Recently logged">'+list+head+'</div>';
+  $('trayToggle').onclick = () => { if(recent.length>1){ trayOpen = !trayOpen; renderTray(); } };
+  $('trayClose').onclick = () => { recent = []; trayOpen = false; renderTray(); };
+  el.querySelectorAll('[data-unrecent]').forEach(b => b.onclick = () => {
+    const r = recent[Number(b.dataset.unrecent)]; if(!r) return;
+    recent.splice(Number(b.dataset.unrecent), 1);
+    removeEntry(r.day, r.id); toast('Removed '+r.label);
+    if(recent.length<=1) trayOpen = false; renderTray();
+  });
+  const all = $('trayAll'); if(all) all.onclick = () => {
+    const n = recent.length; recent.forEach(r => removeEntry(r.day, r.id)); recent = []; trayOpen = false; renderTray(); toast('Removed '+n+' entries');
+  };
+}
+setInterval(() => { if(recent.length) renderTray(); }, 30000);
 
 /* ---------- render ---------- */
 let pendingRender = false;
@@ -590,6 +637,10 @@ function bind(){
   const m = $('main');
   const ld = $('logDay'); if(ld) ld.onchange = () => { if(ld.value) { S.logDay = ld.value > today() ? today() : ld.value; render(); } };
   m.querySelectorAll('[data-log]').forEach(b => b.onclick = async () => {
+    const now = Date.now();
+    if(lastTap.key===b.dataset.log && now-lastTap.at < 1500){ toast('Ignored a quick second tap. Tap again to log it twice.'); lastTap = {key:'',at:0}; return; }
+    lastTap = { key: b.dataset.log, at: now };
+    b.classList.add('flash'); setTimeout(()=>b.classList.remove('flash'), 450);
     const [tid, kind] = b.dataset.log.split('|');
     const t = S.tasks.find(x=>x.id===tid); if(!t || !ME) return;
     const hasPart = Number(t.partial)>0, isPart = kind==='partial' && hasPart;
@@ -597,7 +648,9 @@ function bind(){
     const label = t.name + (isPart ? ' (partial)' : hasPart ? ' (full)' : '');
     const at = day===today() ? new Date().toISOString() : new Date(parseKey(day).getTime()+12*36e5).toISOString();
     const id = await addEntry(day, { who: ME, taskId: t.id, name: label, pts, at, part: isPart });
-    toast('+'+pts+' for '+label, () => removeEntry(day, id));
+    recent.unshift({ day, id, label, pts, at: Date.now() });
+    trayOpen = recent.length > 1 ? trayOpen : false;
+    renderTray();
   });
   m.querySelectorAll('[data-thank]').forEach(b => b.onclick = () => {
     const [day,id] = b.dataset.thank.split('|');
