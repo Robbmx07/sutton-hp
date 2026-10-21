@@ -292,7 +292,7 @@ button.row:hover .nm{color:var(--accent)}
 /* Sutton Bill Book, phone edition: stores data in the household Google Sheet instead of Claude.
    Gives the app the same small data/user/download interface it uses inside Claude. */
 (function () {
-  const API_URL = 'PASTE_YOUR_WEB_APP_URL_HERE';
+  const API_URL = 'https://script.google.com/macros/s/AKfycbyxt-6hXgWyWZ9i8NA33Awr4HgNWMNoaNI112kxLyHRyOH8aqV9_REgjk5fmY9yXxRO/exec';
   const LS = { pass: 'sbb-pass', who: 'sbb-who', outbox: 'sbb-outbox', cache: 'sbb-cache' };
   const get = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
   const put = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} };
