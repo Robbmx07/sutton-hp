@@ -1,0 +1,2250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Bill Book">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#17201D" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;font:14px system-ui,-apple-system,sans-serif}
+img{max-width:100%}
+[hidden]{display:none!important}
+.gate{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;background:var(--paper);padding:24px max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px))}
+.gate-card{width:100%;max-width:360px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px;text-align:center}
+.gate-card h2{font-size:22px}
+.gate-card p{margin:0}
+</style>
+<title>Sutton Bill Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: phone-first checkbook register — sticky header, one column of tear-off date stubs, fixed bottom tabs; two columns on wide screens */
+:root{
+  --paper:#F2F5F2; --card:#FFFFFF; --ink:#16211D; --muted:#5B6964; --line:#D9E1DB; --line-strong:#B9C6BE;
+  --accent:#1D5B4E; --accent-ink:#FFFFFF; --accent-soft:#E0ECE6; --stub:#F6F1E2; --stub-ink:#5A4A1E;
+  --due:#9A6510; --due-soft:#FBEFD6; --late:#B0261D; --late-soft:#FBE3DF; --ok:#25734A; --ok-soft:#DFF0E5;
+  --in:#2B8A57; --in-soft:#DCF0E3; --out:#B8612A; --out-soft:#F7E6D9;
+  --shadow:0 1px 2px rgba(22,33,29,.06),0 4px 14px rgba(22,33,29,.06); --scrim:rgba(14,22,19,.45);
+  --f-display:"Bricolage Grotesque","Avenir Next","Segoe UI",system-ui,sans-serif;
+  --f-body:"Figtree","Segoe UI",system-ui,-apple-system,sans-serif;
+  --f-num:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --r:12px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#0F1614; --card:#17201D; --ink:#E4ECE8; --muted:#97A7A0; --line:#27332F; --line-strong:#3A4843;
+  --accent:#6BC2A8; --accent-ink:#0B1714; --accent-soft:#1B322C; --stub:#2A2617; --stub-ink:#E7D49C;
+  --due:#E7AC4C; --due-soft:#382C14; --late:#F28A80; --late-soft:#3C1C19; --ok:#6CC58F; --ok-soft:#183124;
+  --in:#6CC58F; --in-soft:#183124; --out:#E89A63; --out-soft:#3A2516;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25); --scrim:rgba(0,0,0,.6); color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --paper:#0F1614; --card:#17201D; --ink:#E4ECE8; --muted:#97A7A0; --line:#27332F; --line-strong:#3A4843;
+  --accent:#6BC2A8; --accent-ink:#0B1714; --accent-soft:#1B322C; --stub:#2A2617; --stub-ink:#E7D49C;
+  --due:#E7AC4C; --due-soft:#382C14; --late:#F28A80; --late-soft:#3C1C19; --ok:#6CC58F; --ok-soft:#183124;
+  --in:#6CC58F; --in-soft:#183124; --out:#E89A63; --out-soft:#3A2516;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25); --scrim:rgba(0,0,0,.6); color-scheme:dark;}
+
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45}
+body.locked{overflow:hidden}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--card)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.15}
+
+/* header */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--card);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:10px}
+.top::after{content:"";position:absolute;left:0;right:0;bottom:-4px;height:3px;
+  background:repeating-linear-gradient(90deg,var(--accent) 0 6px,transparent 6px 10px);opacity:.25}
+.top-in{max-width:1080px;margin:0 auto;display:flex;align-items:center;gap:12px}
+.brand{display:flex;flex-direction:column;min-width:0;flex:1}
+.brand h1{font-size:20px;font-weight:700;letter-spacing:-.01em}
+.brand small{color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sync{display:inline-flex;align-items:center;gap:6px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--muted);display:inline-block;flex:none}
+.dot.on{background:var(--ok)} .dot.warn{background:var(--due)}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line-strong);background:var(--card);
+  border-radius:10px;padding:9px 14px;font-weight:600;min-height:40px;text-decoration:none;color:var(--ink)}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn.danger{color:var(--late);border-color:var(--late)}
+.btn.sm{min-height:32px;padding:5px 10px;font-size:13px;border-radius:8px}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+
+/* main */
+main{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:18px calc(96px + env(safe-area-inset-bottom,0px))}
+.wrap{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+.grid2{display:grid;grid-template-columns:1fr;gap:18px}
+@media (min-width:860px){.grid2{grid-template-columns:1.15fr .85fr;align-items:start}}
+.col{display:flex;flex-direction:column;gap:18px;min-width:0}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;box-shadow:var(--shadow);min-width:0}
+.panel-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.panel-h h2{font-size:17px;font-weight:700}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.link{background:none;border:0;padding:0;color:var(--accent);font-weight:600;text-decoration:underline;text-underline-offset:3px}
+
+.banner{border:1px dashed var(--line-strong);border-radius:var(--r);padding:12px 14px;display:flex;gap:10px;align-items:flex-start;background:var(--card)}
+.banner.warn{border-color:var(--due);background:var(--due-soft)}
+
+/* hero summary */
+.hero{display:flex;flex-direction:column;gap:4px}
+.hero .big{font-family:var(--f-display);font-size:clamp(26px,6vw,36px);font-weight:700;letter-spacing:-.02em;line-height:1.1}
+.hero .big .num{font-family:var(--f-num);font-weight:600}
+
+.kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media (min-width:640px){.kpis{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.kpi b{font-family:var(--f-num);font-size:20px;font-weight:600}
+.kpi span{font-size:12px;color:var(--muted)}
+
+/* attention */
+.alerts{display:flex;flex-direction:column;gap:8px}
+.alert{display:flex;gap:10px;align-items:center;border-radius:10px;padding:10px 12px;border:1px solid var(--line);background:var(--card)}
+.alert .ic{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;flex:none;font-weight:700;font-size:13px}
+.alert.late .ic{background:var(--late-soft);color:var(--late)}
+.alert.due .ic{background:var(--due-soft);color:var(--due)}
+.alert.info .ic{background:var(--accent-soft);color:var(--accent)}
+.alert .tx{flex:1;min-width:0}
+.alert .tx b{display:block;font-weight:600}
+.alert .tx span{font-size:13px;color:var(--muted)}
+.alert .acts{display:flex;flex-direction:column;gap:4px;align-items:stretch;flex:none}
+.alert .acts .ghost{color:var(--muted);font-weight:600}
+
+/* register rows */
+.reg{display:flex;flex-direction:column}
+.row{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line);width:100%;text-align:left;background:none;border-left:0;border-right:0;border-bottom:0}
+.reg .row:first-child{border-top:0}
+button.row:hover .nm{color:var(--accent)}
+.stub{flex:none;width:50px;border-radius:8px;background:var(--stub);color:var(--stub-ink);text-align:center;padding:5px 0 6px;
+  border-left:2px dashed color-mix(in srgb,var(--stub-ink) 35%,transparent);line-height:1}
+.stub small{display:block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.stub b{display:block;font-family:var(--f-num);font-size:19px;font-weight:600;margin-top:2px}
+.stub.late{background:var(--late-soft);color:var(--late)} .stub.soon{background:var(--due-soft);color:var(--due)}
+.stub.paid{background:var(--ok-soft);color:var(--ok)}
+.stub.inc{background:var(--in-soft);color:var(--in);border-left-color:color-mix(in srgb,var(--in) 45%,transparent)}
+.amt b.plus{color:var(--in)} .row.incrow .nm{color:var(--in)}
+.chip.in{background:var(--in-soft);color:var(--in)}
+.cal .pip.inc{background:var(--in)}
+/* money in vs out */
+.flow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.flow div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.flow b{font-family:var(--f-num);font-size:clamp(17px,4.6vw,22px);font-weight:600;white-space:nowrap}
+.flow span{font-size:12px;color:var(--muted)}
+.flow .in b{color:var(--in)} .flow .out b{color:var(--out)} .flow .neg b{color:var(--late)}
+.split{height:10px;border-radius:6px;background:var(--in-soft);overflow:hidden;margin-top:12px;display:flex}
+.split i{display:block;height:100%;background:var(--out)}
+.cf{width:100%;height:auto;display:block}
+.cf text{font-family:var(--f-num);font-size:11px;fill:var(--muted)}
+.cf .lbl{font-family:var(--f-body);font-size:12px;fill:var(--ink)}
+.legend i.sw{width:10px;height:10px;border-radius:3px;display:inline-block}
+/* paycheck planner */
+.pc{display:grid;grid-template-columns:50px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.pc:first-child{border-top:0}
+.pc .mid b{display:block;font-weight:600}
+.pc .mid span{font-size:12.5px;color:var(--muted)}
+.pc .left{text-align:right}
+.pc .left b{font-family:var(--f-num);font-weight:600;display:block}
+.pc .left small{font-size:11.5px;color:var(--muted)}
+.pc .left.neg b{color:var(--late)} .pc .left.pos b{color:var(--in)}
+.row .mid{flex:1;min-width:0}
+.row .nm{font-weight:600;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .sub{font-size:12.5px;color:var(--muted);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.row .amt{text-align:right;flex:none}
+.row .amt b{font-family:var(--f-num);font-weight:600;display:block}
+.row .amt small{font-size:11.5px;color:var(--muted)}
+.row.done .nm,.row.done .amt b{color:var(--muted)} .row.done .amt b{text-decoration:line-through}
+.chip{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:1px 8px;font-size:11.5px;font-weight:600;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
+.chip.late{background:var(--late-soft);color:var(--late)} .chip.due{background:var(--due-soft);color:var(--due)} .chip.ok{background:var(--ok-soft);color:var(--ok)}
+.chip.plain{background:transparent;border:1px solid var(--line-strong);color:var(--muted)}
+.group-h{font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:14px 0 2px;display:flex;justify-content:space-between}
+.group-h:first-child{margin-top:0}
+
+/* bars */
+.bars{display:flex;flex-direction:column;gap:9px}
+.bar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;font-size:13.5px}
+.bar .track{grid-column:1/-1;height:8px;border-radius:5px;background:var(--accent-soft);overflow:hidden}
+.bar .fill{height:100%;background:var(--accent);border-radius:5px}
+
+/* paycheck */
+.pay2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.paybox{border:1px solid var(--line);border-radius:10px;padding:12px;min-width:0}
+.paybox b{font-family:var(--f-num);font-size:20px;font-weight:600;display:block}
+.paybox span{font-size:12.5px;color:var(--muted)}
+
+/* variable bills */
+.var{display:grid;grid-template-columns:minmax(0,1fr) 110px;gap:4px 12px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.var:first-child{border-top:0}
+.var svg{width:110px;height:34px;display:block}
+
+/* toolbar / filters */
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--line-strong);border-radius:10px;padding:3px;background:var(--card);gap:2px}
+.seg button{border:0;background:none;padding:6px 12px;border-radius:7px;font-weight:600;font-size:13.5px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.fchip{border:1px solid var(--line-strong);background:var(--card);border-radius:999px;padding:5px 12px;font-size:13px;font-weight:600;color:var(--muted)}
+.fchip[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.search{flex:1;min-width:160px;border:1px solid var(--line-strong);border-radius:10px;padding:9px 12px;background:var(--card)}
+
+/* calendar */
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.cal .dow{font-size:11px;font-weight:700;color:var(--muted);text-align:center;padding:4px 0;letter-spacing:.06em}
+.cal .cell{min-height:58px;border:1px solid var(--line);border-radius:8px;background:var(--card);padding:4px;display:flex;flex-direction:column;gap:2px;text-align:left}
+.cal .cell.out{opacity:.4}
+.cal .cell.today{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.cal .cell.sel{background:var(--accent-soft)}
+.cal .cell .d{font-family:var(--f-num);font-size:12px;font-weight:600}
+.cal .cell .tot{font-family:var(--f-num);font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cal .pips{display:flex;gap:2px;flex-wrap:wrap}
+.cal .pip{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.cal .pip.late{background:var(--late)} .cal .pip.paid{background:var(--ok)}
+@media (max-width:480px){.cal .cell .tot{display:none}.cal .cell{min-height:46px}}
+
+/* review */
+.sub-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 12px;padding:12px 0;border-top:1px solid var(--line)}
+.sub-card:first-child{border-top:0}
+.verdict{grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap}
+.verdict button{border:1px solid var(--line-strong);background:var(--card);border-radius:8px;padding:5px 10px;font-size:13px;font-weight:600;color:var(--muted)}
+.verdict button[aria-pressed="true"].keep{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.verdict button[aria-pressed="true"].unsure{background:var(--due-soft);border-color:var(--due);color:var(--due)}
+.verdict button[aria-pressed="true"].drop{background:var(--late-soft);border-color:var(--late);color:var(--late)}
+
+/* forms */
+.form{display:flex;flex-direction:column;gap:14px}
+.f{display:flex;flex-direction:column;gap:5px;min-width:0}
+.f label,.f .lbl{font-size:13px;font-weight:600}
+.f .hint{font-size:12px;color:var(--muted)}
+.f input[type=text],.f input[type=number],.f input[type=date],.f input[type=url],.f select,.f textarea{
+  border:1px solid var(--line-strong);border-radius:10px;padding:10px 12px;background:var(--card);width:100%;min-height:44px}
+.f textarea{min-height:70px;resize:vertical}
+.f2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:14px}
+.check input{width:20px;height:20px;margin:1px 0 0;accent-color:var(--accent);flex:none}
+.err{color:var(--late);font-size:13px;font-weight:600}
+.warnbox{border:1px solid var(--due);background:var(--due-soft);border-radius:10px;padding:10px 12px;font-size:13.5px}
+.picks{display:flex;gap:6px;flex-wrap:wrap}
+.picks button{border:1px solid var(--line-strong);background:var(--card);border-radius:999px;padding:4px 10px;font-size:12.5px;font-weight:600}
+.picks button:hover{border-color:var(--accent);color:var(--accent)}
+.amtwrap{position:relative}
+.amtwrap span{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-family:var(--f-num)}
+.amtwrap input{padding-left:26px!important;font-family:var(--f-num)}
+.actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;padding-top:4px}
+.actions .spacer{flex:1}
+
+/* sheet */
+.sheet{position:fixed;inset:0;z-index:50;display:flex;align-items:flex-end;justify-content:center;background:var(--scrim)}
+.sheet-panel{background:var(--card);width:100%;max-width:560px;max-height:calc(100% - 24px - env(safe-area-inset-top,0px));overflow:auto;
+  border-radius:16px 16px 0 0;padding:16px max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
+  box-shadow:0 -8px 30px rgba(0,0,0,.2)}
+@media (min-width:700px){.sheet{align-items:center}.sheet-panel{border-radius:16px;max-height:88%}}
+.sheet-h{display:flex;align-items:center;gap:10px;margin-bottom:14px;position:sticky;top:-16px;background:var(--card);padding-block:6px;z-index:1}
+.sheet-h h2{font-size:19px;flex:1}
+.x{border:0;background:var(--accent-soft);color:var(--accent);width:34px;height:34px;border-radius:50%;font-size:18px;line-height:1}
+
+.imp{display:flex;flex-direction:column}
+.imp-row{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 10px;padding:10px 0;border-top:1px solid var(--line);align-items:start}
+.imp-row:first-child{border-top:0}
+.imp-row input[type=checkbox]{width:20px;height:20px;accent-color:var(--accent);margin-top:2px}
+.imp-row .nm{font-weight:600}
+
+/* bottom nav */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--card);border-top:1px solid var(--line);
+  padding:6px max(8px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px))}
+.tabs-in{max-width:620px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+.tabs button{border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;border-radius:10px;color:var(--muted);font-size:11.5px;font-weight:600}
+.tabs button svg{width:22px;height:22px}
+.tabs button[aria-current="page"]{color:var(--accent);background:var(--accent-soft)}
+.badge{position:absolute;top:2px;right:calc(50% - 20px);background:var(--late);color:#fff;border-radius:999px;font-size:10px;min-width:16px;height:16px;line-height:16px;padding:0 4px}
+.tabs button{position:relative}
+
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:60;background:var(--ink);color:var(--paper);
+  padding:10px 16px;border-radius:10px;font-weight:600;font-size:14px;max-width:calc(100% - 32px);box-shadow:var(--shadow);display:flex;gap:12px;align-items:center}
+.toast button{background:none;border:0;color:inherit;text-decoration:underline;font-weight:700}
+
+.empty{text-align:center;padding:26px 10px;color:var(--muted);display:flex;flex-direction:column;gap:10px;align-items:center}
+.empty h3{color:var(--ink);font-size:18px}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.legend span{display:inline-flex;gap:5px;align-items:center}
+.code{width:100%;min-height:180px;font-family:var(--f-num);font-size:12px;border:1px solid var(--line-strong);border-radius:10px;padding:10px;background:var(--paper)}
+.steps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px;font-size:14px}
+@media (prefers-reduced-motion:no-preference){.sheet-panel{animation:up .18s ease-out}@keyframes up{from{transform:translateY(16px);opacity:.6}to{transform:none;opacity:1}}}
+</style>
+
+<script>
+/* Sutton Bill Book, phone edition: stores data in the household Google Sheet instead of Claude.
+   Gives the app the same small data/user/download interface it uses inside Claude. */
+(function () {
+  const API_URL = 'PASTE_YOUR_WEB_APP_URL_HERE';
+  const LS = { pass: 'sbb-pass', who: 'sbb-who', outbox: 'sbb-outbox', cache: 'sbb-cache' };
+  const get = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+  const put = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} };
+  let PASS = get(LS.pass) || '', ME = get(LS.who) || '';
+
+  /* ---------- talking to the sheet ---------- */
+  async function api(body) {
+    const r = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(Object.assign({}, body, { passcode: PASS })) });
+    let j; try { j = await r.json(); } catch (e) { const err = new Error('bad_response'); err.code = 'unavailable'; throw err; }
+    if (!j.ok) { const err = new Error(j.error || 'error'); err.code = j.error === 'bad_passcode' || j.error === 'locked' ? j.error : 'unavailable'; err.until = j.until; throw err; }
+    return j;
+  }
+
+  /* ---------- local copy + outbox (changes save even with a weak signal) ---------- */
+  let server = {}, store = {}, loaded = false, flushing = false, gen = 0, again = false, syncErr = false;
+  const subs = new Set();
+  let outbox = []; try { outbox = JSON.parse(get(LS.outbox) || '[]') || []; } catch (e) { outbox = []; }
+  const saveOutbox = () => put(LS.outbox, JSON.stringify(outbox));
+  const isObj = v => v && typeof v === 'object' && !Array.isArray(v);
+  const merge = (t, src) => { const o = isObj(t) ? Object.assign({}, t) : {}; for (const k in src) o[k] = isObj(src[k]) && isObj(o[k]) ? merge(o[k], src[k]) : src[k]; return o; };
+  const clone = v => JSON.parse(JSON.stringify(v));
+  const applyOp = (st, o) => { const c = (st[o.c] = st[o.c] || {}); if (o.op === 'delete') delete c[o.id]; else if (o.op === 'update') c[o.id] = merge(c[o.id], o.data); else c[o.id] = clone(o.data); };
+  const rebuild = () => { store = clone(server); outbox.forEach(o => applyOp(store, o)); };
+  const col = c => (store[c] = store[c] || {});
+  const notify = () => subs.forEach(fn => { try { fn(); } catch (e) { console.error(e); } });
+  const snapOf = (c, id) => { const d = col(c)[id]; return { id, exists: d !== undefined, data: () => d, metadata: { fromCache: false, hasPendingWrites: outbox.length > 0 } }; };
+  let flushTimer = null;
+  function flushSoon() { clearTimeout(flushTimer); flushTimer = setTimeout(flush, 250); }
+  async function flush() {
+    if (flushing || !outbox.length) return;
+    flushing = true;
+    try {
+      while (outbox.length) {
+        const n = Math.min(outbox.length, 150), ops = outbox.slice(0, n);
+        await api({ action: 'write', ops });
+        ops.forEach(o => applyOp(server, o));
+        outbox.splice(0, n); saveOutbox(); gen++;
+        notify();
+      }
+      syncErr = false;
+    } catch (e) {
+      syncErr = true; flushing = false;
+      if (e && (e.code === 'bad_passcode' || e.code === 'locked')) { needPass(e); return; }
+      setTimeout(flush, 15000); notify(); return;
+    }
+    flushing = false; notify();
+  }
+  function send(ops) { ops.forEach(o => { outbox.push(o); applyOp(store, o); }); saveOutbox(); notify(); flushSoon(); return Promise.resolve(); }
+  let refreshing = null;
+  async function refresh() {
+    if (!loaded) return;
+    if (refreshing) { again = true; return refreshing; }
+    refreshing = (async () => {
+      const g = gen;
+      const j = await api({ action: 'load' });
+      if (g !== gen) { again = true; return; }
+      server = j.data || {}; put(LS.cache, JSON.stringify(server)); rebuild(); notify(); flush();
+    })().finally(() => { refreshing = null; if (again) { again = false; setTimeout(() => refresh().catch(() => {}), 300); } });
+    return refreshing;
+  }
+  function docRef(c, id) {
+    return { id, path: c + '/' + id,
+      get: async () => snapOf(c, id),
+      set: data => send([{ op: 'set', c, id, data }]),
+      update: data => send([{ op: 'update', c, id, data }]),
+      delete: () => send([{ op: 'delete', c, id }]),
+      onSnapshot(next) { const fn = () => next(snapOf(c, id)); subs.add(fn); if (loaded) setTimeout(fn, 0); return () => subs.delete(fn); } };
+  }
+  const newId = () => 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  function query(c, ord, lim) {
+    const run = () => {
+      let docs = Object.keys(col(c)).map(id => snapOf(c, id));
+      if (ord) { const [f, dir] = ord; docs.sort((x, y) => { const a = x.data()[f], b = y.data()[f]; const r = a === undefined ? 1 : b === undefined ? -1 : (a < b ? -1 : a > b ? 1 : 0); return dir === 'desc' ? -r : r; }); }
+      if (lim) docs = docs.slice(0, lim);
+      return { docs, size: docs.length, empty: !docs.length, docChanges: () => [], metadata: {} };
+    };
+    return { orderBy: (f, dir) => query(c, [f, dir || 'asc'], lim), limit: n => query(c, ord, Math.max(n, 5000)), get: async () => run(), where: () => query(c, ord, lim),
+      doc: id => docRef(c, id || newId()), add: async data => { const r = docRef(c, newId()); await r.set(data); return r; },
+      onSnapshot(next) { const fn = () => next(run()); subs.add(fn); if (loaded) setTimeout(fn, 0); return () => subs.delete(fn); } };
+  }
+  const DB = Object.freeze({ doc: p => { const i = p.lastIndexOf('/'); return docRef(p.slice(0, i), p.slice(i + 1)); }, collection: c => query(c) });
+
+  const USER = Object.freeze({
+    id: async () => ME || null, me: async () => ({ id: ME || null, name: ME || '', email: null, isOwner: true, canEdit: true, avatarUrl: '', color: '#1D5B4E' }),
+    isOwner: async () => true, canEdit: async () => true, can: async () => true, name: async () => ME || '',
+    profiles: async ids => { const o = {}; [].concat(ids).forEach(id => { o[id] = { id, name: id || '', isMe: !!ME && id === ME, guest: false, email: null, avatarUrl: '', color: '#1D5B4E' }; }); return o; },
+    search: async () => []
+  });
+  /* a real download, which works on GitHub Pages */
+  const DOWNLOADS = Object.freeze({ save: async ({ filename, data }) => {
+    const blob = data instanceof Blob ? data : new Blob([data]);
+    const url = URL.createObjectURL(blob), a = document.createElement('a');
+    a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  } });
+
+  /* ---------- passcode and who's-this-phone screens ---------- */
+  let resolveReady; const ready = new Promise(r => { resolveReady = r; });
+  const esc = s => String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  function overlay(html) {
+    let el = document.getElementById('sbbGate');
+    if (!html) { if (el) el.remove(); document.body.classList.remove('locked'); return; }
+    if (!el) { el = document.createElement('div'); el.id = 'sbbGate'; el.className = 'gate'; document.body.appendChild(el); }
+    el.innerHTML = `<div class="gate-card">${html}</div>`; document.body.classList.add('locked');
+    return el;
+  }
+  function needPass(e) {
+    PASS = ''; put(LS.pass, null);
+    const msg = e && e.code === 'locked' ? `Too many wrong tries. The bill book is locked until ${new Date(e.until).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })}.`
+      : e && e.code === 'bad_passcode' ? 'That passcode didn’t match. Try again.' : '';
+    const el = overlay(`<h2>Sutton Bill Book</h2><p class="small muted">Enter the household passcode. This phone will remember it.</p>
+      ${msg ? `<p class="err">${esc(msg)}</p>` : ''}
+      <form id="sbbPassForm" class="form"><input id="sbbPass" type="password" inputmode="numeric" autocomplete="current-password" placeholder="Passcode" aria-label="Household passcode" style="text-align:center;font-size:20px;letter-spacing:.3em;border:1px solid var(--line-strong);border-radius:10px;padding:12px;background:var(--card);width:100%">
+      <button class="btn primary" type="submit" style="width:100%">Unlock</button></form>`);
+    el.querySelector('#sbbPassForm').onsubmit = ev => { ev.preventDefault(); const v = el.querySelector('#sbbPass').value.trim(); if (!v) return; PASS = v; put(LS.pass, v); start(); };
+    setTimeout(() => { const i = el.querySelector('#sbbPass'); if (i) i.focus(); }, 60);
+  }
+  function askWho() {
+    const st = (store.meta && store.meta.settings) || {}, names = (st.members && st.members.filter(Boolean).length ? st.members : ['Robert', 'Erica']).filter(Boolean);
+    const el = overlay(`<h2>Who’s using this phone?</h2><p class="small muted">Bills you mark paid are labeled with your name.</p>
+      <div class="form">${names.map(n => `<button class="btn" data-who="${esc(n)}" style="width:100%;min-height:52px;font-size:17px">I’m ${esc(n)}</button>`).join('')}</div>`);
+    el.querySelectorAll('[data-who]').forEach(b => b.onclick = () => { ME = b.dataset.who; put(LS.who, ME); overlay(null); resolveReady(); if (typeof S === 'object') { S.me = ME; } if (typeof render === 'function') render(); });
+  }
+  let started = false;
+  async function start() {
+    if (!API_URL || API_URL.indexOf('script.google.com') < 0) {
+      overlay(`<h2>Almost set up</h2><p class="small">This copy isn’t connected to your Google Sheet yet. Paste the Apps Script web app address into <code>API_URL</code> in index.html (see SETUP.md).</p>`); return;
+    }
+    if (!PASS) { needPass(); return; }
+    overlay(`<h2>Sutton Bill Book</h2><p class="small muted">Opening your bills…</p>`);
+    try {
+      const j = await api({ action: 'load' });
+      server = j.data || {}; put(LS.cache, JSON.stringify(server));
+    } catch (e) {
+      if (e && (e.code === 'bad_passcode' || e.code === 'locked')) { needPass(e); return; }
+      /* no signal: open the last copy this phone saw and keep retrying */
+      let cached = null; try { cached = JSON.parse(get(LS.cache) || 'null'); } catch (x) {}
+      if (!cached) { overlay(`<h2>Can’t reach the bill book</h2><p class="small">Check your connection. It will try again in a few seconds.</p>`); setTimeout(start, 8000); return; }
+      server = cached;
+    }
+    rebuild(); loaded = true; notify(); flush();
+    if (!started) {
+      started = true;
+      const poll = () => { if (!document.hidden) refresh().catch(e => { if (e && (e.code === 'bad_passcode' || e.code === 'locked')) needPass(e); }); };
+      setInterval(poll, 20000); document.addEventListener('visibilitychange', poll); window.addEventListener('focus', poll);
+    }
+    if (!ME) { askWho(); return; }
+    overlay(null); resolveReady();
+  }
+
+  window.SBB = Object.freeze({
+    pending: () => outbox.length,
+    switchWho: () => { ME = ''; put(LS.who, null); askWho(); },
+    lock: () => { PASS = ''; put(LS.pass, null); needPass(); }
+  });
+  window.claude = Object.freeze({ use: async name => {
+    if (name === 'db') { await ready; return DB; }
+    if (name === 'user') { await ready; return USER; }
+    if (name === 'downloads') return DOWNLOADS;
+    return null;
+  } });
+  window.addEventListener('DOMContentLoaded', start);
+})();
+
+</script>
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <div class="brand">
+      <h1>Sutton Bill Book</h1>
+      <small id="syncLine"><span class="sync"><span class="dot"></span>Opening…</span></small>
+    </div>
+    <button class="btn primary" data-act="add" id="addBtn" aria-label="Add a bill or subscription">+ Add</button>
+  </div>
+</header>
+
+<main><div class="wrap" id="view" aria-live="polite">
+  <div class="panel empty"><h3>Opening your bill book…</h3><p>Your bills, due dates and subscriptions will show here.</p></div>
+</div></main>
+
+<nav class="tabs" aria-label="Sections"><div class="tabs-in" id="tabs">
+  <button data-tab="home" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Home</button>
+  <button data-tab="upcoming"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Upcoming<span class="badge" id="lateBadge" hidden></span></button>
+  <button data-tab="bills"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>Bills</button>
+  <button data-tab="review"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>Check-up</button>
+  <button data-tab="more"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>More</button>
+</div></nav>
+
+<div class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+  <div class="sheet-panel"><div class="sheet-h"><h2 id="sheetTitle">Sheet</h2><button class="x" data-act="close" aria-label="Close">×</button></div><div id="sheetBody"></div></div>
+</div>
+<div class="toast" id="toast" hidden role="status"></div>
+<input type="file" id="filePick" hidden accept=".ics,.zip,.csv,.json,text/calendar,text/csv,application/json,application/zip">
+
+<script>
+/*LOGIC-START*/
+const DAY = 864e5;
+const pad = n => String(n).padStart(2, '0');
+const ord = s => { const [y, m, d] = s.split('-').map(Number); return Math.round(Date.UTC(y, m - 1, d) / DAY); };
+const iso = n => new Date(n * DAY).toISOString().slice(0, 10);
+const dim = (y, m) => new Date(Date.UTC(y, m, 0)).getUTCDate();
+function localToday() { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
+function addMonths(s, k) {
+  const [y, m, d] = s.split('-').map(Number);
+  const t = (m - 1) + k, ny = y + Math.floor(t / 12), nm = ((t % 12) + 12) % 12 + 1;
+  return `${ny}-${pad(nm)}-${pad(Math.min(d, dim(ny, nm)))}`;
+}
+const isDate = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(ord(s)) && iso(ord(s)) === s;
+const round2 = n => Math.round(n * 100) / 100;
+
+const FREQ = {
+  weekly:     { d: 7,  pm: 52 / 12, label: 'Weekly' },
+  biweekly:   { d: 14, pm: 26 / 12, label: 'Every 2 weeks' },
+  monthly:    { m: 1,  pm: 1,       label: 'Monthly' },
+  bimonthly:  { m: 2,  pm: 1 / 2,   label: 'Every 2 months' },
+  quarterly:  { m: 3,  pm: 1 / 3,   label: 'Every 3 months' },
+  semiannual: { m: 6,  pm: 1 / 6,   label: 'Every 6 months' },
+  yearly:     { m: 12, pm: 1 / 12,  label: 'Yearly' },
+  once:       { once: true, pm: 0,  label: 'One time' }
+};
+
+/* Every due date of a bill inside [from, to]. The anchor is the first due date; months clamp to the month's last day. */
+function occurrences(b, from, to) {
+  const out = [];
+  if (!b || !isDate(b.anchor) || !isDate(from) || !isDate(to)) return out;
+  const f = FREQ[b.freq] || FREQ.monthly, A = ord(b.anchor), F = ord(from), T = ord(to);
+  let end = isDate(b.endDate) ? ord(b.endDate) : Infinity;
+  if (b.status === 'cancelled') end = Math.min(end, isDate(b.cancelledOn) ? ord(b.cancelledOn) - 1 : -Infinity);
+  if (b.status === 'paused') end = Math.min(end, isDate(b.pausedOn) ? ord(b.pausedOn) - 1 : -Infinity);
+  const hi = Math.min(T, end);
+  if (hi < F) return out;
+  if (f.once) { if (A >= F && A <= hi) out.push(b.anchor); return out; }
+  if (f.d) { const k = Math.max(0, Math.ceil((F - A) / f.d)); for (let n = A + k * f.d; n <= hi; n += f.d) out.push(iso(n)); return out; }
+  const [ay, am] = b.anchor.split('-').map(Number), [fy, fm] = from.split('-').map(Number);
+  let k = Math.max(0, Math.floor(((fy - ay) * 12 + (fm - am)) / f.m) - 1);
+  for (let i = 0; i < 1000; i++, k++) {
+    const s = addMonths(b.anchor, k * f.m), o = ord(s);
+    if (o > hi) break;
+    if (o >= F) out.push(s);
+  }
+  return out;
+}
+function nthDue(b, n) { const f = FREQ[b.freq] || FREQ.monthly; if (f.once) return b.anchor; return f.d ? iso(ord(b.anchor) + n * f.d) : addMonths(b.anchor, n * f.m); }
+function nextDue(b, today) { return occurrences(b, today, iso(ord(today) + 800))[0] || null; }
+/* Due dates of a bill around a window, looking backward from its anchor too (for matching past bank charges) */
+function datesNear(b, from, to) {
+  const f = FREQ[b.freq] || FREQ.monthly, out = [];
+  if (!isDate(b.anchor)) return out;
+  if (f.once) return b.anchor >= from && b.anchor <= to ? [b.anchor] : [];
+  for (let k = -60; k <= 60; k++) { const d = nthDue(b, k); if (d >= from && d <= to) out.push(d); }
+  return out;
+}
+function nearestDue(b, date, maxDays) {
+  const ds = datesNear(b, iso(ord(date) - maxDays), iso(ord(date) + maxDays));
+  return ds.length ? ds.reduce((x, y) => Math.abs(ord(y) - ord(date)) < Math.abs(ord(x) - ord(date)) ? y : x) : null;
+}
+/* A bank charge matches a bill already in the book when it lands within a few days of a due date at a similar amount,
+   even if the bank's name for it ("SPECTRUM", "MR COOPER") differs from yours ("TWC", "Mortgage"). */
+/* The due date a bank charge most likely paid: the first due date no more than 10 days before the charge
+   (paid late) and otherwise the next one coming up (paid early). */
+function dueForCharge(b, date) {
+  const f = FREQ[b.freq] || FREQ.monthly, per = f.d || (f.m || 1) * 31;
+  return datesNear(b, iso(ord(date) - 10), iso(ord(date) + Math.min(per, 45)))[0] || null;
+}
+/* A bank charge series matches a bill already in the book when its charges land near that bill's due dates at a
+   similar amount, even if the bank's name ("SPECTRUM", "MR COOPER") differs from yours ("TWC", "Mortgage").
+   A clear category clash (internet vs. utility) rules a match out. */
+function scheduleMatch(existing, freq, list, used, bankName) {
+  const last = list[list.length - 1], cat = guessCategory(bankName || '').category;
+  let best = null, bestScore = Infinity;
+  for (const b of existing) {
+    if (b.status !== 'active' || used.has(b.id)) continue;
+    if (b.freq !== freq && !(FREQ[b.freq].m && FREQ[freq].m && FREQ[b.freq].m === FREQ[freq].m)) continue;
+    if (cat !== 'Other' && b.category && b.category !== 'Other' && b.category !== cat) continue;
+    const dist = list.map(t => { const d = dueForCharge(b, t.date); return d ? ord(d) - ord(t.date) : null; }).filter(d => d !== null && d <= 14);
+    if (dist.length < Math.ceil(list.length * 0.6)) continue;
+    const a = Number(b.amount) || 0;
+    const diff = a > 0 ? Math.abs(last.amt - a) / Math.max(a, last.amt) : 0.5;
+    if (diff > (b.amountType === 'varies' ? 0.6 : 0.2)) continue;
+    /* a fixed bill (a loan) only matches charges that hold steady, not a store you visit monthly */
+    if (b.amountType !== 'varies') {
+      let moves = 0; for (let i = 1; i < list.length; i++) if (Math.abs(list[i].amt - list[i - 1].amt) / list[i - 1].amt > 0.03) moves++;
+      if (moves > (list.length > 4 ? 2 : 1)) continue;
+    }
+    const score = diff * 3 + avg(dist.map(Math.abs)) / 30 + (list.length - dist.length) * 0.1;
+    if (score < bestScore) { best = b; bestScore = score; }
+  }
+  return best;
+}
+const payId = (billId, date) => `${billId}_${date}`;
+const isInc = b => !!b && b.kind === 'income';
+const isSpend = b => !!b && b.kind === 'spending';
+const periodDays = b => (FREQ[b.freq] || FREQ.weekly).d || Math.round(((FREQ[b.freq] || FREQ.monthly).m || 1) * 30.44);
+/* The start of the spending period (week) a purchase falls in */
+function periodStart(b, date) { const ds = datesNear(b, iso(ord(date) - periodDays(b) - 1), date); return ds.length ? ds[ds.length - 1] : null; }
+const SPEND_CATS = [
+  [/\bfuel\b|shell|speedway|\bbp\b|marathon|sunoco|circle k|exxon|mobil|sunoco|casey'?s|murphy|valero|citgo|gas station/i, 'Gas & Fuel', 'gas'],
+  [/mcdonald|taco bell|wendy|burger king|chick|chipotle|panera|pizza|grubhub|doordash|uber ?eats|subway|perkins|restaurant|grill|diner|cafe|coffee|starbucks|dunkin|wings|chinese|famous recipe|kfc|arby|skyline|gold star/i, 'Dining out', 'dining out'],
+  [/kroger|meijer|aldi|wal ?-?mart|sam'?s club|costco|target|publix|whole foods|trader joe|food lion|giant eagle|dorothy lane|jungle jim|save a lot|grocery|market/i, 'Groceries', 'groceries']
+];
+function guessSpend(name) { for (const [re, cat, label] of SPEND_CATS) if (re.test(name)) return { category: cat, label }; return null; }
+
+const avg = a => a.length ? a.reduce((s, x) => s + x, 0) / a.length : 0;
+const median = a => { if (!a.length) return 0; const s = [...a].sort((x, y) => x - y), h = s.length >> 1; return s.length % 2 ? s[h] : (s[h - 1] + s[h]) / 2; };
+
+/* list = this bill's payments, newest first, skips removed */
+function estimate(b, list) {
+  if (b.kind === 'spending') { const l = list.slice(0, 8); if (l.length) return round2(avg(l.map(p => Number(p.amount) || 0))); return Number(b.amount) || 0; }
+  if (b.amountType === 'varies') {
+    const real = list.filter(p => p.amount > 0).slice(0, 3);
+    if (real.length) return round2(avg(real.map(p => p.amount)));
+  }
+  return Number(b.amount) || 0;
+}
+function amountRange(list, today) {
+  const cut = iso(ord(today) - 366);
+  const a = list.filter(p => p.amount > 0 && p.dueDate >= cut).map(p => p.amount);
+  return a.length >= 2 ? { lo: Math.min(...a), hi: Math.max(...a), n: a.length } : null;
+}
+function sameMonthLastYear(list, date) {
+  const [y, m] = date.split('-'); const key = `${Number(y) - 1}-${m}`;
+  const p = list.find(p => p.amount > 0 && p.dueDate.slice(0, 7) === key);
+  return p ? p.amount : null;
+}
+function perMonth(b, est, today) {
+  if (b.status !== 'active') return 0;
+  if (isDate(b.endDate) && b.endDate < today) return 0;
+  return est * ((FREQ[b.freq] || FREQ.monthly).pm);
+}
+
+const GENERIC_FIRST = new Set('city bank first american national united state county village loan home house car auto credit gas water phone cell internet life health dental vision rent personal student kids school insurance ins payment monthly annual yearly new north south east west great family'.split(' '));
+const STOP = new Set(['the', 'bill', 'bills', 'payment', 'payments', 'pmt', 'monthly', 'subscription', 'sub', 'plan', 'auto', 'autopay', 'inc', 'llc', 'co', 'com', 'www', 'due', 'pay', 'recurring', 'membership', 'service', 'services', 'my', 'and', 'est', 'approx', 'online', 'us', 'usa']);
+/* Same company, different name on the bill vs. the bank (renamed utilities and providers) */
+const ALIASES = [[/\bvectren\b/g, 'centerpoint'], [/\btwc\b|\btime warner( cable)?\b|\bcharter\b/g, 'spectrum'], [/\bdp ?& ?l\b|\bdpl\b|\bdayton power( and light)?\b/g, 'aes'], [/\bhbo max\b|\bhbo\b/g, 'max'], [/\bamzn\b/g, 'amazon']];
+function nameKey(s) {
+  let k = String(s || '').toLowerCase().replace(/&amp;/g, '&');
+  for (const [re, to] of ALIASES) k = k.replace(re, to);
+  return k.toLowerCase().replace(/\.(com|net|org|tv)\b/g, ' ').replace(/[^a-z0-9+ ]/g, ' ')
+    .split(/\s+/).filter(w => w && !STOP.has(w) && !/^\d+$/.test(w)).join(' ').trim();
+}
+function simScore(a, b) {
+  const x = nameKey(a), y = nameKey(b);
+  if (!x || !y) return 0;
+  if (x === y || x.replace(/ /g, '') === y.replace(/ /g, '')) return 3;
+  const xa = x.split(' ')[0], ya = y.split(' ')[0];
+  if (xa === ya && xa.length >= 3 && !GENERIC_FIRST.has(xa)) return 2;
+  return similar(a, b) ? 1 : 0;
+}
+function similar(a, b) {
+  const x = nameKey(a), y = nameKey(b);
+  if (!x || !y) return false;
+  if (x === y) return true;
+  if (x.replace(/ /g, '') === y.replace(/ /g, '')) return true;
+  const xs = x.replace(/ /g, ''), ys = y.replace(/ /g, '');
+  if (xs.length >= 5 && ys.length >= 5 && (xs.includes(ys) || ys.includes(xs))) return true;
+  const xa = x.split(' ')[0], ya = y.split(' ')[0];
+  return xa === ya && xa.length >= 3 && !GENERIC_FIRST.has(xa);
+}
+function findDuplicates(bills) {
+  const act = bills.filter(b => b.status === 'active'), out = [];
+  for (let i = 0; i < act.length; i++) for (let j = i + 1; j < act.length; j++) {
+    if (isInc(act[i]) === isInc(act[j]) && simScore(act[i].name, act[j].name) >= 2) out.push([act[i], act[j]]);
+  }
+  return out;
+}
+
+const CATS = ['Income', 'Groceries', 'Gas & Fuel', 'Dining out', 'Housing', 'Utilities', 'Phone & Internet', 'Insurance', 'Transportation', 'Loans & Credit', 'Streaming & Media', 'Software & Cloud', 'Gaming', 'Kids & School', 'Health & Fitness', 'Memberships', 'Other'];
+const GUESS = [
+  [/mortgage|rent|hoa|property tax|lawn/i, 'Housing', 'bill'],
+  [/electric|\baes\b|\bdp&?l\b|vectren|centerpoint|duke energy|power|\bgas\b|energy|water|sewer|trash|garbage|waste|utility|rumpke|city of/i, 'Utilities', 'bill', true],
+  [/internet|spectrum|\btwc\b|time warner|at&t|\batt\b|verizon|t-mobile|tmobile|xfinity|comcast|phone bill|wireless|cell phone|mobile bill/i, 'Phone & Internet', 'bill'],
+  [/home equity|heloc|\bdcl\b|debt consolidation|consolidation loan/i, 'Loans & Credit', 'bill'],
+  [/insurance|geico|progressive|state farm|allstate|farmers|nationwide|life ins/i, 'Insurance', 'bill'],
+  [/car payment|auto loan|honda|toyota|ford|chevy|gm financial|bmv|registration|fuel|parking/i, 'Transportation', 'bill'],
+  [/loan|credit card|visa|mastercard|discover|amex|capital one|chase|barclays|synchrony|citi\b|student/i, 'Loans & Credit', 'bill'],
+  [/netflix|hulu|disney|max\b|hbo|paramount|peacock|spotify|youtube|apple music|apple tv|audible|siriusxm|sirius|kindle|pandora/i, 'Streaming & Media', 'subscription'],
+  [/icloud|google one|google storage|microsoft|office 365|m365|adobe|dropbox|chatgpt|openai|claude|anthropic|github|norton|mcafee|vpn|\bapple\b|\bring\b|simplisafe|adt\b/i, 'Software & Cloud', 'subscription'],
+  [/youtube tv|sling|fubo|directv/i, 'Streaming & Media', 'subscription'],
+  [/xbox|game pass|playstation|ps plus|nintendo|steam|roblox|ea play|ubisoft|twitch/i, 'Gaming', 'subscription'],
+  [/daycare|school|tuition|lunch|camp|dance|lesson|scout/i, 'Kids & School', 'bill'],
+  [/gym|fitness|planet|ymca|peloton|doctor|dental|pharmacy/i, 'Health & Fitness', 'bill'],
+  [/prime|amazon|costco|sam'?s club|walmart\+|walmart plus|instacart|doordash|uber one|aaa/i, 'Memberships', 'subscription']
+];
+function guessCategory(name) {
+  for (const [re, cat, kind, varies] of GUESS) if (re.test(name)) return { category: cat, kind, varies: !!varies };
+  return { category: 'Other', kind: 'bill', varies: false };
+}
+
+function classifyInterval(days) {
+  if (days >= 6 && days <= 8) return 'weekly';
+  if (days >= 13 && days <= 16) return 'biweekly';
+  if (days >= 26 && days <= 35) return 'monthly';
+  if (days >= 55 && days <= 66) return 'bimonthly';
+  if (days >= 84 && days <= 97) return 'quarterly';
+  if (days >= 170 && days <= 195) return 'semiannual';
+  if (days >= 350 && days <= 380) return 'yearly';
+  return null;
+}
+
+/* ---- calendar (.ics) import ---- */
+function icsUnesc(s) { return String(s || '').replace(/\\n/gi, '\n').replace(/\\([,;\\])/g, '$1'); }
+function icsDate(v) {
+  if (!v) return null;
+  const m = /^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})(Z)?)?/.exec(v.trim());
+  if (!m) return null;
+  if (m[4] && m[7]) {
+    const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]));
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+  return `${m[1]}-${m[2]}-${m[3]}`;
+}
+function parseICS(text) {
+  const lines = String(text).replace(/\r\n?/g, '\n').replace(/\n[ \t]/g, '').split('\n');
+  const evs = []; let cur = null;
+  for (const raw of lines) {
+    const line = raw.trimEnd();
+    if (line === 'BEGIN:VEVENT') { cur = {}; continue; }
+    if (line === 'END:VEVENT') { if (cur) evs.push(cur); cur = null; continue; }
+    if (!cur) continue;
+    const i = line.indexOf(':'); if (i < 0) continue;
+    const prop = line.slice(0, i).split(';')[0].toUpperCase(), val = line.slice(i + 1);
+    if (prop === 'EXDATE') cur.EXDATE = (cur.EXDATE ? cur.EXDATE + ',' : '') + val;
+    else if (!(prop in cur)) cur[prop] = val;
+  }
+  return evs.map(e => {
+    let rr = null;
+    if (e.RRULE) { rr = {}; for (const part of e.RRULE.split(';')) { const [k, v] = part.split('='); if (k) rr[k.toUpperCase()] = v; } }
+    return { uid: e.UID || '', summary: icsUnesc(e.SUMMARY).trim(), desc: icsUnesc(e.DESCRIPTION), start: icsDate(e.DTSTART), rrule: rr,
+      status: String(e.STATUS || '').toUpperCase(), recId: e['RECURRENCE-ID'] ? icsDate(e['RECURRENCE-ID']) : null,
+      exdates: e.EXDATE ? e.EXDATE.split(',').map(icsDate).filter(Boolean) : [] };
+  }).filter(e => e.start && (e.summary || e.recId));
+}
+function rrToFreq(rr) {
+  const n = Math.max(1, parseInt(rr.INTERVAL || '1', 10) || 1), f = (rr.FREQ || '').toUpperCase();
+  if (f === 'WEEKLY') return n === 1 ? 'weekly' : n === 2 ? 'biweekly' : null;
+  if (f === 'MONTHLY') return { 1: 'monthly', 2: 'bimonthly', 3: 'quarterly', 6: 'semiannual', 12: 'yearly' }[n] || null;
+  if (f === 'YEARLY') return n === 1 ? 'yearly' : null;
+  return null;
+}
+const numStr = s => parseFloat(String(s).replace(/,/g, ''));
+const NUM = '(?:\\d{1,3}(?:,\\d{3})+|\\d{1,6})(?:\\.\\d{1,2})?';
+const UNIT_AFTER = /^\s?(?:am|pm|a\.m|p\.m|th|st|nd|rd|%|x|hrs?|hours?|mins?|minutes?|lbs?|mi|miles?|days?|wks?|weeks?|mos?|months?|yrs?|years?|yo|kids?|people|ppl|ft|in|oz|gal|k)\b/i;
+/* Amount in an event title: "$85", "$90-$140", or a bare number like "Mortgage 876" / "Water 120-150".
+   Bare numbers skip years, times (5:30, 6pm), dates (10/15), "#123" and counts like "3 kids". */
+function findAmount(text, dollarOnly) {
+  const s = String(text || '');
+  let m = new RegExp(`\\$\\s?(${NUM})\\s*(?:-|–|to)\\s*\\$?\\s?(${NUM})`, 'i').exec(s);
+  if (m) return { amount: round2((numStr(m[1]) + numStr(m[2])) / 2), varies: true, raw: m[0] };
+  m = new RegExp(`\\$\\s?(${NUM})`).exec(s);
+  if (m) return { amount: numStr(m[1]), varies: false, raw: m[0] };
+  if (dollarOnly) return null;
+  const re = new RegExp(`(?<![\\w#/.:,$-])(${NUM})(?:\\s*(?:-|–|to)\\s*(${NUM}))?(?![\\w/:]|\\.\\d|,\\d)`, 'gi');
+  let best = null;
+  for (const x of s.matchAll(re)) {
+    if (UNIT_AFTER.test(s.slice(x.index + x[0].length))) continue;
+    const a = numStr(x[1]), b = x[2] ? numStr(x[2]) : null;
+    if (!/[.,]/.test(x[1]) && x[1].length === 4 && a >= 1900 && a <= 2100) continue;
+    if (a < 1) continue;
+    best = { amount: b ? round2((a + b) / 2) : a, varies: !!b, raw: x[0] };
+  }
+  return best;
+}
+const BILL_WORDS = /\b(bill|bills|due|pay|payment|pmt|subscription|renew|renewal|insurance|premium|rent|mortgage|heloc|equity|loan|electric|electricity|gas|water|sewer|trash|garbage|internet|cable|phone|cell|wireless|utility|utilities|tuition|daycare|membership|tax|taxes|hoa|card|minimum|autopay|car note|lease)\b/i;
+const INCOME_WORDS = /\b(payroll|pay ?check|pay ?day|salary|wages?|direct dep\w*|income|refund|bonus|reimburse\w*|commission|stimulus|tax return|got paid|earnings)\b/i;
+function extractBillInfo(summary, desc, members) {
+  const amt = findAmount(summary) || findAmount(desc, true);
+  const full = `${summary} ${desc || ''}`;
+  const varies = !!(amt && amt.varies) || /~|\bapprox|\babout\b|\best\b|estimate|varies|\baround\b/i.test(full);
+  const autopay = /auto ?pay|auto-pay|auto-?draft|auto-?debit/i.test(full);
+  let name = amt && summary.includes(amt.raw) ? summary.replace(amt.raw, ' ') : summary;
+  name = name.replace(/\b(due|payment|pmt|bill|autopay|auto pay|auto-pay|auto draft|est\.?|estimate|approx\.?|about|around)\b/gi, ' ')
+    .replace(/[~()\[\]:|$]+/g, ' ').replace(/\s[-–—]+\s|^[-–—\s]+|[-–—\s]+$/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!name) name = summary.trim() || 'Untitled';
+  const mem = (members || []).map(m => String(m || '').replace(/[^a-z]/gi, '')).filter(Boolean);
+  const personPay = mem.length > 0 && new RegExp(`\\b(${mem.join('|')})('?s)?\\s+(pay|check|paid|work)\\b`, 'i').test(summary);
+  const income = personPay || /^\s*(pay|paid|payday)\s*[\d$.,\s-]*$/i.test(summary) ||
+    (INCOME_WORDS.test(summary) && !/\b(due|bill|loan|insurance|mortgage|rent)\b/i.test(summary));
+  const billish = !income && (BILL_WORDS.test(full) || guessCategory(name).category !== 'Other');
+  return { name, amount: amt ? amt.amount : 0, varies, autopay, income, billish, looks: billish || !!amt };
+}
+const modeOf = a => { const c = new Map(); a.forEach(x => c.set(x, (c.get(x) || 0) + 1)); return [...c.entries()].sort((x, y) => y[1] - x[1])[0][0]; };
+/* Turn a run of payday dates into a payday schedule for the paycheck planner. */
+function paydayFrom(dates, freq, today) {
+  const ds = [...new Set(dates)].sort();
+  const last = [...ds].reverse().find(d => d <= today) || ds[0];
+  const gaps = []; for (let i = 1; i < ds.length; i++) gaps.push(ord(ds[i]) - ord(ds[i - 1]));
+  const weekly = gaps.length && gaps.every(g => g % 7 === 0);
+  const med = gaps.length ? median(gaps) : 0;
+  if (!weekly && med >= 12 && med <= 18 && ds.length >= 3) {
+    const dom = ds.map(d => +d.slice(8, 10)), lowD = dom.filter(x => x <= 16), highD = dom.filter(x => x > 16);
+    if (lowD.length && highD.length) return { enabled: true, freq: 'semimonthly', anchor: last, d1: modeOf(lowD), d2: Math.max(...highD) >= 28 ? 31 : modeOf(highD) };
+  }
+  return { enabled: true, freq: ['weekly', 'biweekly', 'monthly'].includes(freq) ? freq : 'biweekly', anchor: last, d1: 1, d2: 15 };
+}
+function makeCandidate(base, existing) {
+  const g = guessCategory(base.name);
+  const c = Object.assign({ kind: g.kind, category: g.category, history: [], endDate: null, autopay: false }, base);
+  c.varies = !!(base.varies || g.varies);
+  c.existing = existing.find(b => similar(b.name, c.name)) || null;
+  c.checked = !c.existing && c.looks !== false;
+  return c;
+}
+/* Groups every dated event (repeating series, edited single dates, one-off events) by bill name,
+   so "AES 162" in Aug and "AES 141" in Sep become one bill with a history. */
+function icsCandidates(evs, today, existing, members) {
+  const T = ord(today), lo = iso(T - 400), hi = iso(T + 400), groups = new Map();
+  /* Paychecks are grouped per repeating event (yours and Erica's can share a name); bills by name. */
+  const keyOf = (info, uid) => info.income && uid ? 'income|' + uid : (nameKey(info.name) || info.name.toLowerCase());
+  const put = (date, info, uid) => {
+    if (date < lo || date > hi) return null;
+    const k = keyOf(info, uid);
+    if (!groups.has(k)) groups.set(k, { items: new Map(), series: [] });
+    const g = groups.get(k); g.items.set(date, info); return g;
+  };
+  const moved = new Map();
+  for (const o of evs) if (o.recId) { if (!moved.has(o.uid)) moved.set(o.uid, new Set()); moved.get(o.uid).add(o.recId); }
+  for (const e of evs) {
+    if (!e.rrule || e.recId || e.status === 'CANCELLED' || !e.summary) continue;
+    const info = extractBillInfo(e.summary, e.desc, members), freq = rrToFreq(e.rrule);
+    if (!freq) { put(e.start, info, e.uid); continue; }
+    let endDate = null, anchor = e.start;
+    if (e.rrule.UNTIL) endDate = icsDate(e.rrule.UNTIL);
+    if (e.rrule.COUNT) endDate = nthDue({ anchor: e.start, freq }, Math.max(0, parseInt(e.rrule.COUNT, 10) - 1));
+    /* A start date that isn't on the repeat day (start Sep 17, repeats on the 18th): keep the start, then follow the 18th */
+    const bmd = /^\d{1,2}$/.test(e.rrule.BYMONTHDAY || '') ? +e.rrule.BYMONTHDAY : null;
+    if (bmd && FREQ[freq].m && +anchor.slice(8, 10) !== bmd) {
+      put(e.start, info, e.uid);
+      const [y, m] = anchor.split('-').map(Number);
+      let a = `${y}-${pad(m)}-${pad(Math.min(bmd, dim(y, m)))}`;
+      if (a <= e.start) { const n = addMonths(`${y}-${pad(m)}-01`, 1); a = `${n.slice(0, 8)}${pad(Math.min(bmd, dim(+n.slice(0, 4), +n.slice(5, 7))))}`; }
+      anchor = a;
+    }
+    const skip = new Set([...(e.exdates || []), ...(moved.get(e.uid) || [])]);
+    for (const d of occurrences({ anchor, freq, status: 'active', endDate }, lo, hi)) if (!skip.has(d)) put(d, info, e.uid);
+    const k = keyOf(info, e.uid);
+    if (!groups.has(k)) groups.set(k, { items: new Map(), series: [] });
+    groups.get(k).series.push({ freq, endDate });
+  }
+  for (const e of evs) {
+    if (e.rrule && !e.recId) continue;
+    if (e.status === 'CANCELLED' || !e.summary) continue;
+    put(e.start, extractBillInfo(e.summary, e.desc, members));
+  }
+  /* Every paycheck series ever entered, so an unnamed "payroll" can inherit "Ericas payroll" from the series it replaced */
+  const incomeSeries = evs.filter(e => e.rrule && !e.recId && e.summary).map(e => ({ e, info: extractBillInfo(e.summary, e.desc, members), freq: rrToFreq(e.rrule) }))
+    .filter(x => x.info.income && x.freq && FREQ[x.freq].d);
+  const memRe = (members || []).filter(Boolean).length ? new RegExp(`\\b(${members.filter(Boolean).map(m => m.replace(/[^a-z]/gi, '')).join('|')})`, 'i') : null;
+  const cands = []; let skipped = 0;
+  for (const g of groups.values()) {
+    const items = [...g.items.entries()].map(([d, info]) => ({ d, info })).sort((a, b) => a.d < b.d ? -1 : 1);
+    if (!items.length) { continue; }
+    const future = items.filter(x => x.d >= today), past = items.filter(x => x.d < today);
+    /* the name on the newest event wins ("AES" over the old "DP&L" it replaced) */
+    const name = (future[0] || past[past.length - 1] || items[0]).info.name;
+    const income = items.some(x => x.info.income);
+    const billish = !income && items.some(x => x.info.billish);
+    const active = g.series.find(s => !s.endDate || s.endDate >= today);
+    let freq = active ? active.freq : null;
+    if (!freq && items.length >= 2) {
+      const gaps = []; for (let i = 1; i < items.length; i++) gaps.push(ord(items[i].d) - ord(items[i - 1].d));
+      freq = classifyInterval(median(gaps));
+    }
+    if (!freq && g.series.length) freq = g.series[g.series.length - 1].freq;
+    if (!freq) { if (items.length === 1) freq = 'once'; else { skipped += items.length; continue; } }
+    if (freq === 'once' && !future.length) { skipped++; continue; }
+    const anchor = future.length ? future[0].d : nextDue({ anchor: items[items.length - 1].d, freq, status: 'active' }, today);
+    if (!anchor) { skipped++; continue; }
+    const step = FREQ[freq].d || (FREQ[freq].m || 1) * 30.44;
+    const stale = !future.length && (T - ord(items[items.length - 1].d)) > step * 1.6 + 7;
+    const nextAmt = future.find(x => x.info.amount > 0), lastAmt = [...past].reverse().find(x => x.info.amount > 0);
+    const amount = nextAmt ? nextAmt.info.amount : lastAmt ? lastAmt.info.amount : 0;
+    const withAmt = items.filter(x => x.info.amount > 0), vals = withAmt.map(x => x.info.amount);
+    const spread = vals.length >= 2 ? (Math.max(...vals) - Math.min(...vals)) / Math.max(...vals) : 0;
+    /* A price that stepped once or twice (Mortgage 720 → 876) is a fixed bill with a price change, not a varying one */
+    const steps = [];
+    for (let i = 1; i < withAmt.length; i++) { const a = withAmt[i - 1].info.amount, b = withAmt[i].info.amount; if (Math.abs(b - a) / a > 0.01) steps.push({ on: withAmt[i].d, from: a, amount: b }); }
+    const stepped = steps.length >= 1 && steps.length <= 2 && withAmt.length - steps.length >= 2;
+    const recurring = freq !== 'once';
+    if (income && !future.length) { skipped += items.length; continue; }
+    const section = income ? 'income'
+      : (billish && (recurring || amount > 0)) || (amount > 0 && recurring && !FREQ[freq].d) ? 'bill'
+      : amount > 0 && (recurring || future.length) ? 'maybe' : 'other';
+    if (section === 'other') { skipped += items.length; continue; }
+    const c = makeCandidate({ name, amount, varies: (!stepped && spread > 0.05) || items.some(x => x.info.varies), autopay: items.some(x => x.info.autopay), freq, anchor,
+      priceHistory: stepped ? steps.filter(s => s.on <= iso(T + 45)) : [],
+      endDate: active ? active.endDate : null, stale, section, looks: section !== 'maybe',
+      history: past.filter(x => x.info.amount > 0).slice(-14).map(x => ({ date: x.d, amount: x.info.amount })),
+      from: g.series.length ? 'Repeating event' : items.length === 1 ? 'Single event' : `${items.length} events` }, existing.filter(b => isInc(b) === income));
+    if (section === 'maybe' || stale) c.checked = false;
+    if (c.existing) c.checked = !stale && (income ? Math.abs((Number(c.existing.amount) || 0) - amount) > 0.01 : section === 'bill' && (!(Number(c.existing.amount) > 0) || /\d/.test(c.existing.name)));
+    if (income) {
+      c.kind = 'income'; c.category = 'Income'; c.varies = true;
+      if (recurring) c.payday = paydayFrom(items.map(x => x.d), freq, today);
+      if (memRe && !memRe.test(c.name) && FREQ[freq].d) {
+        const prev = incomeSeries.find(x => memRe.test(x.info.name) && x.freq === freq && ((ord(c.anchor) - ord(x.e.start)) % FREQ[freq].d + FREQ[freq].d) % FREQ[freq].d === 0);
+        if (prev) { c.name = prev.info.name.replace(/^(\w+?)s\b/i, '$1’s'); c.from += ' · same days as an earlier one'; }
+      }
+    }
+    cands.push(c);
+  }
+  const order = { bill: 0, maybe: 1, income: 2 };
+  cands.sort((a, b) => (order[a.section] - order[b.section]) || (!!a.combined - !!b.combined) || a.name.localeCompare(b.name));
+  return { cands, skipped };
+}
+
+/* ---- bank statement (.csv) import ---- */
+function parseCSV(text) {
+  const rows = []; let row = [], f = '', q = false;
+  const s = String(text).replace(/^\uFEFF/, '');
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (q) { if (c === '"') { if (s[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += c; }
+    else if (c === '"') q = true;
+    else if (c === ',') { row.push(f); f = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && s[i + 1] === '\n') i++; row.push(f); rows.push(row); row = []; f = ''; }
+    else f += c;
+  }
+  if (f !== '' || row.length) { row.push(f); rows.push(row); }
+  return rows.filter(r => r.some(x => x.trim() !== ''));
+}
+function parseAnyDate(v) {
+  v = String(v || '').trim();
+  let m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(v);
+  if (m) return `${m[1]}-${pad(+m[2])}-${pad(+m[3])}`;
+  m = /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/.exec(v);
+  if (m) { let y = +m[3]; if (y < 100) y += 2000; const s = `${y}-${pad(+m[1])}-${pad(+m[2])}`; return isDate(s) ? s : null; }
+  return null;
+}
+function parseMoney(v) {
+  let s = String(v || '').trim(); if (!s) return null;
+  let neg = /^\(.*\)$/.test(s) || /^-/.test(s) || /-$/.test(s) || /\bDR\b/i.test(s);
+  s = s.replace(/[^0-9.]/g, '');
+  if (!s) return null;
+  const n = parseFloat(s); if (isNaN(n)) return null;
+  return neg ? -n : n;
+}
+const BANK_NOISE = /\b(pos|debit|credit|purchase|card|recurring|ach|web|ppd|ccd|id|co|entry|descr|checkcard|check card|visa|mc|mastercard|payment|pmt|autopay|bill|pay|online|transfer|withdrawal|dbt|crd|ref|trace|indn|des|xx+\w*|www|com|inc|llc)\b/gi;
+function merchantKey(desc) {
+  let s = String(desc || '').toLowerCase();
+  s = s.split('*')[0].length >= 3 ? s.replace(/\*.*$/, ' ') : s.replace(/\*/g, ' ');
+  s = s.replace(/\.(com|net|org)\b/g, ' ').replace(/[^a-z& ]/g, ' ').replace(BANK_NOISE, ' ').replace(/\s+/g, ' ').trim();
+  s = s.replace(/\b(usa|us)\b/g, ' ');
+  return s.split(' ').filter(w => w.length > 2 || w.includes('&')).slice(0, 2).join(' ');
+}
+const titleCase = s => s.replace(/\b[a-z]/g, c => c.toUpperCase());
+const BANK_WORDS = new Set('pos debit credit purchase card recurring ach web ppd ccd entry descr checkcard visa mastercard payment pmt paymt pymt autopay bill pay online transfer withdrawal dbt crd ref trace indn des inc llc ez type epay eft class code chip the and www com'.split(' '));
+const AGGREGATOR = /^(google|tst|dk|wl|bm|xsolla|payschl|sq|sqsp|paypal|pp|sp|fs|in)$/i;
+/* Merchant from a bank line. Handles credit-union exports where Description is generic ("Withdrawal Bill Payment")
+   and the payee is in Memo, ACH lines ("CO: FARMERS INS"), card codes ("GOOGLE *YOUTUBETV"), loan transfers,
+   and skips ATM cash and moves between your own accounts. */
+function bankMerchant(desc, memo) {
+  const raw = `${desc || ''} ${memo || ''}`.replace(/\s+/g, ' ').trim();
+  if (!raw || /\batm\b|\bcard fee\b|transaction fee/i.test(raw)) return null;
+  const sample = raw.replace(/\d{4,}/g, '…').replace(/\bNAME:.*$/i, '').slice(0, 90);
+  const loan = /\b(?:transfer )?to loan\b\s*(\d{1,3}\b)?/i.exec(raw);
+  if (loan) { const n = loan[1] || ''; return { key: 'loan ' + n, name: n ? `Loan ${n} payment` : 'Loan payment', sample }; }
+  if (/\bshare \d+\b|\bto share\b|\bfrom share\b|transfer to (savings|checking)|\bto [a-z]+,[a-z]+/i.test(raw)) return null;
+  let s;
+  const co = /\bCO:\s*(.+?)(?:\s+(?:NAME:|Entry\b|SEC:|IND\b|ID:)|$)/i.exec(raw);
+  if (co) s = co[1];
+  else s = memo && String(memo).trim().length >= 3 && /^\s*(withdrawal|deposit|debit|purchase|pos|ach|bill payment|payment|transfer)\b/i.test(String(desc || '')) ? String(memo) : raw;
+  s = s.replace(/^\s*(withdrawal|deposit)\b/i, ' ').replace(/\b(debit chip|bill payment|home banking( transfer)?)\b/gi, ' ')
+    .replace(/#\s?\d+|\b\d{3}[-.]\d{3}[-.]\d{4}\b|\bDate \d{1,2}\/\d{1,2}\/\d{2,4}\b|\b\d{5,}\b/gi, ' ');
+  const star = s.indexOf('*');
+  if (star >= 0) { const pre = s.slice(0, star).trim(), post = s.slice(star + 1).trim(); s = AGGREGATOR.test(pre) || pre.length < 3 ? post : pre; }
+  s = s.replace(/\b(?:https?:\/\/)?(?:www\.)?([a-z0-9-]+)\.(com|net|org|ai|tv|co)\S*/gi, '$1')
+    .replace(/\b(?=[A-Z0-9]*\d)[A-Z0-9]{6,}\b/gi, ' ').replace(/[^A-Za-z&' ]/g, ' ').replace(/\s+/g, ' ').trim();
+  const words = s.split(' ').filter(Boolean);
+  while (words.length > 1 && /^[A-Z]{1,2}$/.test(words[words.length - 1])) words.pop();
+  const kw = words.map(w => w.toLowerCase()).filter(w => w.length > 2 && !BANK_WORDS.has(w));
+  const key = kw[1] && /^(fuel|gas|pharmacy|pharm|rx|liquor)$/.test(kw[1]) ? kw[0] + ' ' + kw[1] : kw[0] && kw[0].length >= 4 && !GENERIC_FIRST.has(kw[0]) ? kw[0] : kw.slice(0, 2).join(' ');
+  if (!key) return null;
+  const nw = [];
+  for (const w of words) { if (w.length < 2 || BANK_WORDS.has(w.toLowerCase())) continue; if (nw.length && w.toLowerCase() === nw[0].toLowerCase()) break; nw.push(w); if (nw.length === 3) break; }
+  const name = nw.map(w => /^(of|the|and)$/i.test(w) ? w.toLowerCase() : w.length <= 3 && w === w.toUpperCase() ? w : w[0].toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+  return { key, name: name || titleCase(key), sample };
+}
+function bankCandidates(rows, today, existing) {
+  if (rows.length < 2) return { cands: [], skipped: 0, error: 'That file has no transactions in it.' };
+  /* The header is the first row with a Date column AND an amount/debit column; skips bank preambles like "Date Range : ..." */
+  let hi = rows.findIndex(r => r.length >= 3 && r.some(c => /^\s*(posting |post |transaction |trans\.? |effective )?date\s*$/i.test(c)) && r.some(c => /amount|debit|withdraw/i.test(c)));
+  if (hi < 0) return { cands: [], skipped: 0, error: 'Couldn\u2019t find a Date column. Export the statement as CSV with a header row.' };
+  const h = rows[hi].map(c => c.trim().toLowerCase());
+  const idx = re => h.findIndex(c => re.test(c));
+  const iD = h.findIndex(c => /^(posting |post |transaction |trans\.? |effective )?date$/.test(c));
+  let iDesc = idx(/^(description|desc|payee|merchant|name|payee name|transaction description)$/);
+  if (iDesc < 0) iDesc = idx(/desc|payee|merchant/);
+  const iMemo = idx(/memo|details|extended|additional/);
+  if (iDesc < 0) iDesc = iMemo;
+  const iDebit = idx(/debit|withdraw/);
+  const iCredit = iDebit >= 0 ? idx(/credit|deposit/) : -1;
+  let iAmt = idx(/^amount$|^amt$|^transaction amount$/);
+  if (iAmt < 0 && iDebit < 0) iAmt = idx(/amount/);
+  if (iDesc < 0 || (iAmt < 0 && iDebit < 0)) return { cands: [], skipped: 0, error: 'Couldn\u2019t find Description and Amount columns in that file.' };
+  const tx = [], inTx = [];
+  const body = rows.slice(hi + 1);
+  let anyNeg = false;
+  if (iAmt >= 0) anyNeg = body.some(r => (parseMoney(r[iAmt]) || 0) < 0);
+  const cut = iso(ord(today) - 400);
+  for (const r of body) {
+    const date = parseAnyDate(r[iD]); if (!date || date < cut || date > today) continue;
+    let amt = null, inAmt = null;
+    if (iDebit >= 0) {
+      const v = parseMoney(r[iDebit]), cr = iCredit >= 0 ? parseMoney(r[iCredit]) : null;
+      if (v) amt = Math.abs(v); else if (cr) inAmt = Math.abs(cr);
+    } else if (iAmt >= 0) { const v = parseMoney(r[iAmt]); if (v == null) continue; if (anyNeg) { if (v < 0) amt = -v; else inAmt = v; } else amt = v; }
+    if (inAmt) {
+      const m = bankIncome(r[iDesc], iMemo >= 0 && iMemo !== iDesc ? r[iMemo] : '');
+      if (m) inTx.push({ date, amt: round2(inAmt), key: m.key, name: m.name, desc: m.sample, payroll: m.payroll });
+      continue;
+    }
+    if (!amt) continue;
+    const m = bankMerchant(r[iDesc], iMemo >= 0 && iMemo !== iDesc ? r[iMemo] : ''); if (!m) continue;
+    tx.push({ date, amt: round2(amt), key: m.key, name: m.name, desc: m.sample });
+  }
+  const groups = new Map();
+  for (const t of tx) { if (!groups.has(t.key)) groups.set(t.key, []); groups.get(t.key).push(t); }
+  /* Bills paid by hand drift around the due date, so cadence comes from the average gap, with loose per-gap checks */
+  /* Cadence from the gaps between charges. A skipped month (paid twice next time, or paid another way) counts as
+     two periods, and bills paid by hand may land up to ~10 days either side of the usual day. */
+  const CAD = [['weekly', 7, 2], ['biweekly', 14, 3], ['monthly', 30.44, 10], ['bimonthly', 60.9, 12], ['quarterly', 91.3, 15], ['semiannual', 182.6, 20], ['yearly', 365.25, 25]];
+  const cadence = list => {
+    if (list.length < 2) return null;
+    const gaps = []; for (let i = 1; i < list.length; i++) gaps.push(ord(list[i].date) - ord(list[i - 1].date));
+    for (const [f, step, tol] of CAD) {
+      if (step < 20 && list.length < 3) continue;
+      const ks = gaps.map(g => Math.max(1, Math.round(g / step)));
+      const ok = gaps.filter((g, i) => Math.abs(g - ks[i] * step) <= tol).length;
+      const missed = ks.reduce((s, k) => s + k - 1, 0);
+      if (ok / gaps.length >= 0.66 && missed <= Math.floor(gaps.length * 0.5)) return f;
+    }
+    return null;
+  };
+  const cvOf = a => a.length ? Math.sqrt(avg(a.map(x => (x - avg(a)) ** 2))) / avg(a) : 0;
+  const detect = (groups, income) => {
+  const found = [];
+  for (const [key, all] of groups) {
+    all.sort((a, b) => a.date < b.date ? -1 : 1);
+    /* drop small extras from a payee, like a $13 fee next to $300+ card payments */
+    const medAll = median(all.map(t => t.amt));
+    let list = all.length >= 3 ? all.filter(t => t.amt >= medAll * 0.4) : all, freq = cadence(list);
+    const loose = freq && !FREQ[freq].d ? 0.55 : 0.15;
+    if (!freq || cvOf(list.map(t => t.amt)) > loose || (list.length === 2 && Math.max(list[0].amt, list[1].amt) / Math.min(list[0].amt, list[1].amt) > 1.02)) {
+      /* One merchant, several things (Apple: a $0.99 iCloud plan plus app purchases): try the repeating same-price charges */
+      const clusters = [];
+      /* for deposits, the biggest money wins (Erica's ~$850 paychecks, not her $15 transfers) and pay can wobble ~8% */
+      const tol = income ? 0.08 : 0.03, sum = l => l.reduce((x, t) => x + t.amt, 0);
+      for (const t of all) { const c = clusters.find(c => Math.abs(c[0].amt - t.amt) / Math.max(c[0].amt, t.amt) <= tol); c ? c.push(t) : clusters.push([t]); }
+      clusters.sort((a, b) => income ? (b.length >= 3) - (a.length >= 3) || sum(b) - sum(a) : b.length - a.length);
+      const best = clusters[0];
+      list = best.length >= 3 ? best : null; freq = list ? cadence(list) : null;
+    }
+    if (!list || !freq) { found.push({ key, all, single: true }); continue; }
+    found.push({ key, all, list, freq });
+  }
+  return found;
+  };
+  const cands = [], used = new Set();
+  /* Everyday spending you track (Kroger groceries): total each week's purchases that match its words */
+  const words = s => String(s || '').toLowerCase().split(/[,;]/).map(w => w.trim()).filter(Boolean);
+  const spentKeys = new Set();
+  const spendCand = (b, hits, base) => {
+    const per = new Map();
+    for (const t of hits) { const ps = periodStart(b, t.date); if (ps) per.set(ps, (per.get(ps) || 0) + t.amt); }
+    const starts = [...per.keys()].sort();
+    if (starts.length) for (const d of datesNear(b, starts[0], today)) if (!per.has(d) && ord(d) + periodDays(b) <= ord(today)) per.set(d, 0);
+    const full = [...per.entries()].filter(([d]) => ord(d) + periodDays(b) <= ord(today));
+    full.sort((x, y) => x[0] < y[0] ? -1 : 1);
+    const avgAmt = full.length ? round2(avg(full.map(x => x[1]).slice(-8))) : round2(avg([...per.values()]));
+    const c = Object.assign({ section: 'spend', kind: 'spending', name: b.name, amount: avgAmt, varies: true, freq: b.freq, anchor: b.anchor, category: b.category,
+      history: [...per.entries()].sort().map(([d, a]) => ({ date: d, amount: round2(a) })), from: `${hits.length} purchases over ${per.size} ${b.freq === 'weekly' ? 'weeks' : 'periods'}`, checked: true, sample: hits[hits.length - 1].desc, priceHistory: [] }, base || {});
+    cands.push(c);
+  };
+  for (const b of existing.filter(b => isSpend(b) && b.status === 'active')) {
+    const inc = words(b.match || b.name.split(' ')[0]), exc = words(b.exclude);
+    const hits = tx.filter(t => { const s = `${t.name} ${t.desc}`.toLowerCase(); return inc.some(w => s.includes(w)) && !exc.some(w => s.includes(w)); });
+    hits.forEach(t => spentKeys.add(t.key));
+    if (hits.length) spendCand(b, hits, { existing: b, matchedBy: 'spend' });
+  }
+  for (const k of spentKeys) groups.delete(k);
+  const found = detect(groups); let skipped = 0;
+  /* Shops you visit often but not on a schedule (groceries, gas, eating out) are offered as new spending */
+  const sun = (() => { const d = new Date(ord(today) * DAY).getUTCDay(); return iso(ord(today) - d); })();
+  for (const g of found.filter(g => g.single || !g.list)) {
+    const all = g.all, sp = guessSpend(`${all[0].name} ${g.key}`);
+    if (!sp || all.length < 5 || ord(all[all.length - 1].date) - ord(all[0].date) < 28) continue;
+    const name = titleCase(g.key) + (/fuel|gas/.test(g.key) ? '' : ' ' + sp.label);
+    const b = { name, freq: 'weekly', anchor: sun, category: sp.category };
+    spendCand(b, all, { checked: sp.category === 'Groceries', match: g.key, exclude: g.key.includes(' ') ? '' : 'fuel, pharmacy', category: sp.category });
+    g.spent = true;
+  }
+  const exIn = existing.filter(isInc);
+  existing = existing.filter(b => !isInc(b) && !isSpend(b));
+  const build = (g, existingMatch, matchedBy) => {
+    const list = g.list, freq = g.freq, last = list[list.length - 1];
+    const step = FREQ[freq].d || FREQ[freq].m * 30.44;
+    const stale = ord(today) - ord(last.date) > step * 1.6 + 5;
+    const steps = [];
+    for (let i = 1; i < list.length; i++) { const a = list[i - 1].amt, b = list[i].amt; if (Math.abs(b - a) / a > 0.01) steps.push({ on: list[i].date, from: a, amount: b }); }
+    /* a flat price that changed once or twice (a price hike) is a fixed bill, not a varying one */
+    const stepped = steps.length <= 2 && list.length - steps.length >= 2;
+    const varies = !stepped && cvOf(list.map(t => t.amt)) > 0.05;
+    const c = makeCandidate({ name: last.name || titleCase(g.key), amount: varies ? round2(median(list.slice(-3).map(t => t.amt))) : last.amt, varies, freq, anchor: last.date,
+      history: list.map(t => ({ date: t.date, amount: t.amt })), priceHistory: stepped ? steps : [], from: `${list.length} charges`, stale, sample: last.desc, looks: true }, []);
+    if (existingMatch) { c.existing = existingMatch; c.matchedBy = matchedBy; used.add(existingMatch.id); c.name = existingMatch.name; c.category = existingMatch.category || c.category; c.checked = true; }
+    /* unknown store with changing amounts (a dispensary, a pharmacy) or a tiny fee: offered, not pre-checked */
+    if (!c.existing && c.category === 'Other' && (last.amt < 5 || c.varies)) c.checked = false;
+    if (stale) c.checked = false;
+    if (c.existing && c.existing.amountType !== 'varies' && Math.abs((Number(c.existing.amount) || 0) - last.amt) > 0.01) c.priceDiff = { have: Number(c.existing.amount) || 0, bank: last.amt };
+    cands.push(c);
+  };
+  const byName = g => existing.find(b => b.status === 'active' && !used.has(b.id) && similar(b.name, (g.list || g.all)[0].name || g.key));
+  /* pass 1: same name as a bill you have; pass 2: same schedule and amount; pass 3: new */
+  const rest = [];
+  for (const g of found.filter(g => !g.single && !g.spent)) { const m = byName(g); if (m) build(g, m, 'name'); else rest.push(g); }
+  rest.sort((a, b) => b.list.length - a.list.length);
+  /* a frequent shop that happened to look regular (weekly Kroger runs) is spending, not a bill */
+  for (const g of [...rest]) { const sp = guessSpend(`${g.list[0].name} ${g.key}`); if (sp && FREQ[g.freq].d && g.all.length >= 5) { rest.splice(rest.indexOf(g), 1); const name = titleCase(g.key) + (/fuel|gas/.test(g.key) ? '' : ' ' + sp.label); spendCand({ name, freq: 'weekly', anchor: sun, category: sp.category }, g.all, { checked: sp.category === 'Groceries', match: g.key, exclude: g.key.includes(' ') ? '' : 'fuel, pharmacy', category: sp.category }); } }
+  for (const g of rest) { const m = scheduleMatch(existing, g.freq, g.list, used, g.list[0].name || g.key); build(g, m, m ? 'schedule' : null); }
+  /* A one-off charge from a bill you already have (a yearly plan) is still worth logging */
+  for (const g of found.filter(g => g.single && !g.spent)) {
+    const t = g.all[g.all.length - 1], m = byName(g);
+    if (m && FREQ[m.freq] && !FREQ[m.freq].d && (FREQ[m.freq].m >= 6 || FREQ[m.freq].once)) {
+      const c = makeCandidate({ name: m.name, amount: t.amt, varies: false, freq: m.freq, anchor: m.anchor, history: [{ date: t.date, amount: t.amt }], from: '1 charge', sample: t.desc, looks: true }, []);
+      c.existing = m; c.matchedBy = 'name'; c.checked = true; used.add(m.id);
+      if (m.amountType !== 'varies' && Math.abs((Number(m.amount) || 0) - t.amt) > 0.01) c.priceDiff = { have: Number(m.amount) || 0, bank: t.amt };
+      cands.push(c);
+    } else skipped++;
+  }
+  /* Money coming in: paychecks (payroll deposits) and regular transfers from a person (Erica moving her pay over).
+     Matched to income you already have by name, or by about the same amount per month (weekly $857 ≈ every 2 weeks $1,650). */
+  const inGroups = new Map();
+  for (const t of inTx) { if (!inGroups.has(t.key)) inGroups.set(t.key, []); inGroups.get(t.key).push(t); }
+  const incFound = detect(inGroups, true).filter(g => !g.single);
+  const incC = [];
+  for (const g of incFound) {
+    const list = g.list, last = list[list.length - 1], freq = g.freq;
+    const amount = round2(median(list.slice(-4).map(t => t.amt)));
+    const step = FREQ[freq].d || FREQ[freq].m * 30.44;
+    const stale = ord(today) - ord(last.date) > step * 1.6 + 5;
+    const c = makeCandidate({ name: last.name, amount, varies: cvOf(list.map(t => t.amt)) > 0.03, freq, anchor: last.date,
+      history: list.map(t => ({ date: t.date, amount: t.amt })), from: `${list.length} deposits`, stale, sample: last.desc, looks: true }, []);
+    c.section = 'income'; c.kind = 'income'; c.category = 'Income'; c.varies = true; c.payroll = list.some(t => t.payroll);
+    incC.push(c);
+  }
+  const rate = (amt, f) => (Number(amt) || 0) * (FREQ[f] || FREQ.monthly).pm;
+  const usedIn = new Set();
+  /* best name match wins: "Erica transfer" → "Erica's payroll" (same first name) beats a loose "payroll" match */
+  for (const c of [...incC].sort((a, b) => b.history.length - a.history.length)) {
+    let best = null, bs = 0;
+    for (const b of exIn) { if (b.status !== 'active' || usedIn.has(b.id)) continue; const sc = simScore(b.name, c.name); if (sc > bs) { bs = sc; best = b; } }
+    if (best) { c.existing = best; c.matchedBy = 'name'; usedIn.add(best.id); }
+  }
+  for (const c of incC.filter(c => !c.existing)) {
+    const r = rate(c.amount, c.freq);
+    const m = exIn.find(b => b.status === 'active' && !usedIn.has(b.id) && rate(b.amount, b.freq) > 0 && Math.abs(rate(b.amount, b.freq) - r) / Math.max(r, rate(b.amount, b.freq)) <= 0.15);
+    if (m) { c.existing = m; c.matchedBy = 'rate'; usedIn.add(m.id); }
+  }
+  for (const c of incC) { if (c.existing) c.name = c.existing.name; c.checked = !c.stale && (c.payroll || !!c.existing); cands.push(c); }
+  const so = c => c.section === 'income' ? 2 : c.section === 'spend' ? 1 : 0;
+  cands.sort((a, b) => (so(a) - so(b)) || (!!b.existing - !!a.existing) || (b.checked - a.checked) || a.name.localeCompare(b.name));
+  return { cands, skipped };
+}
+/* Who a deposit is from: an employer payroll (ACH "CO: KELCOR MACHINE", "TYPE: PAYROLL") or a person ("From SUTTON,ERICA").
+   Refunds, interest and moves from your own savings are not income. */
+function bankIncome(desc, memo) {
+  const raw = `${desc || ''} ${memo || ''}`.replace(/\s+/g, ' ').trim();
+  if (!raw || /\b(refund|reversal|adjustment|interest|dividend|voucher|returned|cashback|cash back)\b/i.test(raw)) return null;
+  const sample = raw.replace(/\d{4,}/g, '\u2026').replace(/\bNAME:.*$/i, '').slice(0, 90);
+  const payroll = /\bpayroll\b|\bpayrl\b|direct dep|\bsalary\b|\bwages?\b|\bTYPE:\s*PAYROLL/i.test(raw);
+  const tc = w => w[0].toUpperCase() + w.slice(1).toLowerCase();
+  const co = /\bCO:\s*(.+?)(?:\s+(?:NAME:|Entry\b|SEC:|IND\b|ID:)|$)/i.exec(raw);
+  if (co) { const nm = co[1].trim().split(/\s+/).filter(w => w.length > 1 && /[a-z]/i.test(w)).slice(0, 3).map(tc).join(' '); if (nm) return { key: 'in ' + nm.toLowerCase(), name: nm + (payroll ? ' payroll' : ''), sample, payroll }; }
+  const person = /\bfrom\s+([A-Z][A-Z'-]+),\s*([A-Z][A-Z'-]+)/i.exec(raw);
+  if (person) { const first = tc(person[2]); return { key: 'from ' + first.toLowerCase(), name: `${first} transfer`, sample, payroll: false }; }
+  if (/\bshare\b|\btransfer\b|\bfrom savings\b/i.test(raw)) return null;
+  const m = bankMerchant(desc, memo);
+  return m ? { key: 'in ' + m.key, name: m.name + (payroll ? ' payroll' : ''), sample, payroll } : null;
+}
+
+/* ---- calendar (.ics) export ---- */
+function icsEsc(s) { return String(s || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n'); }
+function icsFold(line) { const out = []; let s = line; while (s.length > 74) { out.push(s.slice(0, 74)); s = ' ' + s.slice(74); } out.push(s); return out.join('\r\n'); }
+function rruleFor(b) {
+  const f = FREQ[b.freq] || FREQ.monthly;
+  if (f.once) return null;
+  let r;
+  if (f.d) r = `FREQ=WEEKLY;INTERVAL=${f.d / 7}`;
+  else {
+    const day = +b.anchor.slice(8, 10);
+    const by = day <= 28 ? `BYMONTHDAY=${day}` : `BYMONTHDAY=${Array.from({ length: day - 27 }, (_, i) => 28 + i).join(',')};BYSETPOS=-1`;
+    r = f.m === 12 ? `FREQ=YEARLY;BYMONTH=${+b.anchor.slice(5, 7)};${by}` : `FREQ=MONTHLY;INTERVAL=${f.m};${by}`;
+  }
+  if (isDate(b.endDate)) r += `;UNTIL=${b.endDate.replace(/-/g, '')}`;
+  return r;
+}
+function buildICS(bills, ests, today, leadDays, money) {
+  const L = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Sutton Bill Book//EN', 'CALSCALE:GREGORIAN', 'X-WR-CALNAME:Bills'];
+  const stamp = today.replace(/-/g, '') + 'T120000Z';
+  for (const b of bills) {
+    if (b.status !== 'active') continue;
+    const start = nextDue(b, today); if (!start) continue;
+    const e = ests.get(b.id) || 0;
+    const amt = (b.amountType === 'varies' ? '~' : '') + money(e);
+    const summary = `${b.name} ${amt}${b.autopay ? ' (autopay)' : ''}`;
+    const desc = [b.amountType === 'varies' ? 'Amount varies. Check the bill book for the latest estimate.' : '', b.payUrl ? `Pay: ${b.payUrl}` : '', b.notes || ''].filter(Boolean).join('\n');
+    const end = iso(ord(start) + 1).replace(/-/g, '');
+    L.push('BEGIN:VEVENT', `UID:${b.id}@sutton-bill-book`, `DTSTAMP:${stamp}`, `DTSTART;VALUE=DATE:${start.replace(/-/g, '')}`, `DTEND;VALUE=DATE:${end}`);
+    const rr = rruleFor(Object.assign({}, b, { anchor: start, endDate: b.endDate }));
+    if (rr) L.push(`RRULE:${rr}`);
+    L.push(icsFold(`SUMMARY:${icsEsc(summary)}`));
+    if (desc) L.push(icsFold(`DESCRIPTION:${icsEsc(desc)}`));
+    L.push('TRANSP:TRANSPARENT', 'BEGIN:VALARM', 'ACTION:DISPLAY', icsFold(`DESCRIPTION:${icsEsc(b.name + ' is due')}`), `TRIGGER:-P${leadDays}D`, 'END:VALARM', 'END:VEVENT');
+  }
+  L.push('END:VCALENDAR');
+  return L.join('\r\n') + '\r\n';
+}
+
+/* ---- paydays ---- */
+function paydays(pay, from, to) {
+  if (!pay || !pay.enabled) return [];
+  if (pay.freq !== 'semimonthly' && !isDate(pay.anchor)) return [];
+  if (pay.freq === 'semimonthly') {
+    const out = [], d1 = Math.min(31, Math.max(1, +pay.d1 || 1)), d2 = Math.min(31, Math.max(1, +pay.d2 || 15));
+    let s = from.slice(0, 8) + '01';
+    for (let i = 0; i < 40; i++) {
+      const [y, m] = s.split('-').map(Number);
+      for (const d of [d1, d2].sort((a, b) => a - b)) {
+        const x = `${y}-${pad(m)}-${pad(Math.min(d, dim(y, m)))}`;
+        if (x >= from && x <= to && !out.includes(x)) out.push(x);
+      }
+      s = addMonths(s, 1); if (s > to) break;
+    }
+    return out;
+  }
+  const freq = { weekly: 'weekly', biweekly: 'biweekly', monthly: 'monthly' }[pay.freq] || 'biweekly';
+  const f = FREQ[freq];
+  if (f.d) {
+    const A = ord(pay.anchor), F = ord(from), T = ord(to), out = [];
+    let n = A + Math.ceil((F - A) / f.d) * f.d;
+    for (; n <= T; n += f.d) out.push(iso(n));
+    return out;
+  }
+  const out = [];
+  for (let k = -24; k < 60; k++) { const x = addMonths(pay.anchor, k); if (x > to) break; if (x >= from) out.push(x); }
+  return out;
+}
+function payPeriods(pay, today) {
+  const T = ord(today);
+  const days = paydays(pay, iso(T - 40), iso(T + 80));
+  const prev = [...days].reverse().find(d => d <= today), next = days.find(d => d > today);
+  if (!next) return null;
+  const after = days.find(d => d > next) || null;
+  return { prev, next, after };
+}
+/*LOGIC-END*/
+
+/* ======================= app ======================= */
+const $ = s => document.querySelector(s);
+const view = $('#view');
+const money = n => (Number(n) || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+const money0 = n => (Number(n) || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const dowOf = s => DOW[new Date(ord(s) * DAY).getUTCDay()];
+const nice = s => `${dowOf(s)}, ${MON[+s.slice(5, 7) - 1]} ${+s.slice(8, 10)}`;
+const short = s => `${MON[+s.slice(5, 7) - 1]} ${+s.slice(8, 10)}`;
+function rel(days) {
+  if (days === 0) return 'Today'; if (days === 1) return 'Tomorrow'; if (days === -1) return 'Yesterday';
+  return days > 0 ? `in ${days} days` : `${-days} days late`;
+}
+const uid = () => 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+const DEFAULT_SETTINGS = { members: ['Robert', 'Erica'], leadDays: 3, pay: { enabled: false, freq: 'biweekly', anchor: '', d1: 1, d2: 15 } };
+const S = {
+  bills: new Map(), pays: new Map(), settings: structuredClone(DEFAULT_SETTINGS),
+  mode: 'loading', readOnly: false, me: null, user: null, db: null,
+  tab: 'home', upView: 'list', calY: 0, calM: 0, selDay: null, filter: 'all', q: '', loaded: { bills: false, pays: false, settings: false }
+};
+{ const t = localToday(); S.calY = +t.slice(0, 4); S.calM = +t.slice(5, 7); }
+try { const v = localStorage.getItem('sbb.tab'); if (v) S.tab = v; } catch (e) {}
+
+/* ---------- storage ---------- */
+const LKEY = 'suttonBillBook.v1';
+function loadLocal() {
+  try {
+    const raw = localStorage.getItem(LKEY); if (!raw) return;
+    const d = JSON.parse(raw);
+    (d.bills || []).forEach(b => S.bills.set(b.id, b));
+    (d.payments || []).forEach(p => S.pays.set(p.id, p));
+    if (d.settings) S.settings = Object.assign(structuredClone(DEFAULT_SETTINGS), d.settings);
+  } catch (e) {}
+}
+function saveLocal() {
+  try { localStorage.setItem(LKEY, JSON.stringify({ bills: [...S.bills.values()], payments: [...S.pays.values()], settings: S.settings })); } catch (e) { toast('This browser won\u2019t save data. Changes last until you close the page.'); }
+}
+const clean = o => JSON.parse(JSON.stringify(o));
+function writeErr(e) {
+  if (e && e.code === 'invalid_argument') { S.readOnly = true; toast('You can view this bill book but not change it. Ask the owner to share it with you as an Editor.'); render(); }
+  else if (e && e.code === 'quota_exceeded') toast('The bill book is full. Delete old history or cancelled bills to make room.');
+  else toast('Couldn\u2019t save that change. Check your connection and try again.');
+}
+async function retry(fn) { try { return await fn(); } catch (e) { if (e && e.code === 'unavailable') { await new Promise(r => setTimeout(r, 400 + Math.random() * 600)); return fn(); } throw e; } }
+const Store = {
+  async putBill(b) {
+    b.updatedOn = localToday();
+    if (S.db) { try { await retry(() => S.db.collection('bills').doc(b.id).set(clean(b))); return true; } catch (e) { writeErr(e); return false; } }
+    S.bills.set(b.id, b); saveLocal(); render(); return true;
+  },
+  async delBill(id) {
+    const pays = [...S.pays.values()].filter(p => p.billId === id);
+    if (S.db) {
+      try { await retry(() => S.db.collection('bills').doc(id).delete()); for (const p of pays) await retry(() => S.db.collection('payments').doc(p.id).delete()); return true; }
+      catch (e) { writeErr(e); return false; }
+    }
+    S.bills.delete(id); pays.forEach(p => S.pays.delete(p.id)); saveLocal(); render(); return true;
+  },
+  async putPay(p) {
+    if (S.db) { try { await retry(() => S.db.collection('payments').doc(p.id).set(clean(p))); return true; } catch (e) { writeErr(e); return false; } }
+    S.pays.set(p.id, p); saveLocal(); render(); return true;
+  },
+  async delPay(id) {
+    if (S.db) { try { await retry(() => S.db.collection('payments').doc(id).delete()); return true; } catch (e) { writeErr(e); return false; } }
+    S.pays.delete(id); saveLocal(); render(); return true;
+  },
+  async putSettings(s) {
+    if (S.db) { try { await retry(() => S.db.doc('meta/settings').set(clean(s))); return true; } catch (e) { writeErr(e); return false; } }
+    S.settings = s; saveLocal(); render(); return true;
+  }
+};
+let renderQueued = false;
+function queueRender() { if (renderQueued) return; renderQueued = true; requestAnimationFrame(() => { renderQueued = false; render(); }); }
+async function boot() {
+  let db = null, user = null;
+  const hasClaude = typeof window.claude === 'object' && window.claude && typeof window.claude.use === 'function';
+  if (hasClaude) {
+    try { [db, user] = await Promise.all([window.claude.use('db'), window.claude.use('user')]); } catch (e) { db = null; }
+  }
+  S.user = user || null;
+  if (S.user) { try { S.me = await S.user.id(); } catch (e) {} try { if ((await S.user.can('data.write')) === false) S.readOnly = true; } catch (e) {} }
+  if (db) {
+    S.db = db; S.mode = 'shared';
+    const onErr = e => { if (e && e.code === 'revoked') { S.mode = 'off'; render(); } };
+    db.collection('bills').onSnapshot(snap => { S.bills = new Map(snap.docs.map(d => [d.id, Object.assign({ id: d.id }, d.data())])); S.loaded.bills = true; queueRender(); }, onErr);
+    db.collection('payments').orderBy('dueDate', 'desc').limit(1000).onSnapshot(snap => { S.pays = new Map(snap.docs.map(d => [d.id, Object.assign({ id: d.id }, d.data())])); S.loaded.pays = true; queueRender(); }, onErr);
+    db.doc('meta/settings').onSnapshot(snap => { S.settings = Object.assign(structuredClone(DEFAULT_SETTINGS), snap.exists ? snap.data() : {}); S.loaded.settings = true; queueRender(); }, onErr);
+  } else {
+    S.mode = 'device'; loadLocal(); S.loaded = { bills: true, pays: true, settings: true };
+  }
+  render();
+}
+
+/* ---------- derived data ---------- */
+function ctx() {
+  const t = localToday(), T = ord(t);
+  const byBill = new Map();
+  for (const p of S.pays.values()) { if (!byBill.has(p.billId)) byBill.set(p.billId, []); byBill.get(p.billId).push(p); }
+  for (const l of byBill.values()) l.sort((a, b) => a.dueDate < b.dueDate ? 1 : -1);
+  const bills = [...S.bills.values()].filter(b => b && b.name && isDate(b.anchor));
+  const est = new Map();
+  for (const b of bills) est.set(b.id, estimate(b, (byBill.get(b.id) || []).filter(p => !p.skipped && (!isSpend(b) || ord(p.dueDate) + periodDays(b) <= T))));
+  const c = { t, T, byBill, bills, est };
+  c.inst = instancesBetween(c, iso(T - 60), iso(T + 92));
+  c.out = c.inst.filter(i => !i.income && !i.spend); c.inc = c.inst.filter(i => i.income); c.sp = c.inst.filter(i => i.spend);
+  c.hasSpend = bills.some(b => isSpend(b) && b.status === 'active');
+  c.hasIncome = bills.some(b => isInc(b) && b.status === 'active');
+  return c;
+}
+function instancesBetween(c, from, to) {
+  const out = [], lead = +S.settings.leadDays || 3;
+  for (const b of c.bills) {
+    const track = isDate(b.trackFrom) ? b.trackFrom : (b.createdOn || c.t);
+    for (const d of occurrences(b, from, to)) {
+      const pay = S.pays.get(payId(b.id, d)) || null, days = ord(d) - c.T;
+      if (days < 0 && d < track && !pay) continue;
+      let state; const inc = isInc(b);
+      if (isSpend(b)) {
+        /* a spending week: the current week counts the larger of what's spent so far and the usual amount */
+        const end = ord(d) + periodDays(b), spent = pay && !pay.skipped ? pay.amount : 0, e = c.est.get(b.id);
+        const st = end <= c.T ? (pay ? 'spent' : 'assumed') : days <= 0 ? 'current' : 'planned';
+        out.push({ b, d, days, pay, state: st, spend: true, spent, left: Math.max(0, e - spent), amt: st === 'spent' ? spent : st === 'current' ? Math.max(e, spent) : e, estd: st !== 'spent' });
+        continue;
+      }
+      if (pay) state = pay.skipped ? 'skipped' : inc ? 'received' : 'paid';
+      else if (inc) state = days < 0 ? 'assumed' : 'expected';
+      else if (days < 0) state = b.autopay ? 'auto' : 'overdue';
+      else if (days <= lead) state = 'soon';
+      else state = 'upcoming';
+      out.push({ b, d, days, pay, state, income: isInc(b), amt: pay && !pay.skipped ? pay.amount : c.est.get(b.id), estd: !pay && b.amountType === 'varies' });
+    }
+  }
+  out.sort((x, y) => x.d < y.d ? -1 : x.d > y.d ? 1 : x.b.name.localeCompare(y.b.name));
+  return out;
+}
+function totals(c) {
+  let month = 0, subs = 0, savedSoFar = 0, savedYear = 0, inMonth = 0;
+  const byCat = new Map();
+  for (const b of c.bills) {
+    const e = c.est.get(b.id), pm = perMonth(b, e, c.t);
+    if (isInc(b)) { inMonth += pm; continue; }
+    month += pm; if (b.kind === 'subscription') subs += pm;
+    if (pm) byCat.set(b.category || 'Other', (byCat.get(b.category || 'Other') || 0) + pm);
+    if (b.status === 'cancelled' && isDate(b.cancelledOn) && b.cancelledOn <= c.t) {
+      const m = e * (FREQ[b.freq] || FREQ.monthly).pm;
+      savedYear += m * 12; savedSoFar += m * ((c.T - ord(b.cancelledOn)) / 30.44);
+    }
+  }
+  return { month, year: month * 12, subs, savedSoFar, savedYear, inMonth, byCat: [...byCat.entries()].sort((a, b) => b[1] - a[1]) };
+}
+function attention(c) {
+  const A = [];
+  for (const i of c.inst) if (i.state === 'overdue') A.push({ cls: 'late', ic: '!', title: `${i.b.name} was due ${short(i.d)}`, sub: `${rel(i.days)} · ${i.estd ? 'about ' : ''}${money(i.amt)}`, act: `pay:${i.b.id}:${i.d}`, btn: 'Mark paid' });
+  for (const b of c.bills) {
+    if (b.status !== 'active' || isInc(b) || isSpend(b)) continue;
+    if (isDate(b.trialEnds) && b.trialEnds >= c.t && ord(b.trialEnds) - c.T <= 7 && b.trialAck !== b.trialEnds)
+      A.push({ dis: `trial:${b.id}:${b.trialEnds}`, cls: 'due', ic: 'T', title: `${b.name} free trial ends ${nice(b.trialEnds)}`, sub: `Then ${money(c.est.get(b.id))} ${FREQ[b.freq].label.toLowerCase()}. Cancel before then if you don\u2019t want it.`, act: `edit:${b.id}`, btn: 'Review' });
+    if ((b.freq === 'yearly' || b.freq === 'semiannual')) {
+      const n = nextDue(b, c.t);
+      if (n && ord(n) - c.T <= 30 && !S.pays.get(payId(b.id, n)) && b.renewAck !== n) A.push({ dis: `renew:${b.id}:${n}`, cls: 'due', ic: '↻', title: `${b.name} renews ${nice(n)}`, sub: `${money(c.est.get(b.id))} all at once. Still want it?`, act: `edit:${b.id}`, btn: 'Review' });
+    }
+    const ph = b.priceHistory || [];
+    const lastCh = ph[ph.length - 1];
+    if (lastCh && lastCh.amount > lastCh.from && ord(c.t) - ord(lastCh.on) <= 60 && b.priceAck !== lastCh.on)
+      A.push({ dis: `price:${b.id}:${lastCh.on}`, cls: 'info', ic: '↑', title: `${b.name} went up`, sub: `${money(lastCh.from)} → ${money(lastCh.amount)} on ${short(lastCh.on)} (+${money0((lastCh.amount - lastCh.from) * 12 * (FREQ[b.freq].pm))}/yr)`, act: `edit:${b.id}`, btn: 'Open' });
+  }
+  for (const i of c.inst) if (i.state === 'auto' && i.b.amountType === 'varies' && i.days >= -21 && !(i.b.logAck >= i.d))
+    A.push({ dis: `log:${i.b.id}:${i.d}`, cls: 'info', ic: '$', title: `Log what ${i.b.name} drafted`, sub: `Autopay on ${short(i.d)}. Entering the real amount keeps the estimate accurate.`, act: `pay:${i.b.id}:${i.d}`, btn: 'Log it' });
+  for (const [a, b] of findDuplicates(c.bills)) if (!(a.notDup || []).includes(b.id) && !(b.notDup || []).includes(a.id))
+    A.push({ dis: `dup:${a.id}:${b.id}`, cls: 'due', ic: '2', title: `Possible duplicate: ${a.name} and ${b.name}`, sub: 'If they\u2019re the same bill, delete one so it isn\u2019t counted twice.', act: `edit:${b.id}`, btn: 'Check' });
+  const subs = c.bills.filter(b => b.status === 'active' && b.kind === 'subscription');
+  const stale = subs.filter(b => !isDate(b.reviewedOn) || c.T - ord(b.reviewedOn) > 180);
+  if (stale.length >= 2) A.push({ cls: 'info', ic: '✓', title: `${stale.length} subscriptions are due for a check-up`, sub: 'Takes a minute: keep, unsure, or cancel.', act: 'tab:review', btn: 'Start' });
+  return A;
+}
+
+/* ---------- small renderers ---------- */
+function stub(d, state) { if (state === 'inc') return `<div class="stub inc"><small>${MON[+d.slice(5, 7) - 1]}</small><b>${+d.slice(8, 10)}</b></div>`; const cls = state === 'overdue' ? 'late' : state === 'soon' ? 'soon' : (state === 'paid' || state === 'auto' || state === 'skipped') ? 'paid' : ''; return `<div class="stub ${cls}"><small>${MON[+d.slice(5, 7) - 1]}</small><b>${+d.slice(8, 10)}</b></div>`; }
+function stateChip(i) {
+  if (i.state === 'received') return `<span class="chip in">Received${i.pay.by ? ` · <span data-uid="${esc(i.pay.by)}"></span>` : ''}</span>`;
+  if (i.state === 'assumed') return `<span class="chip plain">Not logged</span>`;
+  if (i.state === 'expected') return `<span class="chip in">Payday${i.days <= 1 ? ' · ' + rel(i.days).toLowerCase() : ''}</span><span class="muted">${i.days > 1 ? rel(i.days) : ''}</span>`;
+  if (i.state === 'paid') return `<span class="chip ok">Paid${i.pay.by ? ` · <span data-uid="${esc(i.pay.by)}"></span>` : ''}</span>`;
+  if (i.state === 'skipped') return `<span class="chip plain">Skipped</span>`;
+  if (i.state === 'auto') return `<span class="chip ok">Autopaid</span>`;
+  if (i.state === 'overdue') return `<span class="chip late">${rel(i.days)}</span>`;
+  if (i.state === 'soon') return `<span class="chip due">${rel(i.days)}</span>`;
+  return `<span class="muted">${rel(i.days)}</span>`;
+}
+function instRow(i) {
+  if (i.income) return `<button class="row incrow ${i.state === 'skipped' ? 'done' : ''}" data-act="pay:${esc(i.b.id)}:${i.d}">
+    ${stub(i.d, 'inc')}
+    <span class="mid"><span class="nm">${esc(i.b.name)}</span><span class="sub">${stateChip(i)}${i.b.owner ? `<span>${esc(i.b.owner)}</span>` : ''}</span></span>
+    <span class="amt"><b class="plus">+${money(i.amt)}</b>${i.estd ? '<small>estimate</small>' : ''}</span>
+  </button>`;
+  const done = i.state === 'paid' || i.state === 'skipped' || i.state === 'auto';
+  return `<button class="row ${done ? 'done' : ''}" data-act="pay:${esc(i.b.id)}:${i.d}">
+    ${stub(i.d, i.state)}
+    <span class="mid"><span class="nm">${esc(i.b.name)}</span><span class="sub">${stateChip(i)}${i.b.autopay && i.state !== 'auto' ? '<span class="chip plain">Autopay</span>' : ''}${i.b.owner ? `<span>${esc(i.b.owner)}</span>` : ''}</span></span>
+    <span class="amt"><b>${i.estd ? '~' : ''}${money(i.amt)}</b>${i.estd ? '<small>estimate</small>' : ''}</span>
+  </button>`;
+}
+function sparkline(list) {
+  const pts = [...list].filter(p => p.amount > 0).slice(0, 12).reverse();
+  if (pts.length < 2) return '<span class="small muted">Needs 2+ amounts</span>';
+  const vals = pts.map(p => p.amount), lo = Math.min(...vals), hi = Math.max(...vals), span = hi - lo || 1;
+  const W = 110, H = 34, P = 3;
+  const xy = vals.map((v, i) => [P + i * (W - 2 * P) / (vals.length - 1), H - P - (v - lo) / span * (H - 2 * P)]);
+  const line = xy.map(p => p.map(n => n.toFixed(1)).join(',')).join(' ');
+  const area = `M${xy[0][0].toFixed(1)},${H - P} L${line.replace(/ /g, ' L')} L${xy[xy.length - 1][0].toFixed(1)},${H - P} Z`;
+  const e = xy[xy.length - 1];
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Last ${vals.length} amounts, ${money(lo)} to ${money(hi)}">
+    <line x1="${P}" x2="${W - P}" y1="${H - P}" y2="${H - P}" stroke="var(--line)" stroke-width="1"/>
+    <path d="${area}" fill="var(--accent-soft)"/><polyline points="${line}" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="${e[0].toFixed(1)}" cy="${e[1].toFixed(1)}" r="3" fill="var(--accent)"/></svg>`;
+}
+function syncLine() {
+  const el = $('#syncLine');
+  const t = localToday();
+  const pend = window.SBB ? window.SBB.pending() : 0;
+  const txt = S.mode === 'shared' ? (S.readOnly ? `<span class="dot warn"></span>View only` : pend ? `<span class="dot warn"></span>Saving ${pend} change${pend === 1 ? '' : 's'}…` : `<span class="dot on"></span>Shared · syncs between your phones`)
+    : S.mode === 'device' ? `<span class="dot warn"></span>Saved on this device only` : S.mode === 'off' ? `<span class="dot warn"></span>Access changed — reload` : `<span class="dot"></span>Opening…`;
+  el.innerHTML = `<span class="sync">${txt}</span> · ${nice(t)}`;
+}
+function emptyBook() {
+  return `<div class="panel empty">
+    <h3>Your bill book is empty</h3>
+    <p>Start by bringing in the bills you already track in Google Calendar, or add them one at a time.</p>
+    <div class="toolbar" style="justify-content:center">
+      <button class="btn primary" data-act="import-ics">Import from Google Calendar</button>
+      <button class="btn" data-act="add">Add a bill</button>
+    </div>
+    <p class="small">Have a bank statement CSV? <button class="link" data-act="import-csv">Find recurring charges in it</button></p>
+  </div>`;
+}
+
+/* ---------- views ---------- */
+function renderHome(c) {
+  if (!c.bills.length) return emptyBook();
+  const T = totals(c), A = attention(c);
+  const next7 = c.out.filter(i => (i.state === 'soon' || i.state === 'upcoming') && i.days <= 7);
+  const sum7 = next7.reduce((s, i) => s + i.amt, 0);
+  const in7 = c.inc.filter(i => i.state === 'expected' && i.days <= 7).reduce((s, i) => s + i.amt, 0);
+  const late = c.out.filter(i => i.state === 'overdue');
+  const left = T.inMonth - T.month;
+  let html = `<section class="hero">
+      <span class="eyebrow">Next 7 days</span>
+      <div class="big"><span class="num">${money(sum7)}</span> <span class="muted" style="font-size:.55em;font-weight:600">going out across ${next7.length} bill${next7.length === 1 ? '' : 's'}${in7 ? ` · <span style="color:var(--in)">+${money0(in7)} coming in</span>` : ''}</span></div>
+      ${late.length ? `<span class="chip late" style="align-self:flex-start">${late.length} overdue · ${money(late.reduce((s, i) => s + i.amt, 0))}</span>` : `<span class="small muted">Nothing overdue.</span>`}
+    </section>`;
+  html += `<section class="panel"><div class="panel-h"><h2>Coming in vs. going out</h2><span class="small muted">average month</span></div>
+    ${c.hasIncome ? `<div class="flow"><div class="in"><span>Coming in</span><b>${money0(T.inMonth)}</b></div><div class="out"><span>Going out</span><b>${money0(T.month)}</b></div><div class="${left < 0 ? 'neg' : 'in'}"><span>${left < 0 ? 'Short by' : 'Left over'}</span><b>${money0(Math.abs(left))}</b></div></div>
+      <div class="split" role="img" aria-label="Bills take ${Math.round(Math.min(1, T.month / Math.max(T.inMonth, 1)) * 100)} percent of income"><i style="width:${(Math.min(1, T.month / Math.max(T.inMonth, 1)) * 100).toFixed(1)}%"></i></div>
+      <p class="small muted" style="margin:8px 0 0">${c.hasSpend ? 'Bills and tracked spending' : 'Bills and subscriptions'} take <b>${Math.round(T.month / Math.max(T.inMonth, 1) * 100)}%</b> of take-home pay.${c.hasSpend ? '' : ' Groceries, gas and other spending come out of what’s left.'}</p>`
+    : `<div class="flow"><div class="out"><span>Going out</span><b>${money0(T.month)}</b></div><div><span>Per year</span><b>${money0(T.year)}</b></div><div><span>Subscriptions</span><b>${money0(T.subs)}</b></div></div>
+      <p class="small muted" style="margin:10px 0 0">Add your paychecks to see what’s left after bills. <button class="link" data-act="add-income">Add income</button></p>`}
+    </section>`;
+  if (c.hasIncome) html += cashFlowPanel(c);
+  if (c.hasSpend) html += spendPanel(c);
+  html += `<div class="grid2"><div class="col">`;
+  if (A.length) html += `<section class="panel"><div class="panel-h"><h2>Needs attention</h2><span class="small muted">${A.length}</span></div><div class="alerts">${A.slice(0, 8).map(a => `
+      <div class="alert ${a.cls}"><span class="ic" aria-hidden="true">${a.ic}</span><span class="tx"><b>${esc(a.title)}</b><span>${esc(a.sub)}</span></span><span class="acts"><button class="btn sm" data-act="${esc(a.act)}">${a.btn}</button>${a.dis && !S.readOnly ? `<button class="btn sm ghost" data-act="ack:${esc(a.dis)}" aria-label="Dismiss: ${esc(a.title)}">${a.dis.startsWith('dup:') ? 'Not a duplicate' : 'Dismiss'}</button>` : ''}</span></div>`).join('')}</div></section>`;
+  const soon = c.inst.filter(i => i.days >= 0 && i.days <= 30 && (i.state === 'soon' || i.state === 'upcoming' || i.state === 'paid' || i.state === 'expected' || i.state === 'received'));
+  html += `<section class="panel"><div class="panel-h"><h2>Next 30 days</h2><button class="link" data-act="tab:upcoming">See all</button></div>
+    ${soon.length ? `<div class="reg">${soon.slice(0, 9).map(instRow).join('')}</div>` : `<p class="muted">No bills due in the next 30 days.</p>`}</section>`;
+  html += `</div><div class="col">`;
+  html += payPanel(c);
+  const vb = c.bills.filter(b => b.status === 'active' && b.amountType === 'varies').sort((a, b) => isInc(b) - isInc(a));
+  if (vb.length) html += `<section class="panel"><div class="panel-h"><h2>Amounts that vary</h2><span class="small muted">last 12 amounts</span></div>${vb.map(b => {
+      const list = (c.byBill.get(b.id) || []).filter(p => !p.skipped), r = amountRange(list, c.t), n = nextDue(b, c.t), ly = n ? sameMonthLastYear(list, n) : null;
+      return `<div class="var"><div style="min-width:0"><button class="link" data-act="edit:${esc(b.id)}">${esc(b.name)}</button>
+        <div class="small"><span class="num" style="${isInc(b) ? 'color:var(--in)' : ''}">${isInc(b) ? '~+' : '~'}${money(c.est.get(b.id))}</span> next${isInc(b) ? ' check (avg of last 3)' : ''}${r ? ` · range <span class="num">${money0(r.lo)}–${money0(r.hi)}</span>` : ''}</div>
+        ${ly ? `<div class="small muted">${MON[+n.slice(5, 7) - 1]} last year: <span class="num">${money(ly)}</span></div>` : ''}</div>${sparkline(list)}</div>`;
+    }).join('')}</section>`;
+  if (T.byCat.length) {
+    const max = T.byCat[0][1];
+    html += `<section class="kpis" aria-label="Totals"><div class="kpi"><span>Bills per year</span><b>${money0(T.year)}</b><span>at today’s amounts</span></div><div class="kpi"><span>Subscriptions</span><b>${money0(T.subs)}</b><span>per month</span></div><div class="kpi"><span>Saved by cancelling</span><b>${money0(T.savedSoFar)}</b><span>${T.savedYear ? money0(T.savedYear) + '/yr going forward' : 'cancel one to start'}</span></div><div class="kpi"><span>Bills tracked</span><b>${c.bills.filter(b => b.status === 'active' && !isInc(b) && !isSpend(b)).length}</b><span>active</span></div></section>`;
+    html += `<section class="panel"><div class="panel-h"><h2>Where it goes</h2><span class="small muted">per month</span></div><div class="bars">${T.byCat.map(([k, v]) => `
+      <div class="bar"><span>${esc(k)}</span><span class="num">${money0(v)}</span><div class="track"><div class="fill" style="width:${Math.max(2, v / max * 100).toFixed(1)}%"></div></div></div>`).join('')}</div></section>`;
+  }
+  html += `</div></div>`;
+  return html;
+}
+/* This week's everyday spending against the usual week, with recent weeks */
+function spendPanel(c) {
+  const items = c.bills.filter(b => isSpend(b) && b.status === 'active');
+  return `<section class="panel"><div class="panel-h"><h2>Everyday spending</h2><span class="small muted">this ${items.every(b => b.freq === 'weekly') ? 'week' : 'period'}</span></div>
+    ${items.map(b => {
+      const cur = c.sp.find(i => i.b.id === b.id && i.state === 'current');
+      const e = c.est.get(b.id), spent = cur ? cur.spent : 0, pct = e > 0 ? Math.min(1.25, spent / e) : 0, over = spent > e && e > 0;
+      const weeks = (c.byBill.get(b.id) || []).filter(p => !p.skipped && ord(p.dueDate) + periodDays(b) <= c.T);
+      return `<div class="var" style="grid-template-columns:minmax(0,1fr) 110px"><div style="min-width:0">
+          <button class="link" data-act="edit:${esc(b.id)}">${esc(b.name)}</button>
+          <div class="small"><b class="num" style="color:var(--${over ? 'late' : 'out'})">${money0(spent)}</b> of usual <span class="num">${money0(e)}</span>${cur ? ` · week of ${short(cur.d)}` : ''}</div>
+          <div class="split" style="margin-top:6px;height:7px;background:var(--out-soft)"><i style="width:${(Math.min(1, pct) * 100).toFixed(1)}%;background:var(--${over ? 'late' : 'out'})"></i></div>
+          ${cur && !S.readOnly ? `<button class="btn sm" style="margin-top:8px" data-act="pay:${esc(b.id)}:${cur.d}">+ Add receipt</button>` : ''}
+        </div>${sparkline(weeks)}</div>`;
+    }).join('')}
+    <p class="small muted" style="margin:8px 0 0">The usual amount is the average of recent full ${items.every(b => b.freq === 'weekly') ? 'weeks' : 'periods'}. Import a bank statement to fill in each week automatically.</p>
+  </section>`;
+}
+/* Six months of money in vs. out: recorded amounts for past months, expected amounts ahead */
+function cashFlowPanel(c) {
+  const months = [];
+  for (let k = -3; k <= 2; k++) { const f = addMonths(c.t.slice(0, 8) + '01', k); months.push([f, `${f.slice(0, 8)}${pad(dim(+f.slice(0, 4), +f.slice(5, 7)))}`]); }
+  const data = months.map(([f, l]) => {
+    if (l < c.t) {
+      /* finished months: what was actually recorded (bank imports, payments, receipts) */
+      let inn = 0, out = 0;
+      for (const p of S.pays.values()) { if (p.skipped || p.dueDate < f || p.dueDate > l) continue; const b = S.bills.get(p.billId); if (!b) continue; if (isInc(b)) inn += Number(p.amount) || 0; else out += Number(p.amount) || 0; }
+      return { f, inn, out, past: true, now: false };
+    }
+    const inst = instancesBetween(c, f, l).filter(i => i.state !== 'skipped');
+    return { f, inn: inst.filter(i => i.income).reduce((s, i) => s + (i.amt || 0), 0), out: inst.filter(i => !i.income).reduce((s, i) => s + (i.amt || 0), 0), past: l < c.t, now: f <= c.t && c.t <= l };
+  });
+  const max = Math.max(1, ...data.map(d => Math.max(d.inn, d.out)));
+  const nice = Math.pow(10, Math.floor(Math.log10(max))), top = Math.ceil(max / nice) * nice;
+  const W = 600, H = 200, L = 46, B = 26, Tp = 10, gw = (W - L - 8) / data.length, bw = Math.min(26, gw * 0.3);
+  const y = v => Tp + (H - Tp - B) * (1 - v / top);
+  let svg = `<svg class="cf" viewBox="0 0 ${W} ${H}" role="img" aria-label="Money in and out by month">`;
+  for (const g of [0, 0.5, 1]) svg += `<line x1="${L}" x2="${W - 4}" y1="${y(top * g).toFixed(1)}" y2="${y(top * g).toFixed(1)}" stroke="var(--line)" stroke-width="1"/><text x="${L - 6}" y="${(y(top * g) + 4).toFixed(1)}" text-anchor="end">${money0(top * g).replace('.00', '')}</text>`;
+  data.forEach((d, i) => {
+    const cx = L + gw * i + gw / 2, op = d.past || d.now ? 1 : 0.5;
+    svg += `<rect x="${(cx - bw - 2).toFixed(1)}" y="${y(d.inn).toFixed(1)}" width="${bw}" height="${(y(0) - y(d.inn)).toFixed(1)}" rx="3" fill="var(--in)" opacity="${op}"><title>${MON[+d.f.slice(5, 7) - 1]}: in ${money0(d.inn)}</title></rect>`;
+    svg += `<rect x="${(cx + 2).toFixed(1)}" y="${y(d.out).toFixed(1)}" width="${bw}" height="${(y(0) - y(d.out)).toFixed(1)}" rx="3" fill="var(--out)" opacity="${op}"><title>${MON[+d.f.slice(5, 7) - 1]}: out ${money0(d.out)}</title></rect>`;
+    svg += `<text class="lbl" x="${cx.toFixed(1)}" y="${H - 8}" text-anchor="middle" font-weight="${d.now ? 700 : 400}">${MON[+d.f.slice(5, 7) - 1]}</text>`;
+  });
+  svg += `</svg>`;
+  const cur = data.find(d => d.now);
+  return `<section class="panel"><div class="panel-h"><h2>Month by month</h2><div class="legend"><span><i class="sw" style="background:var(--in)"></i>In</span><span><i class="sw" style="background:var(--out)"></i>Going out</span><span><i class="sw" style="background:var(--muted);opacity:.5"></i>Faded = expected</span></div></div>
+    <div style="overflow-x:auto">${svg}</div>
+    ${cur ? `<p class="small muted" style="margin:6px 0 0">${MON[+cur.f.slice(5, 7) - 1]}: <span class="num" style="color:var(--in)">+${money0(cur.inn)}</span> in, <span class="num" style="color:var(--out)">${money0(cur.out)}</span> going out, <b class="num">${money0(cur.inn - cur.out)}</b> left. Past months show only what’s been logged or imported.</p>` : ''}
+  </section>`;
+}
+/* Paycheck by paycheck: each payday's money in, the bills due before the next payday, and what's left */
+function payPanel(c) {
+  if (c.hasIncome) {
+    const byDay = new Map();
+    for (const i of c.inc) if (i.days >= 0 && i.state !== 'skipped') { if (!byDay.has(i.d)) byDay.set(i.d, []); byDay.get(i.d).push(i); }
+    const days = [...byDay.keys()].sort();
+    if (days.length) {
+      const unpaid = i => i.state === 'overdue' || i.state === 'soon' || i.state === 'upcoming';
+      const pre = c.out.filter(i => unpaid(i) && i.d < days[0]);
+      const rows = [];
+      if (pre.length) rows.push({ label: `Before ${short(days[0])}`, sub: `${pre.length} bill${pre.length === 1 ? '' : 's'} still to pay${pre.some(i => i.state === 'overdue') ? ', some overdue' : ''}`, inn: 0, out: pre.reduce((s, i) => s + i.amt, 0), d: null });
+      for (let k = 0; k < Math.min(3, days.length); k++) {
+        const d = days[k], nx = days[k + 1] || iso(ord(d) + 14), ins = byDay.get(d);
+        const bills = c.out.filter(i => unpaid(i) && i.d >= d && i.d < nx);
+        const sp = c.sp.filter(i => (i.state === 'planned' || i.state === 'current') && i.d >= (k ? d : iso(c.T - 6)) && i.d < nx).reduce((s, i) => s + (i.state === 'current' ? i.left : i.amt), 0);
+        rows.push({ d, label: ins.map(i => i.b.name).join(' + '), sub: `${bills.length} bill${bills.length === 1 ? '' : 's'} due by ${short(iso(ord(nx) - 1))}${bills.length ? ': ' + bills.slice(0, 3).map(i => i.b.name).join(', ') + (bills.length > 3 ? '…' : '') : ''}${sp ? ` · ~${money0(sp)} spending` : ''}`, inn: ins.reduce((s, i) => s + i.amt, 0), out: bills.reduce((s, i) => s + i.amt, 0) + sp });
+      }
+      return `<section class="panel"><div class="panel-h"><h2>Paycheck by paycheck</h2><span class="small muted">bills each check covers</span></div>
+        ${rows.map(r => { const lf = r.inn - r.out; return `<div class="pc">${r.d ? stub(r.d, 'inc') : '<div class="stub soon"><small>Now</small><b>·</b></div>'}
+          <div class="mid" style="min-width:0"><b>${esc(r.label)}</b><span>${esc(r.sub)}</span></div>
+          <div class="left ${r.d ? (lf < 0 ? 'neg' : 'pos') : 'neg'}"><b>${r.d ? (lf < 0 ? '−' : '') + money0(Math.abs(lf)) : '−' + money0(r.out)}</b><small>${r.d ? `+${money0(r.inn)} − ${money0(r.out)}` : 'from current balance'}</small></div></div>`; }).join('')}
+      </section>`;
+    }
+  }
+  const pp = payPeriods(S.settings.pay, c.t);
+  if (!pp) return `<section class="panel"><div class="panel-h"><h2>Paycheck planner</h2></div><p class="small muted">Add your paychecks as income to see which bills each check has to cover and what’s left.</p><button class="btn sm" data-act="add-income">Add income</button></section>`;
+  const due1 = c.out.filter(i => (i.state === 'overdue') || ((i.state === 'soon' || i.state === 'upcoming') && i.d < pp.next));
+  const due2 = pp.after ? c.out.filter(i => (i.state === 'soon' || i.state === 'upcoming') && i.d >= pp.next && i.d < pp.after) : [];
+  const s1 = due1.reduce((s, i) => s + i.amt, 0), s2 = due2.reduce((s, i) => s + i.amt, 0);
+  return `<section class="panel"><div class="panel-h"><h2>Paycheck planner</h2><span class="small muted">next payday ${short(pp.next)}</span></div>
+    <div class="pay2"><div class="paybox"><span>Before ${short(pp.next)}</span><b>${money(s1)}</b><span>${due1.length} bill${due1.length === 1 ? '' : 's'} still to pay</span></div>
+    <div class="paybox"><span>${short(pp.next)}${pp.after ? '–' + short(iso(ord(pp.after) - 1)) : ''}</span><b>${money(s2)}</b><span>${due2.length} bill${due2.length === 1 ? '' : 's'} from that check</span></div></div></section>`;
+}
+function renderUpcoming(c) {
+  if (!c.bills.length) return emptyBook();
+  let html = `<div class="toolbar"><div class="seg" role="group" aria-label="View"><button data-act="upv:list" aria-pressed="${S.upView === 'list'}">List</button><button data-act="upv:month" aria-pressed="${S.upView === 'month'}">Month</button></div>
+    <div class="legend"><span><i class="dot" style="background:var(--late)"></i>Overdue</span><span><i class="dot" style="background:var(--due)"></i>Due soon</span><span><i class="dot" style="background:var(--ok)"></i>Paid</span><span><i class="dot" style="background:var(--in)"></i>Payday</span></div></div>`;
+  if (S.upView === 'list') {
+    const list = c.inst.filter(i => !i.spend && (i.state === 'overdue' || i.days >= 0));
+    const groups = [['Overdue', i => i.state === 'overdue'], ['This week', i => i.days >= 0 && i.days <= 6], ['Next week', i => i.days >= 7 && i.days <= 13], ['Later this month', i => i.days >= 14 && i.d.slice(0, 7) === c.t.slice(0, 7)]];
+    const used = new Set(); const sections = [];
+    for (const [label, fn] of groups) { const g = list.filter(i => !used.has(i) && fn(i)); g.forEach(i => used.add(i)); if (g.length) sections.push([label, g]); }
+    const rest = list.filter(i => !used.has(i));
+    const months = [...new Set(rest.map(i => i.d.slice(0, 7)))];
+    for (const m of months) sections.push([`${MON[+m.slice(5, 7) - 1]} ${m.slice(0, 4)}`, rest.filter(i => i.d.slice(0, 7) === m)]);
+    const sums = g => { const o = g.filter(i => !i.income && i.state !== 'paid' && i.state !== 'skipped').reduce((s, i) => s + i.amt, 0), n = g.filter(i => i.income && i.state !== 'skipped').reduce((s, i) => s + i.amt, 0); return `${n ? `<span style="color:var(--in)">+${money0(n)}</span> · ` : ''}${money(o)} due`; };
+    html += `<section class="panel"><div class="reg">${sections.map(([l, g]) => `<div class="group-h"><span>${l}</span><span class="num">${sums(g)}</span></div>${g.map(instRow).join('')}`).join('') || '<p class="muted">Nothing due in the next 3 months.</p>'}</div></section>`;
+  } else {
+    const y = S.calY, m = S.calM, first = `${y}-${pad(m)}-01`, last = `${y}-${pad(m)}-${pad(dim(y, m))}`;
+    const startPad = new Date(ord(first) * DAY).getUTCDay();
+    const gFrom = iso(ord(first) - startPad), cells = Math.ceil((startPad + dim(y, m)) / 7) * 7, gTo = iso(ord(gFrom) + cells - 1);
+    const inst = instancesBetween(c, gFrom, gTo).filter(i => !i.spend);
+    const byDay = new Map(); inst.forEach(i => { if (!byDay.has(i.d)) byDay.set(i.d, []); byDay.get(i.d).push(i); });
+    const inMonth = inst.filter(i => i.d >= first && i.d <= last && i.state !== 'skipped');
+    const monthTotal = inMonth.filter(i => !i.income).reduce((s, i) => s + (i.amt || 0), 0), monthIn = inMonth.filter(i => i.income).reduce((s, i) => s + (i.amt || 0), 0);
+    html += `<section class="panel"><div class="panel-h"><div class="toolbar"><button class="btn sm" data-act="cal:-1" aria-label="Previous month">‹</button><h2>${['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][m - 1]} ${y}</h2><button class="btn sm" data-act="cal:1" aria-label="Next month">›</button></div><span class="num small muted">${monthIn ? `<span style="color:var(--in)">+${money0(monthIn)}</span> in · ` : ''}${money0(monthTotal)} bills</span></div>
+      <div class="cal">${DOW.map(d => `<div class="dow">${d.slice(0, 2)}</div>`).join('')}${Array.from({ length: cells }, (_, k) => {
+        const d = iso(ord(gFrom) + k), list = byDay.get(d) || [], tot = list.filter(i => !i.income).reduce((s, i) => s + (i.amt || 0), 0);
+        return `<button class="cell ${d.slice(0, 7) !== first.slice(0, 7) ? 'out' : ''} ${d === c.t ? 'today' : ''} ${d === S.selDay ? 'sel' : ''}" data-act="day:${d}" aria-label="${nice(d)}, ${list.length} bills">
+          <span class="d">${+d.slice(8, 10)}</span><span class="pips">${list.slice(0, 6).map(i => `<i class="pip ${i.income ? 'inc' : i.state === 'overdue' ? 'late' : (i.state === 'paid' || i.state === 'auto') ? 'paid' : ''}"></i>`).join('')}</span>${tot ? `<span class="tot">${money0(tot)}</span>` : ''}</button>`;
+      }).join('')}</div></section>`;
+    const sel = S.selDay && byDay.get(S.selDay);
+    html += `<section class="panel"><div class="panel-h"><h2>${S.selDay ? nice(S.selDay) : 'Pick a day'}</h2></div>${sel ? `<div class="reg">${sel.map(instRow).join('')}</div>` : `<p class="muted small">${S.selDay ? 'Nothing due that day.' : 'Tap a day to see what\u2019s due.'}</p>`}</section>`;
+  }
+  return html;
+}
+function renderBills(c) {
+  if (!c.bills.length) return emptyBook();
+  const F = [['all', 'All bills'], ['bill', 'Bills'], ['subscription', 'Subscriptions'], ['income', 'Income'], ['spending', 'Spending'], ['varies', 'Amount varies'], ['autopay', 'Autopay'], ['inactive', 'Paused & cancelled']];
+  const q = nameKey(S.q);
+  let list = c.bills.filter(b => {
+    if (S.filter === 'inactive') { if (b.status === 'active') return false; } else if (b.status !== 'active') return false;
+    if (S.filter === 'income' ? !isInc(b) : S.filter !== 'inactive' && isInc(b)) return false;
+    if (S.filter === 'spending' ? !isSpend(b) : S.filter !== 'inactive' && S.filter !== 'all' && isSpend(b)) return false;
+    if (S.filter === 'bill' && b.kind !== 'bill') return false;
+    if (S.filter === 'subscription' && b.kind !== 'subscription') return false;
+    if (S.filter === 'varies' && b.amountType !== 'varies') return false;
+    if (S.filter === 'autopay' && !b.autopay) return false;
+    if (q && !nameKey(b.name + ' ' + (b.category || '')).includes(q)) return false;
+    return true;
+  }).map(b => ({ b, n: nextDue(b, c.t) }));
+  list.sort((x, y) => (x.n || '9999') < (y.n || '9999') ? -1 : (x.n || '9999') > (y.n || '9999') ? 1 : x.b.name.localeCompare(y.b.name));
+  const sumM = list.reduce((s, x) => s + perMonth(x.b, c.est.get(x.b.id), c.t), 0);
+  return `<div class="toolbar"><input class="search" id="q" type="search" placeholder="Search bills" value="${esc(S.q)}" aria-label="Search bills"></div>
+    <div class="chips" role="group" aria-label="Filter">${F.map(([k, l]) => `<button class="fchip" data-act="filter:${k}" aria-pressed="${S.filter === k}">${l}</button>`).join('')}</div>
+    <section class="panel"><div class="panel-h"><h2>${list.length} ${S.filter === 'inactive' ? 'paused or cancelled' : 'active'}</h2>${S.filter !== 'inactive' ? `<span class="num small muted" style="${S.filter === 'income' ? 'color:var(--in)' : ''}">${S.filter === 'income' ? '+' : ''}${money(sumM)}/mo</span>` : ''}${S.filter === 'income' ? '<button class="btn sm" data-act="add-income">+ Add income</button>' : ''}</div>
+    <div class="reg">${list.map(({ b, n }) => {
+      const e = c.est.get(b.id), f = FREQ[b.freq] || FREQ.monthly;
+      return `<button class="row" data-act="edit:${esc(b.id)}">${n ? stub(n, ord(n) - c.T <= (+S.settings.leadDays || 3) ? 'soon' : '') : `<div class="stub"><small>—</small><b>·</b></div>`}
+        <span class="mid"><span class="nm">${esc(b.name)}</span><span class="sub"><span>${esc(b.category || 'Other')}</span><span>· ${f.label}</span>${b.autopay ? '<span class="chip plain">Autopay</span>' : ''}${b.amountType === 'varies' ? '<span class="chip plain">Varies</span>' : ''}${b.status !== 'active' ? `<span class="chip ${b.status === 'cancelled' ? 'late' : 'due'}">${b.status === 'cancelled' ? 'Cancelled' : 'Paused'}</span>` : ''}</span></span>
+        <span class="amt"><b class="${isInc(b) ? 'plus' : ''}">${isInc(b) ? '+' : ''}${b.amountType === 'varies' ? '~' : ''}${money(e)}</b><small>${f.once ? 'one time' : f.label.toLowerCase()}</small></span></button>`;
+    }).join('') || '<p class="muted">No bills match.</p>'}</div></section>`;
+}
+function renderReview(c) {
+  const subs = c.bills.filter(b => b.status === 'active' && b.kind === 'subscription').map(b => ({ b, y: perMonth(b, c.est.get(b.id), c.t) * 12 })).sort((a, b) => b.y - a.y);
+  const cancelled = c.bills.filter(b => b.status === 'cancelled');
+  const unsure = subs.filter(x => x.b.verdict === 'unsure' || x.b.verdict === 'drop');
+  const totalY = subs.reduce((s, x) => s + x.y, 0), unsureY = unsure.reduce((s, x) => s + x.y, 0);
+  const T = totals(c);
+  let html = `<section class="hero"><span class="eyebrow">Subscription check-up</span>
+    <div class="big"><span class="num">${money0(totalY)}</span><span class="muted" style="font-size:.5em;font-weight:600"> a year on ${subs.length} subscription${subs.length === 1 ? '' : 's'}</span></div>
+    <span class="small muted">Go down the list and mark each one. Dropping the ones marked Unsure or Cancel would save <b class="num">${money0(unsureY)}</b> a year.</span></section>`;
+  if (!subs.length) html += `<section class="panel empty"><h3>No subscriptions yet</h3><p>Add streaming, cloud storage, game passes and memberships as subscriptions to review them here.</p><button class="btn" data-act="add">Add a subscription</button></section>`;
+  else html += `<section class="panel">${subs.map(({ b, y }) => {
+    const days = isDate(b.reviewedOn) ? c.T - ord(b.reviewedOn) : null;
+    return `<div class="sub-card"><div style="min-width:0"><button class="link" data-act="edit:${esc(b.id)}">${esc(b.name)}</button>
+      <div class="small muted">${esc(b.category || 'Other')} · ${days == null ? 'never reviewed' : days === 0 ? 'reviewed today' : `reviewed ${days} days ago`}${isDate(b.trialEnds) && b.trialEnds >= c.t ? ` · trial ends ${short(b.trialEnds)}` : ''}</div></div>
+      <div class="amt" style="text-align:right"><b class="num">${money0(y)}</b><div class="small muted">a year</div></div>
+      <div class="verdict" role="group" aria-label="Verdict for ${esc(b.name)}">
+        <button class="keep" data-act="verdict:${esc(b.id)}:keep" aria-pressed="${b.verdict === 'keep'}">Keep</button>
+        <button class="unsure" data-act="verdict:${esc(b.id)}:unsure" aria-pressed="${b.verdict === 'unsure'}">Unsure</button>
+        <button class="drop" data-act="verdict:${esc(b.id)}:drop" aria-pressed="${b.verdict === 'drop'}">Cancel it</button>
+        ${b.verdict === 'drop' ? `<button class="btn sm primary" data-act="cancel:${esc(b.id)}">I cancelled it</button>${b.payUrl ? `<a class="btn sm" href="${esc(b.payUrl)}" target="_blank" rel="noopener">Open account page</a>` : ''}` : ''}
+      </div></div>`;
+  }).join('')}</section>`;
+  html += `<section class="panel"><div class="panel-h"><h2>Cancelled</h2><span class="small muted">${money0(T.savedSoFar)} saved so far</span></div>${cancelled.length ? `<div class="reg">${cancelled.map(b => {
+      const m = c.est.get(b.id) * (FREQ[b.freq] || FREQ.monthly).pm;
+      return `<button class="row" data-act="edit:${esc(b.id)}"><span class="mid"><span class="nm">${esc(b.name)}</span><span class="sub">Cancelled ${isDate(b.cancelledOn) ? short(b.cancelledOn) : ''}</span></span><span class="amt"><b>${money0(m * 12)}</b><small>a year saved</small></span></button>`;
+    }).join('')}</div>` : '<p class="small muted">Bills you cancel move here, with what they save you.</p>'}</section>`;
+  return html;
+}
+function renderMore(c) {
+  const st = S.settings, pay = st.pay || DEFAULT_SETTINGS.pay, ro = S.readOnly ? 'disabled' : '';
+  return `<div class="grid2"><div class="col">
+    <section class="panel"><div class="panel-h"><h2>Bring in your bills</h2></div>
+      <div class="form">
+        <div><b>From Google Calendar</b><p class="small muted" style="margin:4px 0 8px">Reads bill events from a calendar file. Amounts in titles like “Electric ~$140” or “$90–$140” become estimates, and past amounts become history.</p>
+          <ol class="steps small"><li>On a computer, open Google Calendar → Settings → Import &amp; export → Export.</li><li>Upload the .zip it downloads here (or a single .ics file from it).</li><li>Check the list, then add the ones you want.</li></ol>
+          <div style="margin-top:10px"><button class="btn primary" data-act="import-ics" ${ro}>Choose calendar file</button></div></div>
+        <div><b>From a bank statement</b><p class="small muted" style="margin:4px 0 8px">Finds charges that repeat on a schedule, including ones you forgot about. The file is read on your phone and only the bills you pick are saved.</p>
+          <button class="btn" data-act="import-csv" ${ro}>Choose CSV file</button></div>
+      </div></section>
+    <section class="panel"><div class="panel-h"><h2>Paydays</h2></div>
+      ${c.hasIncome ? '<p class="small muted" style="margin-top:0">Your paychecks are tracked as income, so the paycheck planner uses them. This setting is only a backup.</p>' : '<p class="small muted" style="margin-top:0">Better: add each paycheck as income (Bills → Income) to see money in vs. out. This sets paydays only.</p>'}
+      <form class="form" id="payForm">
+        <label class="check"><input type="checkbox" id="payOn" ${pay.enabled ? 'checked' : ''} ${ro}><span>Show the paycheck planner on Home</span></label>
+        <div class="f2"><div class="f"><label for="payFreq">How often</label><select id="payFreq" ${ro}>${[['weekly', 'Weekly'], ['biweekly', 'Every 2 weeks'], ['semimonthly', 'Twice a month'], ['monthly', 'Monthly']].map(([k, l]) => `<option value="${k}" ${pay.freq === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+        <div class="f" id="payAnchorF"><label for="payAnchor">A recent payday</label><input type="date" id="payAnchor" value="${esc(pay.anchor || '')}" ${ro}></div></div>
+        <div class="f2" id="paySemi" ${pay.freq === 'semimonthly' ? '' : 'hidden'}><div class="f"><label for="payD1">First payday (day)</label><input type="number" id="payD1" min="1" max="31" value="${esc(pay.d1 || 1)}" ${ro}></div><div class="f"><label for="payD2">Second payday (day)</label><input type="number" id="payD2" min="1" max="31" value="${esc(pay.d2 || 15)}" ${ro}></div></div>
+        <div class="actions"><button class="btn primary" type="submit" ${ro}>Save paydays</button></div>
+      </form></section>
+    </div><div class="col">
+    ${window.SBB ? `<section class="panel"><div class="panel-h"><h2>This phone</h2></div><p class="small" style="margin-top:0">Using the bill book as <b>${esc(S.me || '?')}</b>. Bills you mark paid are labeled with this name.</p><div class="toolbar"><button class="btn sm" data-act="sbb-switch">Switch person</button><button class="btn sm" data-act="sbb-lock">Lock this phone</button></div><p class="small muted">Lock asks for the household passcode again next time.</p></section>` : ''}
+    <section class="panel"><div class="panel-h"><h2>Household</h2></div>
+      <form class="form" id="hhForm">
+        <div class="f2"><div class="f"><label for="m1">Person 1</label><input type="text" id="m1" value="${esc(st.members[0] || '')}" ${ro}></div><div class="f"><label for="m2">Person 2</label><input type="text" id="m2" value="${esc(st.members[1] || '')}" ${ro}></div></div>
+        <div class="f"><label for="lead">Flag bills as “due soon” this many days ahead</label><select id="lead" ${ro}>${[1, 2, 3, 5, 7].map(n => `<option ${+st.leadDays === n ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
+        <div class="actions"><button class="btn primary" type="submit" ${ro}>Save</button></div>
+      </form>
+      ${window.SBB ? `<p class="small muted">To add ${esc(st.members[1] || 'your partner')}: send the site address, tell them the passcode separately, and have them add it to the home screen.</p>` : S.mode === 'shared' ? `<p class="small muted">To share with ${esc(st.members[1] || 'your partner')}: use Share at the top of this page and invite them as an Editor. You\u2019ll both see the same bills and who marked each one paid.</p>` : `<p class="small muted">Right now this bill book is saved in this browser only. Open it from your Claude app to share it.</p>`}
+    </section>
+    <section class="panel"><div class="panel-h"><h2>Reminders in Google Calendar</h2></div>
+      <p class="small muted" style="margin-top:0">Download a calendar file with every active bill as a repeating event, then import it into Google Calendar (Settings → Import &amp; export → Import). Make a new calendar called “Bills” first so you can remove it all in one step later.</p>
+      <div class="warnbox small" style="margin-bottom:10px">If your bills are already on your calendar, delete those old events after importing so you don\u2019t get two reminders. Amounts in the calendar are a snapshot. The bill book keeps the live estimate.</div>
+      <button class="btn" data-act="export-ics">Download calendar file</button>
+    </section>
+    <section class="panel"><div class="panel-h"><h2>Backup</h2></div>
+      <p class="small muted" style="margin-top:0">${c.bills.length} bills and ${S.pays.size} payments. A backup file restores everything if something goes wrong.</p>
+      <div class="toolbar"><button class="btn" data-act="export-json">Download backup</button><button class="btn" data-act="import-json" ${ro}>Restore from backup</button></div>
+      <p class="small muted">No account numbers or passwords are stored here, and nothing connects to your bank.</p>
+    </section></div></div>`;
+}
+
+/* ---------- render ---------- */
+function render() {
+  syncLine();
+  document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-current', b.dataset.tab === S.tab ? 'page' : 'false'));
+  $('#addBtn').disabled = S.readOnly || S.mode === 'loading';
+  if (S.mode === 'loading' || (S.mode === 'shared' && !(S.loaded.bills && S.loaded.pays))) {
+    view.innerHTML = `<div class="panel empty"><h3>Opening your bill book…</h3><p>Your bills, due dates and subscriptions will show here.</p></div>`; return;
+  }
+  const c = ctx();
+  const late = c.inst.filter(i => i.state === 'overdue').length;
+  const badge = $('#lateBadge'); badge.hidden = !late; badge.textContent = late;
+  let html = '';
+  if (S.mode === 'device') html += `<div class="banner warn small"><span>Saved in this browser only. Open this page from your Claude app to share it between phones.</span></div>`;
+  const focusQ = document.activeElement && document.activeElement.id === 'q';
+  const pos = focusQ ? document.activeElement.selectionStart : 0;
+  html += S.tab === 'upcoming' ? renderUpcoming(c) : S.tab === 'bills' ? renderBills(c) : S.tab === 'review' ? renderReview(c) : S.tab === 'more' ? renderMore(c) : renderHome(c);
+  view.innerHTML = html;
+  if (focusQ) { const q = $('#q'); if (q) { q.focus(); q.setSelectionRange(pos, pos); } }
+  resolveNames();
+}
+async function resolveNames() {
+  const els = [...document.querySelectorAll('[data-uid]')]; if (!els.length || !S.user) return;
+  try {
+    const ids = [...new Set(els.map(e => e.dataset.uid))], ps = await S.user.profiles(ids);
+    els.forEach(e => { const p = ps[e.dataset.uid]; e.textContent = p && p.isMe ? 'you' : (p && p.name ? p.name.split(' ')[0] : ''); });
+  } catch (e) {}
+}
+
+/* ---------- sheet + toast ---------- */
+let lastFocus = null;
+function openSheet(title, html, mount) {
+  lastFocus = document.activeElement;
+  $('#sheetTitle').textContent = title; $('#sheetBody').innerHTML = html; $('#sheet').hidden = false; document.body.classList.add('locked');
+  if (mount) mount($('#sheetBody'));
+  const f = $('#sheetBody').querySelector('input:not([type=checkbox]),select,textarea,button'); if (f) setTimeout(() => f.focus({ preventScroll: true }), 30);
+}
+function closeSheet() { $('#sheet').hidden = true; document.body.classList.remove('locked'); $('#sheetBody').innerHTML = ''; if (lastFocus && lastFocus.focus) lastFocus.focus(); }
+let toastT = null;
+function toast(msg, undo) {
+  const t = $('#toast'); t.innerHTML = `<span>${esc(msg)}</span>${undo ? '<button type="button">Undo</button>' : ''}`; t.hidden = false;
+  if (undo) t.querySelector('button').onclick = () => { t.hidden = true; undo(); };
+  clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, undo ? 6000 : 3600);
+}
+
+/* ---------- add / edit bill ---------- */
+const PICKS = [
+  ['Kroger groceries', 'Groceries', 'spending', 'varies', 'weekly'], ['Gas', 'Gas & Fuel', 'spending', 'varies', 'weekly'],
+  ['Electric', 'Utilities', 'bill', 'varies'], ['Gas', 'Utilities', 'bill', 'varies'], ['Water & sewer', 'Utilities', 'bill', 'varies'], ['Trash', 'Utilities', 'bill'],
+  ['Internet', 'Phone & Internet', 'bill'], ['Phones', 'Phone & Internet', 'bill'], ['Mortgage', 'Housing', 'bill'], ['Rent', 'Housing', 'bill'],
+  ['Car insurance', 'Insurance', 'bill'], ['Home insurance', 'Insurance', 'bill'], ['Car payment', 'Transportation', 'bill'], ['Credit card', 'Loans & Credit', 'bill', 'varies'],
+  ['Netflix', 'Streaming & Media', 'subscription'], ['Disney+', 'Streaming & Media', 'subscription'], ['Hulu', 'Streaming & Media', 'subscription'], ['Max', 'Streaming & Media', 'subscription'],
+  ['Spotify', 'Streaming & Media', 'subscription'], ['YouTube Premium', 'Streaming & Media', 'subscription'], ['Amazon Prime', 'Memberships', 'subscription'],
+  ['iCloud+', 'Software & Cloud', 'subscription'], ['Google One', 'Software & Cloud', 'subscription'], ['Microsoft 365', 'Software & Cloud', 'subscription'],
+  ['Xbox Game Pass', 'Gaming', 'subscription'], ['PlayStation Plus', 'Gaming', 'subscription'], ['Nintendo Switch Online', 'Gaming', 'subscription', '', 'yearly']
+];
+function billForm(b, isNew) {
+  const st = S.settings, f = (k, d = '') => esc(b[k] ?? d);
+  return `<form class="form" id="billForm" novalidate>
+    ${isNew ? `<div class="f"><span class="lbl">Quick pick</span><div class="picks">${PICKS.map((p, i) => `<button type="button" data-pick="${i}">${esc(p[0])}</button>`).join('')}</div><span class="hint">Fills in the name and category. You enter the amount from your bill.</span></div>` : ''}
+    <div class="f"><label for="bName">Name</label><input type="text" id="bName" value="${f('name')}" autocomplete="off" required></div>
+    <div class="f2">
+      <div class="f"><span class="lbl">Type</span><div class="seg" role="group"><button type="button" data-kind="bill" aria-pressed="${b.kind !== 'subscription' && b.kind !== 'income'}">Bill</button><button type="button" data-kind="subscription" aria-pressed="${b.kind === 'subscription'}">Subscription</button><button type="button" data-kind="income" aria-pressed="${b.kind === 'income'}">Income</button><button type="button" data-kind="spending" aria-pressed="${b.kind === 'spending'}">Spending</button></div></div>
+      <div class="f"><label for="bCat">Category</label><select id="bCat">${CATS.map(k => `<option ${b.category === k ? 'selected' : ''}>${k}</option>`).join('')}</select></div>
+    </div>
+    <label class="check"><input type="checkbox" id="bVaries" ${b.amountType === 'varies' ? 'checked' : ''}><span>The amount changes from bill to bill<br><span class="small muted">You\u2019ll enter the real amount when you mark it paid. The estimate is the average of the last 3.</span></span></label>
+    <div class="f2">
+      <div class="f"><label for="bAmt" id="bAmtL">${b.amountType === 'varies' ? 'Typical amount' : 'Amount'}</label><div class="amtwrap"><span>$</span><input type="number" id="bAmt" inputmode="decimal" step="0.01" min="0" value="${b.amount ? f('amount') : ''}"></div></div>
+      <div class="f"><label for="bFreq">How often</label><select id="bFreq">${Object.entries(FREQ).map(([k, v]) => `<option value="${k}" ${(b.freq || 'monthly') === k ? 'selected' : ''}>${v.label}</option>`).join('')}</select></div>
+    </div>
+    <div class="f2">
+      <div class="f"><label for="bAnchor" id="bAnchorL">Due date</label><input type="date" id="bAnchor" value="${f('anchor')}"><span class="hint">The next one is fine.</span></div>
+      <div class="f"><label for="bEnd">Last payment <span class="muted">(optional)</span></label><input type="date" id="bEnd" value="${f('endDate')}"><span class="hint">For loans that end.</span></div>
+    </div>
+    <div class="f2">
+      <label class="check" style="align-self:end" id="autoW"><input type="checkbox" id="bAuto" ${b.autopay ? 'checked' : ''}><span>Autopay is on</span></label>
+      <div class="f"><label for="bOwner">Who handles it</label><select id="bOwner"><option value="">Either of us</option>${st.members.filter(Boolean).map(m => `<option ${b.owner === m ? 'selected' : ''}>${esc(m)}</option>`).join('')}</select></div>
+    </div>
+    <div class="f2" id="matchF" ${b.kind === 'spending' ? '' : 'hidden'}>
+      <div class="f"><label for="bMatch">Bank charges that contain</label><input type="text" id="bMatch" value="${f('match')}" placeholder="kroger"><span class="hint">Separate words with commas.</span></div>
+      <div class="f"><label for="bExclude">But not</label><input type="text" id="bExclude" value="${f('exclude')}" placeholder="fuel"><span class="hint">Keeps Kroger gas out of groceries.</span></div>
+    </div>
+    <div class="f" id="trialF" ${b.kind === 'subscription' ? '' : 'hidden'}><label for="bTrial">Free trial ends <span class="muted">(optional)</span></label><input type="date" id="bTrial" value="${f('trialEnds')}"></div>
+    <div class="f"><label for="bUrl">Website to pay or manage it <span class="muted">(optional)</span></label><input type="url" id="bUrl" value="${f('payUrl')}" placeholder="https://" inputmode="url"></div>
+    <div class="f"><label for="bNotes">Notes <span class="muted">(optional)</span></label><textarea id="bNotes">${f('notes')}</textarea><span class="hint">Don\u2019t put account numbers or passwords here.</span></div>
+    ${!isNew ? `<div class="f"><label for="bStatus">Status</label><select id="bStatus"><option value="active" ${b.status === 'active' ? 'selected' : ''}>Active</option><option value="paused" ${b.status === 'paused' ? 'selected' : ''}>Paused</option><option value="cancelled" ${b.status === 'cancelled' ? 'selected' : ''}>Cancelled</option></select></div>` : ''}
+    <div id="formMsg"></div>
+    <div class="actions">${!isNew ? '<button type="button" class="btn danger" data-del>Delete</button><span class="spacer"></span>' : ''}<button type="button" class="btn ghost" data-act="close">Cancel</button><button type="submit" class="btn primary">${isNew ? 'Add to bill book' : 'Save changes'}</button></div>
+    ${!isNew ? historyBlock(b) : ''}
+  </form>`;
+}
+function historyBlock(b) {
+  const list = [...S.pays.values()].filter(p => p.billId === b.id).sort((a, c) => a.dueDate < c.dueDate ? 1 : -1);
+  const ph = b.priceHistory || [];
+  if (!list.length && !ph.length) return '';
+  return `<div class="f"><span class="lbl">History</span>${list.length >= 2 ? `<div>${sparkline(list.filter(p => !p.skipped))}</div>` : ''}
+    <div class="reg">${list.slice(0, 14).map(p => `<div class="row" style="padding:7px 0"><span class="mid"><span class="small">${nice(p.dueDate)}</span><span class="sub">${p.skipped ? 'Skipped' : p.source === 'bank' ? 'From bank statement' : p.source === 'calendar' ? 'From calendar' : 'Paid' + (p.paidOn && p.paidOn !== p.dueDate ? ' ' + short(p.paidOn) : '')}${p.by ? ' · <span data-uid="' + esc(p.by) + '"></span>' : ''}</span></span><span class="amt"><b>${p.skipped ? '—' : money(p.amount)}</b></span></div>`).join('')}</div>
+    ${ph.length ? `<span class="hint">Price changes: ${ph.slice(-4).map(x => `${short(x.on)} ${money(x.from)} → ${money(x.amount)}`).join(' · ')}</span>` : ''}</div>`;
+}
+function openBill(id, preset) {
+  if (S.readOnly && !id) return;
+  const isNew = !id;
+  const b = isNew ? Object.assign({ kind: 'bill', category: 'Other', freq: 'monthly', amountType: 'fixed', status: 'active', autopay: false }, preset || {}) : structuredClone(S.bills.get(id));
+  if (!b) return;
+  openSheet(isNew ? (b.kind === 'income' ? 'Add income' : 'Add a bill') : b.name, billForm(b, isNew), body => {
+    const form = body.querySelector('#billForm');
+    let kind = b.kind, confirmDup = false, confirmDel = false;
+    const v0 = id => body.querySelector(id).value.trim();
+    const setKind = k => {
+      kind = k; const inc = k === 'income';
+      body.querySelectorAll('[data-kind]').forEach(x => x.setAttribute('aria-pressed', x.dataset.kind === k));
+      body.querySelector('#trialF').hidden = k !== 'subscription';
+      body.querySelector('#autoW').hidden = inc;
+      body.querySelector('#bAnchorL').textContent = inc ? 'Payday' : 'Due date';
+      body.querySelector('#bAmtL').textContent = inc ? 'Take-home pay' : body.querySelector('#bVaries').checked ? 'Typical amount' : 'Amount';
+      const sp = k === 'spending';
+      body.querySelector('#matchF').hidden = !sp;
+      if (sp) { body.querySelector('#autoW').hidden = true; body.querySelector('#bAnchorL').textContent = 'A week starts on'; body.querySelector('#bAmtL').textContent = 'Usual amount per week'; body.querySelector('#bVaries').checked = true; if (isNew) body.querySelector('#bFreq').value = 'weekly'; }
+      const cat = body.querySelector('#bCat');
+      if (inc) cat.value = 'Income'; else if (cat.value === 'Income') cat.value = 'Other';
+      if (sp && !['Groceries', 'Gas & Fuel', 'Dining out'].includes(cat.value)) cat.value = 'Groceries';
+      if (inc && isNew) { if (body.querySelector('#bFreq').value === 'monthly') body.querySelector('#bFreq').value = 'biweekly'; body.querySelector('#bVaries').checked = true; body.querySelector('#bAmtL').textContent = 'Typical take-home pay'; }
+    };
+    setKind(kind);
+    body.querySelectorAll('[data-kind]').forEach(x => x.onclick = () => setKind(x.dataset.kind));
+    body.querySelector('#bVaries').onchange = e => body.querySelector('#bAmtL').textContent = e.target.checked ? 'Typical amount' : 'Amount';
+    body.querySelectorAll('[data-pick]').forEach(x => x.onclick = () => {
+      const p = PICKS[+x.dataset.pick];
+      body.querySelector('#bName').value = p[0]; body.querySelector('#bCat').value = p[1]; setKind(p[2]);
+      body.querySelector('#bVaries').checked = p[3] === 'varies'; body.querySelector('#bVaries').onchange({ target: body.querySelector('#bVaries') });
+      body.querySelector('#bFreq').value = p[4] || 'monthly';
+      body.querySelector('#bAmt').focus();
+    });
+    body.querySelector('#bName').addEventListener('blur', e => { if (isNew && kind === 'spending' && !v0('#bMatch') && e.target.value) body.querySelector('#bMatch').value = e.target.value.split(' ')[0].toLowerCase(); if (isNew && kind !== 'income' && kind !== 'spending' && body.querySelector('#bCat').value === 'Other' && e.target.value) { const g = guessCategory(e.target.value); body.querySelector('#bCat').value = g.category; setKind(g.kind); if (g.varies) body.querySelector('#bVaries').checked = true; } });
+    const msg = (h) => body.querySelector('#formMsg').innerHTML = h;
+    const del = body.querySelector('[data-del]');
+    if (del) del.onclick = async () => {
+      if (!confirmDel) { confirmDel = true; del.textContent = 'Tap again to delete for good'; msg(`<div class="warnbox">This removes ${esc(b.name)} and its payment history. To stop tracking it but keep the history, set Status to Cancelled instead.</div>`); return; }
+      if (await Store.delBill(b.id)) { closeSheet(); toast(`Deleted ${b.name}`); }
+    };
+    form.onsubmit = async e => {
+      e.preventDefault();
+      const v = id => body.querySelector(id).value.trim();
+      const name = v('#bName'), amt = parseFloat(v('#bAmt')), anchor = v('#bAnchor'), end = v('#bEnd'), varies = body.querySelector('#bVaries').checked;
+      const hist = isNew ? [] : [...S.pays.values()].filter(p => p.billId === b.id && p.amount > 0);
+      const errs = [];
+      if (!name) errs.push('Give it a name.');
+      if (!(amt > 0) && !(varies && hist.length)) errs.push(varies ? 'Enter a typical amount so it can be estimated.' : 'Enter the amount.');
+      if (!isDate(anchor)) errs.push(kind === 'income' ? 'Pick a payday.' : kind === 'spending' ? 'Pick a day the week starts.' : 'Pick a due date.');
+      if (end && !isDate(end)) errs.push('The last payment date isn\u2019t a valid date.');
+      if (isDate(end) && isDate(anchor) && end < anchor) errs.push('The last payment can\u2019t be before the due date.');
+      if (errs.length) { msg(`<p class="err">${errs.map(esc).join(' ')}</p>`); return; }
+      const dupe = [...S.bills.values()].find(x => x.id !== b.id && x.status !== 'cancelled' && similar(x.name, name));
+      if (dupe && !confirmDup) { confirmDup = true; msg(`<div class="warnbox">“${esc(dupe.name)}” is already in your bill book (${money(dupe.amount)}, ${FREQ[dupe.freq].label.toLowerCase()}). Tap ${isNew ? 'Add' : 'Save'} again if this is a different bill.</div>`); return; }
+      let url = v('#bUrl'); if (url && !/^https?:\/\//i.test(url)) url = 'https://' + url;
+      const today = localToday();
+      const nb = Object.assign(b, {
+        id: b.id || uid(), name, kind, category: v('#bCat'), amount: amt > 0 ? round2(amt) : (Number(b.amount) || 0), amountType: varies ? 'varies' : 'fixed',
+        freq: v('#bFreq'), anchor, endDate: isDate(end) ? end : null, autopay: kind !== 'income' && kind !== 'spending' && body.querySelector('#bAuto').checked, owner: v('#bOwner'),
+        trialEnds: kind === 'subscription' && isDate(v('#bTrial')) ? v('#bTrial') : null, payUrl: url, notes: v('#bNotes'),
+        match: kind === 'spending' ? v('#bMatch') : '', exclude: kind === 'spending' ? v('#bExclude') : ''
+      });
+      if (isNew) { nb.createdOn = today; nb.trackFrom = today; nb.createdBy = S.me || null; nb.status = 'active'; }
+      else {
+        const old = S.bills.get(b.id);
+        if (old && old.amountType !== 'varies' && !varies && Math.abs((Number(old.amount) || 0) - nb.amount) > 0.004 && old.amount) nb.priceHistory = [...(old.priceHistory || []), { on: today, from: Number(old.amount), amount: nb.amount }].slice(-24);
+        const ns = v('#bStatus');
+        if (ns !== old.status) {
+          if (ns === 'cancelled') nb.cancelledOn = today; if (ns === 'paused') nb.pausedOn = today;
+          if (ns === 'active') { nb.cancelledOn = null; nb.pausedOn = null; nb.trackFrom = today; }
+        }
+        nb.status = ns;
+      }
+      if (kind === 'income') nb.category = 'Income'; else if (nb.category === 'Income') nb.category = 'Other';
+      if (await Store.putBill(nb)) { closeSheet(); toast(isNew ? `Added ${name}` : `Saved ${name}`); }
+    };
+  });
+}
+
+/* ---------- mark paid ---------- */
+/* A spending week: add receipts to the week's total, or type the total */
+function openSpend(b, date) {
+  const c = ctx(), pid = payId(b.id, date), existing = S.pays.get(pid), e = c.est.get(b.id), ro = S.readOnly;
+  const end = iso(ord(date) + periodDays(b) - 1), spent = existing && !existing.skipped ? existing.amount : 0, wk = b.freq === 'weekly' ? 'week' : 'period';
+  openSheet(b.name, `<div class="form">
+    <div class="toolbar">${stub(date, '')}<div><b>${b.freq === 'weekly' ? 'Week of' : 'Period'} ${short(date)} – ${short(end)}</b><div class="small muted">Usual ${money(e)} a ${wk}${existing && existing.source === 'bank' ? ' · total from bank statement' : ''}</div></div></div>
+    <div class="f2"><div class="f"><label for="sAdd">Add a receipt</label><div class="amtwrap"><span>$</span><input type="number" id="sAdd" inputmode="decimal" step="0.01" min="0" placeholder="0.00" ${ro ? 'disabled' : ''}></div></div>
+      <div class="f"><label for="sTot">Spent so far this ${wk}</label><div class="amtwrap"><span>$</span><input type="number" id="sTot" inputmode="decimal" step="0.01" min="0" value="${spent || ''}" placeholder="0.00" ${ro ? 'disabled' : ''}></div></div></div>
+    <p class="small" id="sNote" style="margin:0"></p>
+    <div id="pMsg"></div>
+    <div class="actions"><button class="btn" data-act="edit:${esc(b.id)}">Edit</button><span class="spacer"></span><button class="btn ghost" data-act="close">Cancel</button><button class="btn primary" id="sSave" ${ro ? 'disabled' : ''}>Save</button></div></div>`, body => {
+    const add = body.querySelector('#sAdd'), tot = body.querySelector('#sTot'), note = body.querySelector('#sNote');
+    const total = () => round2((parseFloat(tot.value) || 0) + (parseFloat(add.value) || 0));
+    const upd = () => { const t = total(); note.innerHTML = `${add.value ? `New total <b class="num">${money(t)}</b> · ` : ''}${t > e ? `<span style="color:var(--late)">${money(t - e)} over the usual</span>` : `<span class="muted">${money(e - t)} left of the usual</span>`}`; };
+    add.addEventListener('input', upd); tot.addEventListener('input', upd); upd();
+    setTimeout(() => add.focus(), 40);
+    body.querySelector('#sSave').onclick = async () => {
+      const t = total();
+      if (t < 0) { body.querySelector('#pMsg').innerHTML = '<p class="err">The total can’t be negative.</p>'; return; }
+      const ok = t === 0 ? (existing ? await Store.delPay(pid) : true) : await Store.putPay({ id: pid, billId: b.id, dueDate: date, amount: t, paidOn: localToday(), by: S.me || null, source: 'manual', loggedOn: localToday() });
+      if (ok) { closeSheet(); toast(`${b.name}: ${money(t)} this ${wk}`, existing ? () => Store.putPay(structuredClone(existing)) : () => Store.delPay(pid)); }
+    };
+  });
+}
+function openPay(billId, date) {
+  const b = S.bills.get(billId); if (!b) return;
+  if (isSpend(b)) return openSpend(b, date);
+  const c = ctx(), pid = payId(billId, date), existing = S.pays.get(pid);
+  const e = c.est.get(billId), list = (c.byBill.get(billId) || []).filter(p => !p.skipped), r = amountRange(list, c.t), ly = sameMonthLastYear(list, date);
+  const ro = S.readOnly, inc = isInc(b);
+  openSheet(b.name, `<div class="form">
+    <div class="toolbar">${stub(date, inc ? 'inc' : existing ? 'paid' : ord(date) < c.T ? 'overdue' : '')}<div><b>${inc ? 'Payday' : 'Due'} ${nice(date)}</b><div class="small muted">${FREQ[b.freq].label}${b.autopay ? ' · autopay' : ''}${b.owner ? ' · ' + esc(b.owner) : ''}</div></div></div>
+    ${b.amountType === 'varies' ? `<div class="small muted">Estimate <b class="num">${money(e)}</b>${r ? ` · last year ranged <span class="num">${money0(r.lo)}–${money0(r.hi)}</span>` : ''}${ly ? ` · same month last year <span class="num">${money(ly)}</span>` : ''}</div>` : ''}
+    ${existing ? `<div class="warnbox" style="border-color:var(--ok);background:var(--ok-soft)">${existing.skipped ? 'Marked as skipped.' : `${inc ? 'Received' : 'Paid'} <b class="num">${money(existing.amount)}</b>${existing.paidOn ? ' on ' + nice(existing.paidOn) : ''}${existing.by ? ' by <span data-uid="' + esc(existing.by) + '"></span>' : ''}.`}</div>` : ''}
+    <div class="f2"><div class="f"><label for="pAmt">${inc ? 'Amount received' : b.amountType === 'varies' ? 'Actual amount' : 'Amount paid'}</label><div class="amtwrap"><span>$</span><input type="number" id="pAmt" inputmode="decimal" step="0.01" min="0" value="${existing && !existing.skipped ? existing.amount : (e || '')}" ${ro ? 'disabled' : ''}></div></div>
+    <div class="f"><label for="pOn">${inc ? 'Deposited on' : 'Paid on'}</label><input type="date" id="pOn" value="${existing && existing.paidOn ? existing.paidOn : (date < c.t ? date : c.t)}" ${ro ? 'disabled' : ''}></div></div>
+    <label class="check" id="pUpdW" hidden><input type="checkbox" id="pUpd" checked><span id="pUpdT"></span></label>
+    <div id="pMsg"></div>
+    ${b.payUrl ? `<a class="btn" href="${esc(b.payUrl)}" target="_blank" rel="noopener">Open ${esc(b.name)} website</a>` : ''}
+    <div class="actions">${existing ? `<button class="btn danger" data-unpay ${ro ? 'disabled' : ''}>Undo</button><span class="spacer"></span>` : `<button class="btn ghost" data-skip ${ro ? 'disabled' : ''}>${inc ? 'No check this time' : 'Skip this one'}</button><span class="spacer"></span>`}
+      <button class="btn" data-act="edit:${esc(b.id)}">${inc ? 'Edit income' : 'Edit bill'}</button><button class="btn primary" data-dopay ${ro ? 'disabled' : ''}>${existing ? 'Update' : inc ? 'Mark received' : 'Mark paid'}</button></div></div>`, body => {
+    const amtEl = body.querySelector('#pAmt'), upW = body.querySelector('#pUpdW');
+    const check = () => {
+      const a = parseFloat(amtEl.value);
+      const show = b.amountType !== 'varies' && a > 0 && Math.abs(a - (Number(b.amount) || 0)) > 0.004;
+      upW.hidden = !show;
+      if (show) body.querySelector('#pUpdT').textContent = inc ? `Change the regular paycheck from ${money(b.amount)} to ${money(a)}` : `Change the regular amount from ${money(b.amount)} to ${money(a)} (price changed)`;
+    };
+    amtEl.addEventListener('input', check); check();
+    body.querySelector('[data-dopay]').onclick = async () => {
+      const a = parseFloat(amtEl.value), on = body.querySelector('#pOn').value;
+      if (!(a > 0)) { body.querySelector('#pMsg').innerHTML = `<p class="err">Enter the amount you ${inc ? 'received' : 'paid'}.</p>`; return; }
+      if (!isDate(on)) { body.querySelector('#pMsg').innerHTML = '<p class="err">Pick the date you paid it.</p>'; return; }
+      const p = { id: pid, billId, dueDate: date, amount: round2(a), paidOn: on, by: S.me || null, source: 'manual', loggedOn: localToday() };
+      if (!(await Store.putPay(p))) return;
+      if (!upW.hidden && body.querySelector('#pUpd').checked) {
+        const nb = structuredClone(b);
+        if (!inc) nb.priceHistory = [...(b.priceHistory || []), { on: date, from: Number(b.amount) || 0, amount: round2(a) }].slice(-24);
+        nb.amount = round2(a);
+        await Store.putBill(nb);
+      }
+      closeSheet();
+      toast(`${b.name} marked ${inc ? 'received' : 'paid'}`, existing ? null : () => Store.delPay(pid));
+    };
+    const sk = body.querySelector('[data-skip]');
+    if (sk) sk.onclick = async () => { if (await Store.putPay({ id: pid, billId, dueDate: date, amount: 0, skipped: true, paidOn: null, by: S.me || null, source: 'manual', loggedOn: localToday() })) { closeSheet(); toast(`Skipped ${b.name} for ${short(date)}`, () => Store.delPay(pid)); } };
+    const un = body.querySelector('[data-unpay]');
+    if (un) un.onclick = async () => { const keep = structuredClone(existing); if (await Store.delPay(pid)) { closeSheet(); toast('Marked unpaid', () => Store.putPay(keep)); } };
+  });
+  resolveNames();
+}
+
+/* ---------- import ---------- */
+let pickMode = null;
+function pick(mode) { if (S.readOnly) return; pickMode = mode; const fp = $('#filePick'); fp.value = ''; fp.accept = mode === 'csv' ? '.csv,text/csv' : mode === 'json' ? '.json,application/json' : '.ics,.zip,text/calendar,application/zip'; fp.click(); }
+function loadScript(src) { return new Promise((res, rej) => { if (document.querySelector(`script[src="${src}"]`)) return res(); const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); }); }
+$('#filePick').addEventListener('change', async e => {
+  const file = e.target.files && e.target.files[0]; if (!file) return;
+  try {
+    if (pickMode === 'json') return restoreBackup(await file.text());
+    if (pickMode === 'csv') { const rows = parseCSV(await file.text()); return showImport('bank', bankCandidates(rows, localToday(), [...S.bills.values()])); }
+    let texts = [];
+    if (/\.zip$/i.test(file.name) || file.type === 'application/zip') {
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
+      const zip = await window.JSZip.loadAsync(file);
+      for (const n of Object.keys(zip.files)) if (/\.ics$/i.test(n)) texts.push(await zip.files[n].async('string'));
+      if (!texts.length) { toast('That zip has no calendar (.ics) files in it.'); return; }
+    } else texts = [await file.text()];
+    const evs = texts.flatMap(parseICS);
+    if (!evs.length) { toast('No events found in that file. Make sure it\u2019s a Google Calendar export (.ics or .zip).'); return; }
+    showImport('calendar', icsCandidates(evs, localToday(), [...S.bills.values()].filter(b => b.status !== 'cancelled'), S.settings.members));
+  } catch (err) { toast('Couldn\u2019t read that file. Try exporting it again.'); }
+});
+function showImport(source, res) {
+  if (res.error) { toast(res.error); return; }
+  const cs = res.cands;
+  if (!cs.length) { openSheet('Nothing found', `<p>${source === 'bank' ? 'No charges repeated on a regular schedule in that statement. A longer statement (3+ months) works best.' : 'None of the events looked like bills. Titles with an amount, like “Mortgage (876)” or “AES 320$”, or words like “bill”, “due” or “insurance” are picked up.'}</p><div class="actions"><button class="btn primary" data-act="close">OK</button></div>`); return; }
+  cs.forEach(c => { c.section = c.section || 'bill'; });
+  const payLabel = p => p.freq === 'semimonthly' ? `the ${p.d1}th and ${p.d2 >= 28 ? 'last day' : p.d2 + 'th'} of each month` : `${FREQ[p.freq].label.toLowerCase()}, next ${short(paydays(p, localToday(), iso(ord(localToday()) + 40))[0] || p.anchor)}`;
+  const billRow = (c, i) => `<div class="imp-row"><input type="checkbox" id="ic${i}" ${c.checked ? 'checked' : ''} aria-label="${c.existing ? 'Update' : 'Add'} ${esc(c.name)}">
+      <div style="min-width:0;display:flex;flex-direction:column;gap:6px">
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) 108px;gap:6px">
+          <input type="text" id="in${i}" value="${esc(c.name)}" aria-label="Name" style="font-weight:600;border:1px solid var(--line);border-radius:8px;padding:7px 9px;background:var(--card);min-width:0">
+          <div class="amtwrap"><span>$</span><input type="number" id="ia${i}" inputmode="decimal" step="0.01" min="0" value="${c.amount || ''}" placeholder="amount" aria-label="Amount" style="width:100%;border:1px solid ${c.amount ? 'var(--line)' : 'var(--due)'};border-radius:8px;padding:7px 9px;background:var(--card)"></div>
+        </div>
+        ${c.section === 'spend' ? `<div class="small muted">Usual per week · ${esc(c.category)} · ${esc(c.from)}${c.match ? ` · bank lines with “${esc(c.match)}”${c.exclude ? `, not “${esc(c.exclude)}”` : ''}` : ''}</div>` : ''}
+        <div class="small muted" ${c.section === 'spend' ? 'hidden' : ''}>${c.varies ? 'Amount varies · ' : ''}${FREQ[c.freq].label}${c.freq === 'once' ? ' on ' + short(c.anchor) : `, next ${short(c.anchor)}`} · ${esc(c.category)} · ${esc(c.from)}${c.history.length ? ` · ${c.history.length} past amounts` : ''}${c.autopay ? ' · autopay' : ''}</div>
+        ${(c.priceHistory || []).length ? `<div class="small" style="color:var(--accent)">Price changed ${c.priceHistory.map(p => `${money(p.from)} → ${money(p.amount)} on ${short(p.on)}`).join(', ')}</div>` : ''}
+        ${c.existing ? `<div class="small" style="color:var(--${source === 'bank' ? 'ok' : 'due'})">${c.matchedBy === 'schedule' ? `Matches your “${esc(c.existing.name)}” by due date and amount` : c.matchedBy === 'rate' ? `Looks like your “${esc(c.existing.name)}” (about the same per month${c.existing.freq !== c.freq ? `, but paid ${FREQ[c.freq].label.toLowerCase()}` : ''})` : `Already in your bill book as “${esc(c.existing.name)}”`}${Number(c.existing.amount) > 0 ? ` (${money(c.existing.amount)})` : ' with no amount'}. ${source === 'bank' ? (c.section === 'income' ? `Checking this logs the ${c.history.length} deposits on it${c.existing.freq !== c.freq && c.history.length >= 3 ? ` and switches it from ${FREQ[c.existing.freq].label.toLowerCase()} to ${FREQ[c.freq].label.toLowerCase()}, as the bank shows` : ''} instead of adding a copy.` : `Checking this logs the ${c.history.length} charges as payments on it instead of adding a copy.`) : 'Checking this updates it instead of adding a copy.'}${c.priceDiff ? ` Bank shows ${money(c.priceDiff.bank)}.` : ''}</div>` : ''}
+        ${c.stale ? `<div class="small" style="color:var(--due)">Nothing on the calendar after ${short(c.history.length ? c.history[c.history.length - 1].date : c.anchor)}. It may have ended. If you add it, it starts paused.</div>` : ''}
+        ${c.sample ? `<div class="small muted" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.sample)}</div>` : ''}
+      </div></div>`;
+  const SECT = [
+    ['bill', source === 'bank' ? 'Recurring charges' : 'Bills', ''],
+    ['maybe', 'Might be bills', 'These repeat or have a number in the title. Check any that are bills.'],
+    ['spend', 'Everyday spending', 'Tracked as a usual weekly amount, not a bill with a due date. Each week’s purchases are added up.'],
+    ['income', 'Income', 'Added as money coming in, never as bills, so you can see what’s left after bills.']
+  ];
+  const nBills = cs.filter(c => c.section !== 'income').length, nInc = cs.length - nBills;
+  openSheet(source === 'bank' ? 'Recurring charges found' : 'Found in your calendar', `<div class="form">
+    <p class="small muted" style="margin:0">${nBills} possible bill${nBills === 1 ? '' : 's'}${nInc ? ` and ${nInc} income source${nInc === 1 ? '' : 's'}` : ''}${res.skipped ? `, ${res.skipped} other ${source === 'bank' ? 'merchants' : 'events'} skipped (appointments, birthdays and so on)` : ''}. Fix any name or amount before adding.</p>
+    ${source === 'calendar' ? `<label class="check"><input type="checkbox" id="impHist" checked><span>Save past calendar amounts as history<br><span class="small muted">Gives each bill a starting estimate, a range and a trend.</span></span></label>` : ''}
+    ${SECT.map(([key, title, hint]) => {
+      const rows = cs.map((c, i) => [c, i]).filter(([c]) => c.section === key);
+      if (!rows.length) return '';
+      return `<div><div class="group-h" style="margin-top:6px"><span>${title}</span><span>${rows.length}</span></div>${hint ? `<p class="small muted" style="margin:2px 0 4px">${hint}</p>` : ''}
+        <div class="imp">${rows.map(([c, i]) => billRow(c, i)).join('')}</div></div>`;
+    }).join('')}
+    <div id="impMsg"></div>
+    <div class="actions" style="position:sticky;bottom:-20px;background:var(--card);padding-block:10px"><button class="btn ghost" data-act="close">Cancel</button><button class="btn primary" id="impGo">Add selected</button></div></div>`, body => {
+    const boxes = () => cs.map((c, i) => [c, body.querySelector('#ic' + i)]).filter(([, el]) => el && el.checked);
+    const upd = () => {
+      const sel = boxes(), up = sel.filter(([c]) => c.existing).length, add = sel.length - up;
+      const go = body.querySelector('#impGo');
+      const parts = [add ? `Add ${add} bill${add === 1 ? '' : 's'}` : '', up ? `${add ? 'update' : 'Update'} ${up}` : ''].filter(Boolean);
+      go.textContent = sel.length ? parts.join(', ') : 'Add selected';
+      go.disabled = !sel.length;
+    };
+    body.querySelectorAll('.imp input[type=checkbox]').forEach(x => x.addEventListener('change', upd)); upd();
+    body.querySelectorAll('[data-payday]').forEach(btn => btn.onclick = async () => {
+      const c = cs[+btn.dataset.payday];
+      if (S.readOnly) return;
+      if (await Store.putSettings(Object.assign({}, S.settings, { pay: c.payday }))) {
+        body.querySelectorAll('[data-payday]').forEach(b => { b.textContent = 'Use for paycheck planner'; b.classList.remove('primary'); });
+        btn.textContent = 'Paydays set ✓'; btn.classList.add('primary');
+        toast(`Paydays set: ${payLabel(c.payday)}`);
+      }
+    });
+    body.querySelector('#impGo').onclick = async () => {
+      const sel = boxes();
+      const missing = sel.filter(([c]) => { const i = cs.indexOf(c); return !(parseFloat(body.querySelector('#ia' + i).value) > 0) && !c.history.some(h => h.amount > 0) && !(c.existing && Number(c.existing.amount) > 0); });
+      if (missing.length && !body.dataset.warned) {
+        body.dataset.warned = '1';
+        body.querySelector('#impMsg').innerHTML = `<div class="warnbox">${missing.map(([c]) => esc(c.name)).join(', ')} ${missing.length === 1 ? 'has' : 'have'} no amount. Enter one, or tap again to add ${missing.length === 1 ? 'it' : 'them'} as “amount varies” and fill it in when the bill comes.</div>`;
+        return;
+      }
+      const go = body.querySelector('#impGo'); go.disabled = true; go.textContent = 'Saving…';
+      const hist = source === 'bank' || (body.querySelector('#impHist') && body.querySelector('#impHist').checked);
+      const today = localToday(); let added = 0, updated = 0;
+      for (const [c] of sel) {
+        const i = cs.indexOf(c);
+        const name = body.querySelector('#in' + i).value.trim() || c.name;
+        const amt = round2(parseFloat(body.querySelector('#ia' + i).value) || 0);
+        const hasHist = hist && c.history.some(h => h.amount > 0);
+        let b;
+        if (c.section === 'spend') {
+          if (c.existing && S.bills.get(c.existing.id)) { b = structuredClone(S.bills.get(c.existing.id)); if (amt > 0) b.amount = amt; updated++; }
+          else { b = { id: uid(), name, kind: 'spending', category: c.category, amount: amt || c.amount, amountType: 'varies', freq: c.freq, anchor: c.anchor, endDate: null, autopay: false, owner: '', payUrl: '', notes: '',
+            match: c.match || '', exclude: c.exclude || '', status: 'active', createdOn: today, trackFrom: c.history.length ? c.history[0].date : today, createdBy: S.me || null, importedFrom: source }; added++; }
+          if (!(await Store.putBill(b))) { go.disabled = false; go.textContent = 'Try again'; return; }
+          /* the bank's weekly totals replace anything typed in for those weeks */
+          for (const h of c.history) await Store.putPay({ id: payId(b.id, h.date), billId: b.id, dueDate: h.date, amount: h.amount, paidOn: h.date, by: null, source, loggedOn: today });
+          continue;
+        }
+        if (c.existing && S.bills.get(c.existing.id)) {
+          b = structuredClone(S.bills.get(c.existing.id));
+          if (/\d/.test(b.name) || !b.name.trim()) b.name = name;
+          if (amt > 0 && Math.abs(amt - (Number(b.amount) || 0)) > 0.004) {
+            if (Number(b.amount) > 0 && b.amountType !== 'varies') b.priceHistory = [...(b.priceHistory || []), { on: today, from: Number(b.amount), amount: amt }].slice(-24);
+            b.amount = amt;
+          }
+          if (c.varies && source !== 'bank') b.amountType = 'varies';
+          else if (amt > 0 && b.amountType === 'varies' && !(Number(c.existing.amount) > 0)) b.amountType = 'fixed';
+          if (!(b.priceHistory || []).length && (c.priceHistory || []).length) b.priceHistory = c.priceHistory.slice(-24);
+          if (c.category && (!b.category || b.category === 'Other')) b.category = c.category;
+          if (c.kind === 'subscription') b.kind = 'subscription';
+          /* the bank's deposit schedule beats the calendar's (paid weekly, not every 2 weeks) */
+          if (c.section === 'income' && source === 'bank' && c.history.length >= 3 && b.freq !== c.freq) { b.freq = c.freq; b.anchor = c.anchor; b.amount = amt || c.amount; }
+          updated++;
+        } else {
+          b = { id: uid(), name, kind: c.kind, category: c.category, amount: amt, amountType: c.varies ? 'varies' : 'fixed', freq: c.freq, anchor: c.anchor,
+            endDate: c.endDate || null, autopay: !!c.autopay, owner: '', payUrl: '', notes: source === 'bank' ? `Found in bank statement: ${c.sample || ''}`.trim() : '',
+            status: 'active', createdOn: today, trackFrom: today, createdBy: S.me || null, priceHistory: (c.priceHistory || []).slice(-24), importedFrom: source };
+          if (!(amt > 0) && !hasHist) b.amountType = 'varies';
+          if (c.section === 'income') { b.kind = 'income'; b.category = 'Income'; b.autopay = false; b.amountType = 'varies'; }
+          if (c.stale) { b.status = 'paused'; b.pausedOn = today; }
+          added++;
+        }
+        if (!(await Store.putBill(b))) { go.disabled = false; go.textContent = 'Try again'; return; }
+        const done = new Set();
+        if (hasHist) for (const h of c.history.slice(-14)) {
+          /* bank charges land a few days off the due date: file each under the due date it paid */
+          const due = c.existing ? dueForCharge(b, h.date) : h.date;
+          if (due && done.has(due)) continue;
+          if (due) done.add(due);
+          if (!due || S.pays.has(payId(b.id, due))) continue;
+          await Store.putPay({ id: payId(b.id, due), billId: b.id, dueDate: due, amount: round2(h.amount), paidOn: h.date, by: null, source, loggedOn: today });
+        }
+      }
+      closeSheet();
+      toast([added ? `Added ${added} bill${added === 1 ? '' : 's'}` : '', updated ? `updated ${updated}` : ''].filter(Boolean).join(', ') || 'Nothing changed');
+    };
+  });
+}
+
+/* ---------- export / backup ---------- */
+async function offerFile(filename, data, mime, intro) {
+  let dl = null;
+  try { if (window.claude && window.claude.use) dl = await window.claude.use('downloads'); } catch (e) {}
+  if (dl) {
+    try { await dl.save({ filename, data: new Blob([data], { type: mime }) }); toast(`Saved ${filename}`); return; }
+    catch (e) { if (e && (e.code === 'declined' || e.code === 'cancelled' || e.code === 'aborted')) return; }
+  }
+  openSheet(filename, `<div class="form"><p class="small muted" style="margin:0">${esc(intro)} Downloading isn\u2019t available here, so copy the text below and save it as <b>${esc(filename)}</b>.</p>
+    <textarea class="code" id="fileText" readonly>${esc(data)}</textarea><div class="actions"><button class="btn primary" id="copyBtn">Copy</button></div></div>`, body => {
+    body.querySelector('#copyBtn').onclick = async () => { const ta = body.querySelector('#fileText'); try { await navigator.clipboard.writeText(ta.value); toast('Copied'); } catch (e) { ta.focus(); ta.select(); toast('Selected. Use Copy from your keyboard or menu.'); } };
+  });
+}
+function exportICS() {
+  const c = ctx(); const act = c.bills.filter(b => b.status === 'active' && !isInc(b));
+  if (!act.length) { toast('Add a bill first.'); return; }
+  offerFile('bills.ics', buildICS(act, c.est, c.t, +S.settings.leadDays || 3, money), 'text/calendar', 'This is a calendar file for Google Calendar.');
+}
+function exportJSON() {
+  const data = JSON.stringify({ app: 'sutton-bill-book', version: 1, exportedOn: localToday(), settings: S.settings, bills: [...S.bills.values()], payments: [...S.pays.values()] }, null, 1);
+  offerFile(`bill-book-backup-${localToday()}.json`, data, 'application/json', 'This backup holds all your bills, payments and settings.');
+}
+function restoreBackup(text) {
+  let d; try { d = JSON.parse(text); } catch (e) { toast('That isn\u2019t a bill book backup file.'); return; }
+  if (!d || d.app !== 'sutton-bill-book' || !Array.isArray(d.bills)) { toast('That isn\u2019t a bill book backup file.'); return; }
+  const bills = d.bills.filter(b => b && b.id && b.name && isDate(b.anchor)), pays = (d.payments || []).filter(p => p && p.id && p.billId);
+  const newB = bills.filter(b => !S.bills.has(b.id)).length;
+  openSheet('Restore backup', `<div class="form"><p>The backup from ${esc(d.exportedOn || 'an earlier date')} has <b>${bills.length}</b> bills (${newB} not in your book now) and <b>${pays.length}</b> payments.</p>
+    <p class="small muted">Matching bills are replaced with the backup\u2019s version. Bills added since the backup are kept.</p>
+    <div class="actions"><button class="btn ghost" data-act="close">Cancel</button><button class="btn primary" id="doRestore">Restore</button></div></div>`, body => {
+    body.querySelector('#doRestore').onclick = async () => {
+      const go = body.querySelector('#doRestore'); go.disabled = true; go.textContent = 'Restoring…';
+      for (const b of bills) if (!(await Store.putBill(b))) return;
+      for (const p of pays) if (!(await Store.putPay(p))) return;
+      if (d.settings) await Store.putSettings(Object.assign(structuredClone(DEFAULT_SETTINGS), d.settings));
+      closeSheet(); toast('Backup restored');
+    };
+  });
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click', async e => {
+  const t = e.target.closest('[data-tab],[data-act]'); if (!t) return;
+  if (t.dataset.tab) { S.tab = t.dataset.tab; try { localStorage.setItem('sbb.tab', S.tab); } catch (x) {} render(); window.scrollTo(0, 0); return; }
+  const [a, x, y] = t.dataset.act.split(':');
+  if (a === 'close') return closeSheet();
+  if (a === 'add') return openBill(null);
+  if (a === 'sbb-switch' && window.SBB) return window.SBB.switchWho();
+  if (a === 'sbb-lock' && window.SBB) return window.SBB.lock();
+  if (a === 'add-income') return openBill(null, { kind: 'income', category: 'Income', freq: 'biweekly', amountType: 'varies' });
+  if (a === 'edit') { if (!$('#sheet').hidden) closeSheet(); return openBill(x); }
+  if (a === 'pay') return openPay(x, y);
+  if (a === 'tab') { S.tab = x; render(); window.scrollTo(0, 0); return; }
+  if (a === 'upv') { S.upView = x; render(); return; }
+  if (a === 'cal') { let m = S.calM + +x, yy = S.calY; if (m < 1) { m = 12; yy--; } if (m > 12) { m = 1; yy++; } S.calM = m; S.calY = yy; S.selDay = null; render(); return; }
+  if (a === 'day') { S.selDay = x; render(); return; }
+  if (a === 'filter') { S.filter = x; render(); return; }
+  if (a === 'verdict') { if (S.readOnly) return; const b = structuredClone(S.bills.get(x)); if (!b) return; b.verdict = b.verdict === y ? null : y; b.reviewedOn = localToday(); await Store.putBill(b); return; }
+  if (a === 'ack') {
+    /* dismiss an alert; stored on the bill so it clears for both of you, and comes back only if something new happens */
+    const [, kind, id, val] = t.dataset.act.split(':');
+    const b = structuredClone(S.bills.get(id)); if (!b) return;
+    const prev = structuredClone(b);
+    if (kind === 'price') b.priceAck = val;
+    else if (kind === 'renew') b.renewAck = val;
+    else if (kind === 'trial') b.trialAck = val;
+    else if (kind === 'log') b.logAck = val;
+    else if (kind === 'dup') b.notDup = [...new Set([...(b.notDup || []), val])];
+    if (await Store.putBill(b)) toast(kind === 'dup' ? 'Kept both' : 'Dismissed', () => Store.putBill(prev));
+    return;
+  }
+  if (a === 'cancel') { const b = structuredClone(S.bills.get(x)); if (!b) return; const prev = structuredClone(b); b.status = 'cancelled'; b.cancelledOn = localToday(); if (await Store.putBill(b)) toast(`${b.name} cancelled. Savings are tracked under Cancelled.`, () => Store.putBill(prev)); return; }
+  if (a === 'import-ics') return pick('ics');
+  if (a === 'import-csv') return pick('csv');
+  if (a === 'import-json') return pick('json');
+  if (a === 'export-ics') return exportICS();
+  if (a === 'export-json') return exportJSON();
+});
+document.addEventListener('input', e => { if (e.target.id === 'q') { S.q = e.target.value; render(); } if (e.target.id === 'payFreq') { const s = $('#paySemi'); if (s) s.hidden = e.target.value !== 'semimonthly'; } });
+document.addEventListener('change', e => { if (e.target.id === 'payFreq') { const s = $('#paySemi'); if (s) s.hidden = e.target.value !== 'semimonthly'; } });
+document.addEventListener('submit', async e => {
+  if (e.target.id === 'payForm') {
+    e.preventDefault();
+    const pay = { enabled: $('#payOn').checked, freq: $('#payFreq').value, anchor: $('#payAnchor').value, d1: +$('#payD1').value || 1, d2: +$('#payD2').value || 15 };
+    if (pay.enabled && pay.freq !== 'semimonthly' && !isDate(pay.anchor)) { toast('Pick a recent payday first.'); return; }
+    if (await Store.putSettings(Object.assign({}, S.settings, { pay }))) toast('Paydays saved');
+  }
+  if (e.target.id === 'hhForm') {
+    e.preventDefault();
+    const s = Object.assign({}, S.settings, { members: [$('#m1').value.trim(), $('#m2').value.trim()], leadDays: +$('#lead').value || 3 });
+    if (await Store.putSettings(s)) toast('Saved');
+  }
+});
+$('#sheet').addEventListener('click', e => { if (e.target.id === 'sheet') closeSheet(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#sheet').hidden) closeSheet(); });
+setInterval(() => { const t = localToday(); if (t !== S._day) { S._day = t; if (S.mode !== 'loading') render(); } }, 60000);
+S._day = localToday();
+render();
+boot();
+</script>
+
+</body>
+</html>
