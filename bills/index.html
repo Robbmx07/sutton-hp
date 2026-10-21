@@ -601,6 +601,7 @@ const median = a => { if (!a.length) return 0; const s = [...a].sort((x, y) => x
 
 /* list = this bill's payments, newest first, skips removed */
 function estimate(b, list) {
+  if (b.kind === 'spending' && b.amountType === 'fixed' && Number(b.amount) > 0) return Number(b.amount);
   if (b.kind === 'spending') { const l = list.slice(0, 8); if (l.length) return round2(avg(l.map(p => Number(p.amount) || 0))); return Number(b.amount) || 0; }
   if (b.amountType === 'varies') {
     const real = list.filter(p => p.amount > 0).slice(0, 3);
@@ -1432,11 +1433,16 @@ function attention(c) {
 
 /* ---------- small renderers ---------- */
 function stub(d, state) { if (state === 'inc') return `<div class="stub inc"><small>${MON[+d.slice(5, 7) - 1]}</small><b>${+d.slice(8, 10)}</b></div>`; const cls = state === 'overdue' ? 'late' : state === 'soon' ? 'soon' : (state === 'paid' || state === 'auto' || state === 'skipped') ? 'paid' : ''; return `<div class="stub ${cls}"><small>${MON[+d.slice(5, 7) - 1]}</small><b>${+d.slice(8, 10)}</b></div>`; }
+function whenPaid(p) {
+  if (!p || !p.paidOn || !isDate(p.paidOn) || !isDate(p.dueDate)) return '';
+  const n = ord(p.dueDate) - ord(p.paidOn);
+  return n > 0 ? `${n} day${n === 1 ? '' : 's'} early` : n < 0 ? `${-n} day${n === -1 ? '' : 's'} late` : 'on the due date';
+}
 function stateChip(i) {
   if (i.state === 'received') return `<span class="chip in">Received${i.pay.by ? ` · <span data-uid="${esc(i.pay.by)}"></span>` : ''}</span>`;
   if (i.state === 'assumed') return `<span class="chip plain">Not logged</span>`;
   if (i.state === 'expected') return `<span class="chip in">Payday${i.days <= 1 ? ' · ' + rel(i.days).toLowerCase() : ''}</span><span class="muted">${i.days > 1 ? rel(i.days) : ''}</span>`;
-  if (i.state === 'paid') return `<span class="chip ok">Paid${i.pay.by ? ` · <span data-uid="${esc(i.pay.by)}"></span>` : ''}</span>`;
+  if (i.state === 'paid') return `<span class="chip ok">Paid${i.pay.paidOn && i.pay.paidOn !== i.d ? ' ' + short(i.pay.paidOn) : ''}${i.pay.by ? ` · <span data-uid="${esc(i.pay.by)}"></span>` : ''}</span>${whenPaid(i.pay) && i.pay.paidOn !== i.d ? `<span class="muted">${whenPaid(i.pay)}</span>` : ''}`;
   if (i.state === 'skipped') return `<span class="chip plain">Skipped</span>`;
   if (i.state === 'auto') return `<span class="chip ok">Autopaid</span>`;
   if (i.state === 'overdue') return `<span class="chip late">${rel(i.days)}</span>`;
@@ -1525,7 +1531,7 @@ function renderHome(c) {
   if (vb.length) html += `<section class="panel"><div class="panel-h"><h2>Amounts that vary</h2><span class="small muted">last 12 amounts</span></div>${vb.map(b => {
       const list = (c.byBill.get(b.id) || []).filter(p => !p.skipped), r = amountRange(list, c.t), n = nextDue(b, c.t), ly = n ? sameMonthLastYear(list, n) : null;
       return `<div class="var"><div style="min-width:0"><button class="link" data-act="edit:${esc(b.id)}">${esc(b.name)}</button>
-        <div class="small"><span class="num" style="${isInc(b) ? 'color:var(--in)' : ''}">${isInc(b) ? '~+' : '~'}${money(c.est.get(b.id))}</span> next${isInc(b) ? ' check (avg of last 3)' : ''}${r ? ` · range <span class="num">${money0(r.lo)}–${money0(r.hi)}</span>` : ''}</div>
+        <div class="small"><span class="num" style="${isInc(b) ? 'color:var(--in)' : ''}">${isInc(b) ? '~+' : '~'}${money(c.est.get(b.id))}</span> next${isInc(b) ? ' check (avg of last 3)' : ' (avg of last 3)'}${!isInc(b) && Number(b.amount) > 0 && Math.abs(c.est.get(b.id) - b.amount) / b.amount > 0.05 ? ` · your estimate <span class="num">${money0(b.amount)}</span> <span style="color:var(--${c.est.get(b.id) > b.amount ? 'late' : 'ok'})">(${c.est.get(b.id) > b.amount ? '+' : '−'}${money0(Math.abs(c.est.get(b.id) - b.amount))})</span>` : ''}${r ? ` · range <span class="num">${money0(r.lo)}–${money0(r.hi)}</span>` : ''}</div>
         ${ly ? `<div class="small muted">${MON[+n.slice(5, 7) - 1]} last year: <span class="num">${money(ly)}</span></div>` : ''}</div>${sparkline(list)}</div>`;
     }).join('')}</section>`;
   if (T.byCat.length) {
@@ -1815,7 +1821,7 @@ function billForm(b, isNew) {
       <div class="f"><span class="lbl">Type</span><div class="seg" role="group"><button type="button" data-kind="bill" aria-pressed="${b.kind !== 'subscription' && b.kind !== 'income'}">Bill</button><button type="button" data-kind="subscription" aria-pressed="${b.kind === 'subscription'}">Subscription</button><button type="button" data-kind="income" aria-pressed="${b.kind === 'income'}">Income</button><button type="button" data-kind="spending" aria-pressed="${b.kind === 'spending'}">Spending</button></div></div>
       <div class="f"><label for="bCat">Category</label><select id="bCat">${CATS.map(k => `<option ${b.category === k ? 'selected' : ''}>${k}</option>`).join('')}</select></div>
     </div>
-    <label class="check"><input type="checkbox" id="bVaries" ${b.amountType === 'varies' ? 'checked' : ''}><span>The amount changes from bill to bill<br><span class="small muted">You\u2019ll enter the real amount when you mark it paid. The estimate is the average of the last 3.</span></span></label>
+    <label class="check"><input type="checkbox" id="bVaries" ${b.amountType === 'varies' ? 'checked' : ''}><span>The amount changes from bill to bill<br><span class="small muted">The amount above stays your estimate. The app also shows the real average of the last 3 payments, and uses that for planning.</span></span></label>
     <div class="f2">
       <div class="f"><label for="bAmt" id="bAmtL">${b.amountType === 'varies' ? 'Typical amount' : 'Amount'}</label><div class="amtwrap"><span>$</span><input type="number" id="bAmt" inputmode="decimal" step="0.01" min="0" value="${b.amount ? f('amount') : ''}"></div></div>
       <div class="f"><label for="bFreq">How often</label><select id="bFreq">${Object.entries(FREQ).map(([k, v]) => `<option value="${k}" ${(b.freq || 'monthly') === k ? 'selected' : ''}>${v.label}</option>`).join('')}</select></div>
@@ -1846,7 +1852,7 @@ function historyBlock(b) {
   const ph = b.priceHistory || [];
   if (!list.length && !ph.length) return '';
   return `<div class="f"><span class="lbl">History</span>${list.length >= 2 ? `<div>${sparkline(list.filter(p => !p.skipped))}</div>` : ''}
-    <div class="reg">${list.slice(0, 14).map(p => `<div class="row" style="padding:7px 0"><span class="mid"><span class="small">${nice(p.dueDate)}</span><span class="sub">${p.skipped ? 'Skipped' : p.source === 'bank' ? 'From bank statement' : p.source === 'calendar' ? 'From calendar' : 'Paid' + (p.paidOn && p.paidOn !== p.dueDate ? ' ' + short(p.paidOn) : '')}${p.by ? ' · <span data-uid="' + esc(p.by) + '"></span>' : ''}</span></span><span class="amt"><b>${p.skipped ? '—' : money(p.amount)}</b></span></div>`).join('')}</div>
+    <div class="reg">${list.slice(0, 14).map(p => `<div class="row" style="padding:7px 0"><span class="mid"><span class="small">Due ${nice(p.dueDate)}</span><span class="sub">${p.skipped ? 'Skipped' : (p.paidOn ? 'Paid ' + short(p.paidOn) + (whenPaid(p) && p.paidOn !== p.dueDate ? ' (' + whenPaid(p) + ')' : '') : 'Paid') + (p.source === 'bank' ? ' · bank' : p.source === 'calendar' ? ' · calendar' : '')}${p.by ? ' · <span data-uid="' + esc(p.by) + '"></span>' : ''}</span></span><span class="amt"><b>${p.skipped ? '—' : money(p.amount)}</b></span></div>`).join('')}</div>
     ${ph.length ? `<span class="hint">Price changes: ${ph.slice(-4).map(x => `${short(x.on)} ${money(x.from)} → ${money(x.amount)}`).join(' · ')}</span>` : ''}</div>`;
 }
 function openBill(id, preset) {
@@ -1867,7 +1873,7 @@ function openBill(id, preset) {
       body.querySelector('#bAmtL').textContent = inc ? 'Take-home pay' : body.querySelector('#bVaries').checked ? 'Typical amount' : 'Amount';
       const sp = k === 'spending';
       body.querySelector('#matchF').hidden = !sp;
-      if (sp) { body.querySelector('#autoW').hidden = true; body.querySelector('#bAnchorL').textContent = 'A week starts on'; body.querySelector('#bAmtL').textContent = 'Usual amount per week'; body.querySelector('#bVaries').checked = true; if (isNew) body.querySelector('#bFreq').value = 'weekly'; }
+      if (sp) { body.querySelector('#autoW').hidden = true; body.querySelector('#bAnchorL').textContent = 'A week starts on'; body.querySelector('#bAmtL').textContent = 'Planned or usual amount'; if (isNew) { body.querySelector('#bVaries').checked = true; body.querySelector('#bFreq').value = 'weekly'; } }
       const cat = body.querySelector('#bCat');
       if (inc) cat.value = 'Income'; else if (cat.value === 'Income') cat.value = 'Other';
       if (sp && !['Groceries', 'Gas & Fuel', 'Dining out'].includes(cat.value)) cat.value = 'Groceries';
@@ -1962,7 +1968,7 @@ function openPay(billId, date) {
   const ro = S.readOnly, inc = isInc(b);
   openSheet(b.name, `<div class="form">
     <div class="toolbar">${stub(date, inc ? 'inc' : existing ? 'paid' : ord(date) < c.T ? 'overdue' : '')}<div><b>${inc ? 'Payday' : 'Due'} ${nice(date)}</b><div class="small muted">${FREQ[b.freq].label}${b.autopay ? ' · autopay' : ''}${b.owner ? ' · ' + esc(b.owner) : ''}</div></div></div>
-    ${b.amountType === 'varies' ? `<div class="small muted">Estimate <b class="num">${money(e)}</b>${r ? ` · last year ranged <span class="num">${money0(r.lo)}–${money0(r.hi)}</span>` : ''}${ly ? ` · same month last year <span class="num">${money(ly)}</span>` : ''}</div>` : ''}
+    ${b.amountType === 'varies' ? `<div class="small muted">${Number(b.amount) > 0 && Math.abs(e - b.amount) > 0.5 ? `Your estimate <b class="num">${money(b.amount)}</b> · real average <b class="num">${money(e)}</b>` : `Estimate <b class="num">${money(e)}</b>`}${r ? ` · last year ranged <span class="num">${money0(r.lo)}–${money0(r.hi)}</span>` : ''}${ly ? ` · same month last year <span class="num">${money(ly)}</span>` : ''}</div>` : ''}
     ${existing ? `<div class="warnbox" style="border-color:var(--ok);background:var(--ok-soft)">${existing.skipped ? 'Marked as skipped.' : `${inc ? 'Received' : 'Paid'} <b class="num">${money(existing.amount)}</b>${existing.paidOn ? ' on ' + nice(existing.paidOn) : ''}${existing.by ? ' by <span data-uid="' + esc(existing.by) + '"></span>' : ''}.`}</div>` : ''}
     <div class="f2"><div class="f"><label for="pAmt">${inc ? 'Amount received' : b.amountType === 'varies' ? 'Actual amount' : 'Amount paid'}</label><div class="amtwrap"><span>$</span><input type="number" id="pAmt" inputmode="decimal" step="0.01" min="0" value="${existing && !existing.skipped ? existing.amount : (e || '')}" ${ro ? 'disabled' : ''}></div></div>
     <div class="f"><label for="pOn">${inc ? 'Deposited on' : 'Paid on'}</label><input type="date" id="pOn" value="${existing && existing.paidOn ? existing.paidOn : (date < c.t ? date : c.t)}" ${ro ? 'disabled' : ''}></div></div>
@@ -2173,10 +2179,15 @@ function restoreBackup(text) {
   const bills = d.bills.filter(b => b && b.id && b.name && isDate(b.anchor)), pays = (d.payments || []).filter(p => p && p.id && p.billId);
   const newB = bills.filter(b => !S.bills.has(b.id)).length;
   openSheet('Restore backup', `<div class="form"><p>The backup from ${esc(d.exportedOn || 'an earlier date')} has <b>${bills.length}</b> bills (${newB} not in your book now) and <b>${pays.length}</b> payments.</p>
-    <p class="small muted">Matching bills are replaced with the backup\u2019s version. Bills added since the backup are kept.</p>
+    <label class="check"><input type="checkbox" id="rAll" ${d.replaceAll ? 'checked' : ''}><span>Replace everything with this backup<br><span class="small muted">Removes bills and payments that aren\u2019t in the backup. Leave it off to only add and update.</span></span></label>
     <div class="actions"><button class="btn ghost" data-act="close">Cancel</button><button class="btn primary" id="doRestore">Restore</button></div></div>`, body => {
     body.querySelector('#doRestore').onclick = async () => {
       const go = body.querySelector('#doRestore'); go.disabled = true; go.textContent = 'Restoring…';
+      if (body.querySelector('#rAll').checked) {
+        const keepB = new Set(bills.map(b => b.id)), keepP = new Set(pays.map(p => p.id));
+        for (const p of [...S.pays.values()]) if (!keepP.has(p.id)) await Store.delPay(p.id);
+        for (const b of [...S.bills.values()]) if (!keepB.has(b.id) && S.bills.has(b.id)) await Store.delBill(b.id);
+      }
       for (const b of bills) if (!(await Store.putBill(b))) return;
       for (const p of pays) if (!(await Store.putPay(p))) return;
       if (d.settings) await Store.putSettings(Object.assign(structuredClone(DEFAULT_SETTINGS), d.settings));
