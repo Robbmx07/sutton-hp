@@ -120,9 +120,6 @@ details.cat[open]{gap:8px}
 .goaltag.met{color:var(--good);font-weight:700}
 .gtasks{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:2px 12px;padding:6px 0;font-size:.85rem}
 .gtasks label{display:flex;gap:6px;align-items:center}
-.thanks-card{border-color:var(--good)}
-.thanks-card .label{color:var(--good)}
-.btn.thank{border-color:var(--good);color:var(--good)}
 .boardnote{grid-column:1/-1;margin:0;text-align:center}
 .wk + .wk{margin-top:-4px}
 .setgrid{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1.3fr) 62px 62px auto;gap:8px;align-items:center}
@@ -279,7 +276,7 @@ function allEntries(){
   return out;
 }
 function weekStart(d){ const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); const wd = (x.getDay()+6)%7; x.setDate(x.getDate()-wd); return x; }
-const THANKS_PTS = 1, QUOTA_BONUS = 10, TEAM_BONUS = 5;
+const QUOTA_BONUS = 10, TEAM_BONUS = 5;
 function totals(){
   const ents = allEntries(), q = cfg().quota;
   const ws = dkey(weekStart(new Date()));
@@ -289,7 +286,6 @@ function totals(){
   for(const p of P){
     const o = other(p);
     const work = ents.filter(e=>e.who===p).reduce((s,e)=>s+e.pts,0);
-    const thanks = ents.filter(e=>e.who===p && e.thankedBy===o).length * THANKS_PTS;
     let quotaB = 0, teamB = 0;
     for(const [wk, v] of Object.entries(weeks)){
       if(wk > ws) continue;
@@ -297,8 +293,8 @@ function totals(){
     }
     const spent = S.reds.filter(r=>r.who===p && (r.status==='requested'||r.status==='done')).reduce((s,r)=>s+(Number(r.cost)||0),0);
     const week = (weeks[ws] && weeks[ws][p]) || 0;
-    const earned = work + thanks + quotaB + teamB;
-    t[p] = { work, thanks, quotaB, teamB, earned, spent, bal: earned-spent, week, streak: streak(ents, p) };
+    const earned = work + quotaB + teamB;
+    t[p] = { work, quotaB, teamB, earned, spent, bal: earned-spent, week, streak: streak(ents, p) };
   }
   return t;
 }
@@ -427,7 +423,7 @@ function renderBoard(){
     return '<div class="score '+p+'"><div class="top"><span class="name">'+esc(nm(p))+(p===ME?' (you)':'')+'</span><span class="bal num">'+t[p].bal+'<small>pts</small></span></div>'+
       '<div class="bar" title="This week vs. quota"><i style="width:'+pct+'%"></i></div>'+
       '<div class="wk"><span>This week'+(t[p].week>=q[p]?' · quota met':'')+'</span><span class="num">'+t[p].week+' / '+q[p]+'</span></div>'+
-      '<div class="wk"><span>'+(t[p].streak?t[p].streak+'-day streak':'No streak yet')+'</span><span>'+(t[p].thanks?t[p].thanks+' thanks':'')+'</span></div></div>';
+      '<div class="wk"><span>'+(t[p].streak?t[p].streak+'-day streak':'No streak yet')+'</span></div></div>';
   }).join('');
   const both = P.every(p=>t[p].week>=q[p]);
   $('board').insertAdjacentHTML('beforeend', '<p class="boardnote small muted">'+(both
@@ -463,14 +459,6 @@ function viewToday(){
       reqs.map(r=>'<div class="item"><div class="grow"><div class="t">'+esc(r.title)+'</div><div class="small muted">'+fmtWhen(r.at)+' · '+r.cost+' pts</div></div>'+
         '<button class="btn good sm" data-fulfill="'+r.id+'">Done</button><button class="btn ghost sm" data-decline="'+r.id+'">Not now</button></div>').join('')+
       '</div><p class="note">“Not now” returns the points to '+esc(nm(o))+'. Rewards are offers, never obligations.</p></section>';
-  }
-  const cutoff = dkey(new Date(Date.now()-3*864e5));
-  const unthanked = allEntries().filter(e=>e.who===o && !e.thankedBy && e.day>=cutoff).sort((x,y)=>(y.at||'').localeCompare(x.at||''));
-  if(unthanked.length){
-    h += '<section class="card thanks-card"><div class="spread"><span class="label">'+esc(nm(o))+' pitched in · '+unthanked.length+' not thanked yet</span>'+
-      '<button class="btn sm thank" id="thankAll">Thank for all ('+'+'+unthanked.length*THANKS_PTS+' to '+esc(nm(o))+')</button></div>'+
-      '<div class="list">'+unthanked.slice(0,6).map(e=>entryRow(e,false)).join('')+'</div>'+
-      (unthanked.length>6?'<p class="small muted">and '+(unthanked.length-6)+' more</p>':'')+'</section>';
   }
   h += goalsCard();
   const isToday = day===today();
@@ -517,10 +505,7 @@ function goalsCard(){
     }).join('')+'</div></section>';
 }
 function entryRow(e, canDel){
-  const o = ME && e.who===other(ME);
-  const thanks = e.thankedBy ? '<span class="pill ok">Thanked +'+THANKS_PTS+'</span>'
-    : o ? '<button class="btn sm thank" data-thank="'+e.day+'|'+e.id+'">Thank '+esc(nm(e.who))+'</button>' : '';
-  return '<div class="item"><span class="dot '+e.who+'"></span><div class="grow"><div class="t">'+esc(e.name)+'</div><div class="small muted">'+esc(nm(e.who))+(e.at?' · '+fmtTime(e.at):'')+'</div></div>'+thanks+'<span class="pts">+'+e.pts+'</span>'+
+  return '<div class="item"><span class="dot '+e.who+'"></span><div class="grow"><div class="t">'+esc(e.name)+'</div><div class="small muted">'+esc(nm(e.who))+(e.at?' · '+fmtTime(e.at):'')+'</div></div><span class="pts">+'+e.pts+'</span>'+
     (canDel && e.who===ME ? '<button class="btn ghost sm" data-unlog="'+e.day+'|'+e.id+'" aria-label="Remove">Remove</button>' : '')+'</div>';
 }
 
@@ -652,17 +637,6 @@ function bind(){
     trayOpen = recent.length > 1 ? trayOpen : false;
     renderTray();
   });
-  m.querySelectorAll('[data-thank]').forEach(b => b.onclick = () => {
-    const [day,id] = b.dataset.thank.split('|');
-    write(()=>S.db.doc('days/'+day).merge({ entries: { [id]: { thankedBy: ME } } })).then(()=>toast('Thanks sent: +'+THANKS_PTS+' to '+nm(other(ME))));
-  });
-  const ta = $('thankAll'); if(ta) ta.onclick = () => {
-    const cutoff = dkey(new Date(Date.now()-3*864e5));
-    const list = allEntries().filter(e=>e.who===other(ME) && !e.thankedBy && e.day>=cutoff);
-    const byDay = {}; list.forEach(e => { (byDay[e.day] ||= {})[e.id] = { thankedBy: ME }; });
-    Object.entries(byDay).forEach(([day, ents]) => write(()=>S.db.doc('days/'+day).merge({ entries: ents })));
-    toast('Thanked '+nm(other(ME))+' for '+list.length+' things');
-  };
   m.querySelectorAll('details[data-cat]').forEach(d => d.ontoggle = () => {
     openCats[d.dataset.cat] = d.open; try{ localStorage.setItem('hp-cats', JSON.stringify(openCats)); }catch(e){}
   });
