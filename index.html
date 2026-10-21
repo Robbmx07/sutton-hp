@@ -729,7 +729,7 @@ async function api(body){
   return j;
 }
 function makeDB(){
-  let server = {}, store = {}, loaded = false, flushing = false;
+  let server = {}, store = {}, loaded = false, flushing = false, gen = 0, again = false;
   const subs = new Set();
   const OUTBOX = 'hp-outbox';
   let outbox = []; try{ outbox = JSON.parse(localStorage.getItem(OUTBOX)||'[]') || []; }catch(e){ outbox = []; }
@@ -757,7 +757,7 @@ function makeDB(){
         const batch = outbox[0];
         await api({ action:'write', ops: batch.ops });
         batch.ops.forEach(o => applyOp(server, o));
-        outbox.shift(); saveOutbox();
+        outbox.shift(); saveOutbox(); gen++;
       }
       S.syncErr = false;
     }catch(e){
@@ -773,9 +773,17 @@ function makeDB(){
     notify(); flush();
     return Promise.resolve();
   }
+  let refreshing = null;
   async function refresh(){
-    const j = await api({ action:'load' });
-    server = j.data || {}; rebuild(); notify(); flush();
+    if(refreshing){ again = true; return refreshing; }
+    refreshing = (async () => {
+      const g = gen;
+      const j = await api({ action:'load' });
+      // A save finished while this load was in flight, so the data is older than what we have. Skip it and reload.
+      if(g !== gen){ again = true; return; }
+      server = j.data || {}; rebuild(); notify(); flush();
+    })().finally(() => { refreshing = null; if(again){ again = false; setTimeout(() => refresh().catch(()=>{}), 300); } });
+    return refreshing;
   }
   function docRef(c, id){
     return { id, path: c+'/'+id,
