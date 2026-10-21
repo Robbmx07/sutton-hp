@@ -299,9 +299,20 @@ button.row:hover .nm{color:var(--accent)}
   let PASS = get(LS.pass) || '', ME = get(LS.who) || '';
 
   /* ---------- talking to the sheet ---------- */
-  async function api(body) {
-    const r = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(Object.assign({}, body, { passcode: PASS })) });
-    let j; try { j = await r.json(); } catch (e) { const err = new Error('bad_response'); err.code = 'unavailable'; throw err; }
+  /* Every call gives up after a time limit, so the app never sits on a loading screen forever */
+  async function api(body, ms) {
+    const ctl = typeof AbortController === 'function' ? new AbortController() : null;
+    const timer = ctl ? setTimeout(() => ctl.abort(), ms || 30000) : null;
+    let r;
+    try { r = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(Object.assign({}, body, { passcode: PASS })), signal: ctl ? ctl.signal : undefined, redirect: 'follow', cache: 'no-store' }); }
+    catch (e) { const err = new Error(e && e.name === 'AbortError' ? 'timeout' : 'network'); err.code = e && e.name === 'AbortError' ? 'timeout' : 'network'; throw err; }
+    finally { if (timer) clearTimeout(timer); }
+    const text = await r.text();
+    let j; try { j = JSON.parse(text); } catch (e) {
+      const err = new Error('bad_response'); err.code = 'not_json';
+      err.hint = /accounts\.google|ServiceLogin|sign in/i.test(text) ? 'signin' : /authoriz/i.test(text) ? 'auth' : /unable to open|not found|404/i.test(text) ? 'missing' : 'other';
+      throw err;
+    }
     if (!j.ok) { const err = new Error(j.error || 'error'); err.code = j.error === 'bad_passcode' || j.error === 'locked' ? j.error : 'unavailable'; err.until = j.until; throw err; }
     return j;
   }
@@ -416,23 +427,43 @@ button.row:hover .nm{color:var(--accent)}
       <div class="form">${names.map(n => `<button class="btn" data-who="${esc(n)}" style="width:100%;min-height:52px;font-size:17px">I’m ${esc(n)}</button>`).join('')}</div>`);
     el.querySelectorAll('[data-who]').forEach(b => b.onclick = () => { ME = b.dataset.who; put(LS.who, ME); overlay(null); resolveReady(); if (typeof S === 'object') { S.me = ME; } if (typeof render === 'function') render(); });
   }
+  /* Plain-language reason the sheet didn't answer, with what to check */
+  function showProblem(e) {
+    const why = e.code === 'timeout' ? 'Your Google Sheet didn\u2019t answer within 30 seconds.'
+      : e.code === 'network' ? 'This phone couldn\u2019t reach Google. Check Wi-Fi or cellular data.'
+      : e.hint === 'signin' ? 'Google is asking for a sign-in, so the script isn\u2019t open to the app.'
+      : e.hint === 'auth' ? 'The Google script still needs permission to run.'
+      : e.hint === 'missing' ? 'Google can\u2019t find the script at this address.'
+      : 'The Google Sheet sent back something the app didn\u2019t expect.';
+    const fix = e.code === 'network' ? ''
+      : e.hint === 'auth' ? '<li>In Apps Script, run <b>setup</b> once and click Allow.</li><li>Then Deploy → Manage deployments → edit → Version: New version → Deploy.</li>'
+      : '<li>In Apps Script: Deploy → Manage deployments → edit (pencil).</li><li>Check <b>Execute as: Me</b> and <b>Who has access: Anyone</b>.</li><li>Set Version to <b>New version</b>, then Deploy.</li>';
+    const el = overlay(`<h2>Can\u2019t open the bill book</h2><p class="small">${why}</p>
+      ${fix ? `<ol class="small" style="text-align:left;margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px">${fix}</ol>` : ''}
+      <button class="btn primary" id="sbbRetry" style="width:100%">Try again</button>
+      <p class="small muted">Error: ${esc(e.code || 'unknown')}${e.hint ? ' / ' + esc(e.hint) : ''}</p>`);
+    el.querySelector('#sbbRetry').onclick = () => start();
+  }
   let started = false;
   async function start() {
     if (!API_URL || API_URL.indexOf('script.google.com') < 0) {
       overlay(`<h2>Almost set up</h2><p class="small">This copy isn’t connected to your Google Sheet yet. Paste the Apps Script web app address into <code>API_URL</code> in index.html (see SETUP.md).</p>`); return;
     }
     if (!PASS) { needPass(); return; }
-    overlay(`<h2>Sutton Bill Book</h2><p class="small muted">Opening your bills…</p>`);
+    overlay(`<h2>Sutton Bill Book</h2><p class="small muted" id="sbbWait">Opening your bills…</p>`);
+    const slow = setTimeout(() => { const w = document.getElementById('sbbWait'); if (w) w.textContent = 'Still connecting to your Google Sheet. The first open of the day can take up to 30 seconds.'; }, 7000);
     try {
-      const j = await api({ action: 'load' });
+      const j = await api({ action: 'load' }, 30000);
       server = j.data || {}; put(LS.cache, JSON.stringify(server));
     } catch (e) {
+      clearTimeout(slow);
       if (e && (e.code === 'bad_passcode' || e.code === 'locked')) { needPass(e); return; }
-      /* no signal: open the last copy this phone saw and keep retrying */
+      /* no answer: open the last copy this phone saw and keep retrying in the background */
       let cached = null; try { cached = JSON.parse(get(LS.cache) || 'null'); } catch (x) {}
-      if (!cached) { overlay(`<h2>Can’t reach the bill book</h2><p class="small">Check your connection. It will try again in a few seconds.</p>`); setTimeout(start, 8000); return; }
-      server = cached;
+      if (!cached) { showProblem(e); return; }
+      server = cached; setTimeout(() => refresh().catch(() => {}), 15000);
     }
+    clearTimeout(slow);
     rebuild(); loaded = true; notify(); flush();
     if (!started) {
       started = true;
@@ -454,7 +485,7 @@ button.row:hover .nm{color:var(--accent)}
     if (name === 'downloads') return DOWNLOADS;
     return null;
   } });
-  window.addEventListener('DOMContentLoaded', start);
+  window.addEventListener('DOMContentLoaded', () => start().catch(e => showProblem({ code: 'app', hint: String(e && e.message || e).slice(0, 80) })));
 })();
 
 </script>
