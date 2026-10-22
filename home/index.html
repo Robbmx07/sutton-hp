@@ -416,12 +416,26 @@ button{font:inherit;color:inherit;cursor:pointer}
     var weeks = {};
     ents.forEach(function (e) { var wk = key(mondayOf(fromKey(e.day))); if (!weeks[wk]) weeks[wk] = { a: 0, b: 0 }; weeks[wk][e.who] += e.pts; });
     var reds = vals(st.redemptions);
+    // Household goals bonus, shared by both: all met +10 each, at least 75% met +5 each.
+    var goalList = (Array.isArray(c.goals) ? c.goals : []).filter(function (g) { return Number(g.count) > 0; });
+    function goalsBonus(wk) {
+      if (!goalList.length) return 0;
+      var we2 = key(addDays(fromKey(wk), 6)), met = 0;
+      goalList.forEach(function (g) {
+        var ids = {}, total = 0; (g.tasks || []).forEach(function (id) { ids[id] = 1; });
+        ents.forEach(function (e) { if (e.day >= wk && e.day <= we2 && ids[e.taskId]) total += (e.part || /\(partial\)$/.test(e.name || '')) ? 0.5 : 1; });
+        if (total >= Number(g.count)) met++;
+      });
+      var n = goalList.length, most = Math.ceil(n * 0.75);
+      return met >= n ? 10 : (met >= most && most < n ? 5 : 0);
+    }
     function tot(p) {
       var o = p === 'a' ? 'b' : 'a', work = 0, bonus = 0;
       ents.forEach(function (e) { if (e.who === p) work += e.pts; });
       Object.keys(weeks).forEach(function (wk) {
         if (wk > ws) return; var v = weeks[wk];
         if (quota[p] > 0 && v[p] >= quota[p]) { bonus += 10; if (quota[o] > 0 && v[o] >= quota[o]) bonus += 5; }
+        bonus += goalsBonus(wk);
       });
       var spent = 0; reds.forEach(function (r) { if (r && r.who === p && (r.status === 'requested' || r.status === 'done')) spent += Number(r.cost) || 0; });
       return { week: (weeks[ws] && weeks[ws][p]) || 0, bal: work + bonus - spent };

@@ -117,6 +117,8 @@ details.cat[open]{gap:8px}
 .gbar i{display:block;height:100%}
 .gbar .ga{background:var(--a)} .gbar .gb{background:var(--b)}
 .goaltag{font-variant-numeric:tabular-nums}
+.gbonus{font-weight:700;color:var(--muted)}
+.gbonus.ok{color:var(--good)}
 .goaltag.met{color:var(--good);font-weight:700}
 .gtasks{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:2px 12px;padding:6px 0;font-size:.85rem}
 .gtasks label{display:flex;gap:6px;align-items:center}
@@ -276,7 +278,7 @@ function allEntries(){
   return out;
 }
 function weekStart(d){ const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); const wd = (x.getDay()+6)%7; x.setDate(x.getDate()-wd); return x; }
-const QUOTA_BONUS = 10, TEAM_BONUS = 5;
+const QUOTA_BONUS = 10, TEAM_BONUS = 5, GOALS_ALL_BONUS = 10, GOALS_MOST_BONUS = 5, GOALS_MOST_SHARE = .75;
 function totals(){
   const ents = allEntries(), q = cfg().quota;
   const ws = dkey(weekStart(new Date()));
@@ -291,10 +293,12 @@ function totals(){
       if(wk > ws) continue;
       if(q[p] > 0 && v[p] >= q[p]){ quotaB += QUOTA_BONUS; if(q[o] > 0 && v[o] >= q[o]) teamB += TEAM_BONUS; }
     }
+    let goalB = 0;
+    for(const wk of Object.keys(weeks)){ if(wk <= ws) goalB += goalsBonusFor(goalProgress(wk, ents)).bonus; }
     const spent = S.reds.filter(r=>r.who===p && (r.status==='requested'||r.status==='done')).reduce((s,r)=>s+(Number(r.cost)||0),0);
     const week = (weeks[ws] && weeks[ws][p]) || 0;
-    const earned = work + quotaB + teamB;
-    t[p] = { work, quotaB, teamB, earned, spent, bal: earned-spent, week, streak: streak(ents, p) };
+    const earned = work + quotaB + teamB + goalB;
+    t[p] = { work, quotaB, teamB, goalB, earned, spent, bal: earned-spent, week, streak: streak(ents, p) };
   }
   return t;
 }
@@ -305,14 +309,23 @@ function streak(ents, p){
   return n;
 }
 function goals(){ return (S.cfg && Array.isArray(S.cfg.goals)) ? S.cfg.goals : []; }
-function goalProgress(){
-  const ws = dkey(weekStart(new Date())), we = dkey(new Date(parseKey(ws).getTime()+6*864e5));
-  const wk = allEntries().filter(e => e.day >= ws && e.day <= we);
+function goalProgress(weekKey, ents){
+  const ws = weekKey || dkey(weekStart(new Date())), we = dkey(new Date(parseKey(ws).getTime()+6*864e5));
+  const wk = (ents || allEntries()).filter(e => e.day >= ws && e.day <= we);
   return goals().map(g => {
     const ids = new Set(g.tasks||[]), got = {a:0,b:0};
     wk.forEach(e => { if(ids.has(e.taskId)) got[e.who] += (e.part || /\(partial\)$/.test(e.name||'')) ? .5 : 1; });
     return { ...g, count: Number(g.count)||0, got, total: got.a+got.b };
   });
+}
+/* Shared bonus for the household goals: both people get it.
+   All goals met: +10 each. At least 75% met (6 of 8): +5 each. */
+function goalsBonusFor(gp){
+  gp = gp.filter(g => g.count > 0);
+  if(!gp.length) return { bonus: 0, met: 0, n: 0, most: 0 };
+  const met = gp.filter(g => g.total >= g.count).length, n = gp.length, most = Math.ceil(n * GOALS_MOST_SHARE);
+  const bonus = met >= n ? GOALS_ALL_BONUS : (met >= most && most < n ? GOALS_MOST_BONUS : 0);
+  return { bonus, met, n, most };
 }
 const fmtN = n => Number.isInteger(n) ? String(n) : n.toFixed(1);
 function avgTaskPts(){
@@ -495,9 +508,13 @@ let openCats = {}; try{ openCats = JSON.parse(localStorage.getItem('hp-cats')||'
 function goalsCard(){
   const gp = goalProgress().filter(g=>g.count>0);
   if(!gp.length) return '';
-  const met = gp.filter(g=>g.total>=g.count).length;
+  const gb = goalsBonusFor(gp), met = gb.met;
+  const bonusLine = gb.bonus === GOALS_ALL_BONUS ? '<span class="gbonus ok">All goals met: +'+GOALS_ALL_BONUS+' each</span>'
+    : gb.bonus ? '<span class="gbonus ok">+'+GOALS_MOST_BONUS+' each earned</span> <span class="small muted">Meet all '+gb.n+' to make it +'+GOALS_ALL_BONUS+'.</span>'
+    : '<span class="gbonus">Meet '+gb.most+' of '+gb.n+' for +'+GOALS_MOST_BONUS+' each, or all '+gb.n+' for +'+GOALS_ALL_BONUS+' each.</span>';
   return '<section class="card goals"><div class="spread"><h3>This week’s household goals</h3><span class="small muted">'+met+' of '+gp.length+' met</span></div>'+
-    '<p class="note">Shared targets for the high-traffic stuff. Whoever gets to it counts toward the same goal; a partial counts as half.</p><div class="glist">'+
+    '<p class="note">Shared targets for the high-traffic stuff. Whoever gets to it counts toward the same goal; a partial counts as half. The bonus goes to both of you.</p>'+
+    '<p class="small" style="margin:0">'+bonusLine+'</p><div class="glist">'+
     gp.map(g => {
       const wa = Math.min(100, g.got.a/g.count*100), wb = Math.min(100-wa, g.got.b/g.count*100), done = g.total>=g.count;
       return '<div class="grow-row"><div class="spread"><span class="t">'+esc(g.name)+'</span><span class="num small'+(done?' ok':'')+'">'+(done?'Met · ':'')+fmtN(g.total)+' / '+g.count+'</span></div>'+
