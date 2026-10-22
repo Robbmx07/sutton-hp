@@ -275,7 +275,7 @@ button{font:inherit;color:inherit;cursor:pointer}
     d.redemptions = out;
   }
 
-  function load(k) {
+  function load(k, retry) {
     var ctl = typeof AbortController === 'function' ? new AbortController() : null;
     var timer = ctl ? setTimeout(function () { ctl.abort(); }, 30000) : null;
     return fetch(SOURCES[k].url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -289,7 +289,11 @@ button{font:inherit;color:inherit;cursor:pointer}
         if (k === 'hp') privateHp(data[k]);
         lsSet('kitchen-cache-' + k, JSON.stringify({ at: lastOk[k], data: data[k] }));
       }, function (e) { if (timer) clearTimeout(timer); throw e && e.code ? e : { code: 'network' }; })
-      .catch(function (e) { state[k] = e.code || 'network'; });
+      .catch(function (e) {
+        /* this app's own saved passcode stopped working: if the app now uses the family passcode, switch back to it */
+        if (e.code === 'bad_passcode' && OWN[k] && OWN[k] !== PASS && !retry) { OWN[k] = ''; lsSet('kitchen-pass-' + k, null); return load(k, true); }
+        state[k] = e.code || 'network';
+      });
   }
 
   var busy = false;
