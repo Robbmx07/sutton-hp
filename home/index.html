@@ -303,7 +303,7 @@ button{font:inherit;color:inherit;cursor:pointer}
     /* a sheet that rejected the passcode is not asked again until a new passcode is entered:
        the dinner plan and bill book lock themselves after 10 wrong tries */
     var todo = KEYS.filter(function (k) { return state[k] !== 'bad_passcode' && state[k] !== 'locked'; });
-    Promise.all(todo.map(load)).then(function () {
+    Promise.all(todo.map(function (k) { return load(k); })).then(function () {
       busy = false; renderAll();
       var bad = KEYS.filter(function (k) { return state[k] === 'bad_passcode'; });
       if (bad.length === KEYS.length) askPass('That passcode didn’t match. Try again.');
