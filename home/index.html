@@ -195,7 +195,10 @@ button{font:inherit;color:inherit;cursor:pointer}
   };
   var KEYS = ['meal', 'hp', 'bills'];
   var REFRESH_MS = 2 * 60 * 1000;          // each sheet is read every 2 minutes
-  var LO_SOON = 3, LO_OLD = 4, BILL_DAYS = 7;
+  var BILL_DAYS = 7;
+  /* leftovers: same good-through rules as the Dinner Plan app (USDA 3-4 days, short end; a few foods 2) */
+  var SHORT_RE = /gravy|broth|\bstock\b|seafood|fish|shrimp|salmon|tilapia|\bcod\b|crab|lobster|scallop|\bclams?\b|mussel|oyster|sushi/i;
+  function goodDays(v) { var g = +v.goodDays; return g >= 1 && g <= 4 ? g : (SHORT_RE.test(v.name || '') ? 2 : 3); }
   var DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
   /* ---------- small helpers ---------- */
@@ -323,16 +326,18 @@ button{font:inherit;color:inherit;cursor:pointer}
     if (!st) { el.innerHTML = problem('meal'); $('loTag').textContent = ''; return; }
     var t = today();
     var items = vals(st.leftovers).filter(function (v) { return v && v.name; })
-      .sort(function (a, b) { return String(a.stored).localeCompare(String(b.stored)) || String(a.name).localeCompare(String(b.name)); });
+      .map(function (v) { var g = addDays(fromKey(v.stored || key(t)), goodDays(v)); return { v: v, good: g, left: daysBetween(t, g) }; })
+      .sort(function (a, b) { return a.good - b.good || String(a.v.name).localeCompare(String(b.v.name)); });
     $('loTag').textContent = items.length ? items.length + (items.length === 1 ? ' container' : ' containers') : '';
     if (!items.length) { el.innerHTML = '<p class="empty">Fridge is clear. Add leftovers from the Dinner Plan app.</p>' + staleNote('meal'); return; }
     var max = 9, h = '';
-    items.slice(0, max).forEach(function (v) {
-      var age = daysBetween(fromKey(v.stored || key(t)), t), p = +v.portions || 1;
-      var cls = age >= LO_OLD ? 'old' : age >= LO_SOON ? 'soon' : '';
-      var chip = cls === 'old' ? '<span class="chip old">Toss?</span>' : cls === 'soon' ? '<span class="chip soon">Eat soon</span>' : '';
+    items.slice(0, max).forEach(function (x) {
+      var v = x.v, p = +v.portions || 1, gd = x.good;
+      var cls = x.left < 0 ? 'old' : x.left === 0 ? 'soon' : '';
+      var chip = cls === 'old' ? '<span class="chip old">Toss?</span>' : cls === 'soon' ? '<span class="chip soon">Eat today</span>' : '';
+      var when = x.left === 0 ? 'today' : x.left === 1 ? 'tomorrow' : x.left === -1 ? 'yesterday' : x.left > 1 && x.left < 7 ? DAYS[gd.getDay()] : md(gd);
       h += '<div class="lo ' + cls + '"><span class="n">' + esc(v.name) + '<span class="m">' + p + (p === 1 ? ' portion' : ' portions') + ' · ' +
-        (age <= 0 ? 'put away today' : age === 1 ? '1 day old' : age + ' days old') + '</span></span>' + chip + '</div>';
+        (x.left < 0 ? 'was good through ' : 'good through ') + when + '</span></span>' + chip + '</div>';
     });
     if (items.length > max) h += '<p class="empty">+ ' + (items.length - max) + ' more</p>';
     el.innerHTML = h + staleNote('meal');
