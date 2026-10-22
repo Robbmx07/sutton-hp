@@ -635,8 +635,8 @@ function estimate(b, list) {
   if (b.kind === 'spending' && b.amountType === 'fixed' && Number(b.amount) > 0) return Number(b.amount);
   if (b.kind === 'spending') { const l = list.slice(0, 8); if (l.length) return round2(avg(l.map(p => Number(p.amount) || 0))); return Number(b.amount) || 0; }
   if (b.amountType === 'varies') {
-    const real = list.filter(p => p.amount > 0).slice(0, 3);
-    if (real.length) return round2(avg(real.map(p => p.amount)));
+    const real = list.filter(p => p.amount > 0).slice(0, 4);
+    if (real.length) return round2(median(real.map(p => p.amount)));
   }
   return Number(b.amount) || 0;
 }
@@ -1562,7 +1562,7 @@ function renderHome(c) {
   if (vb.length) html += `<section class="panel"><div class="panel-h"><h2>Amounts that vary</h2><span class="small muted">last 12 amounts</span></div>${vb.map(b => {
       const list = (c.byBill.get(b.id) || []).filter(p => !p.skipped), r = amountRange(list, c.t), n = nextDue(b, c.t), ly = n ? sameMonthLastYear(list, n) : null;
       return `<div class="var"><div style="min-width:0"><button class="link" data-act="edit:${esc(b.id)}">${esc(b.name)}</button>
-        <div class="small"><span class="num" style="${isInc(b) ? 'color:var(--in)' : ''}">${isInc(b) ? '~+' : '~'}${money(c.est.get(b.id))}</span> next${isInc(b) ? ' check (avg of last 3)' : ' (avg of last 3)'}${!isInc(b) && Number(b.amount) > 0 && Math.abs(c.est.get(b.id) - b.amount) / b.amount > 0.05 ? ` · your estimate <span class="num">${money0(b.amount)}</span> <span style="color:var(--${c.est.get(b.id) > b.amount ? 'late' : 'ok'})">(${c.est.get(b.id) > b.amount ? '+' : '−'}${money0(Math.abs(c.est.get(b.id) - b.amount))})</span>` : ''}${r ? ` · range <span class="num">${money0(r.lo)}–${money0(r.hi)}</span>` : ''}</div>
+        <div class="small"><span class="num" style="${isInc(b) ? 'color:var(--in)' : ''}">${isInc(b) ? '~+' : '~'}${money(c.est.get(b.id))}</span> next${isInc(b) ? ' check (typical of last 4)' : ' (typical of last 4)'}${list.length ? ` · last ${isInc(b) ? '+' : ''}<span class="num">${money(list[0].amount)}</span>` : ''}${!isInc(b) && Number(b.amount) > 0 && Math.abs(c.est.get(b.id) - b.amount) / b.amount > 0.05 ? ` · your estimate <span class="num">${money0(b.amount)}</span> <span style="color:var(--${c.est.get(b.id) > b.amount ? 'late' : 'ok'})">(${c.est.get(b.id) > b.amount ? '+' : '−'}${money0(Math.abs(c.est.get(b.id) - b.amount))})</span>` : ''}${r ? ` · range <span class="num">${money0(r.lo)}–${money0(r.hi)}</span>` : ''}</div>
         ${ly ? `<div class="small muted">${MON[+n.slice(5, 7) - 1]} last year: <span class="num">${money(ly)}</span></div>` : ''}</div>${sparkline(list)}</div>`;
     }).join('')}</section>`;
   if (T.byCat.length) {
@@ -1625,6 +1625,20 @@ function cashFlowPanel(c) {
     ${cur ? `<p class="small muted" style="margin:6px 0 0">${MON[+cur.f.slice(5, 7) - 1]}: <span class="num" style="color:var(--in)">+${money0(cur.inn)}</span> in, <span class="num" style="color:var(--out)">${money0(cur.out)}</span> going out, <b class="num">${money0(cur.inn - cur.out)}</b> left. Past months show only what’s been logged or imported.</p>` : ''}
   </section>`;
 }
+/* Everyday spending expected between two dates, by the day: a week of groceries is 1/7 per day.
+   The current week only counts what's left of the usual amount, spread over its remaining days. */
+function spendBetween(c, from, to) {
+  const F = Math.max(ord(from), c.T), Tt = ord(to); let total = 0; const names = new Set();
+  for (const i of c.sp) {
+    if (i.state !== 'planned' && i.state !== 'current') continue;
+    const len = periodDays(i.b), ps = ord(i.d), pe = ps + len;
+    const lo = Math.max(ps, F, c.T), hi = Math.min(pe, Tt);
+    if (hi <= lo) continue;
+    const part = i.state === 'current' ? i.left * (hi - lo) / Math.max(1, pe - c.T) : i.amt * (hi - lo) / len;
+    if (part > 0.5) { total += part; names.add(i.b.name.replace(/\s*\(.*\)$/, '')); }
+  }
+  return { total: round2(total), names: [...names] };
+}
 /* Paycheck by paycheck: each payday's money in, the bills due before the next payday, and what's left */
 function payPanel(c) {
   if (c.hasIncome) {
@@ -1639,13 +1653,13 @@ function payPanel(c) {
       for (let k = 0; k < Math.min(3, days.length); k++) {
         const d = days[k], nx = days[k + 1] || iso(ord(d) + 14), ins = byDay.get(d);
         const bills = c.out.filter(i => unpaid(i) && i.d >= d && i.d < nx);
-        const sp = c.sp.filter(i => (i.state === 'planned' || i.state === 'current') && i.d >= (k ? d : iso(c.T - 6)) && i.d < nx).reduce((s, i) => s + (i.state === 'current' ? i.left : i.amt), 0);
-        rows.push({ d, label: ins.map(i => i.b.name).join(' + '), sub: `${bills.length} bill${bills.length === 1 ? '' : 's'} due by ${short(iso(ord(nx) - 1))}${bills.length ? ': ' + bills.slice(0, 3).map(i => i.b.name).join(', ') + (bills.length > 3 ? '…' : '') : ''}${sp ? ` · ~${money0(sp)} spending` : ''}`, inn: ins.reduce((s, i) => s + i.amt, 0), out: bills.reduce((s, i) => s + i.amt, 0) + sp });
+        const spend = spendBetween(c, d, nx), bl = bills.reduce((s, i) => s + i.amt, 0);
+        rows.push({ d, label: ins.map(i => i.b.name).join(' + '), sub: `${bills.length} bill${bills.length === 1 ? '' : 's'} due by ${short(iso(ord(nx) - 1))}${bills.length ? ': ' + bills.slice(0, 3).map(i => i.b.name).join(', ') + (bills.length > 3 ? '…' : '') : ''}${spend.total ? ` · ~${money0(spend.total)} for ${spend.names.join(' & ')} (${ord(nx) - Math.max(ord(d), c.T)} days)` : ''}`, inn: ins.reduce((s, i) => s + i.amt, 0), out: bl + spend.total, bills: bl, spend: spend.total });
       }
       return `<section class="panel"><div class="panel-h"><h2>Paycheck by paycheck</h2><span class="small muted">bills each check covers</span></div>
         ${rows.map(r => { const lf = r.inn - r.out; return `<div class="pc">${r.d ? stub(r.d, 'inc') : '<div class="stub soon"><small>Now</small><b>·</b></div>'}
           <div class="mid" style="min-width:0"><b>${esc(r.label)}</b><span>${esc(r.sub)}</span></div>
-          <div class="left ${r.d ? (lf < 0 ? 'neg' : 'pos') : 'neg'}"><b>${r.d ? (lf < 0 ? '−' : '') + money0(Math.abs(lf)) : '−' + money0(r.out)}</b><small>${r.d ? `+${money0(r.inn)} − ${money0(r.out)}` : 'from current balance'}</small></div></div>`; }).join('')}
+          <div class="left ${r.d ? (lf < 0 ? 'neg' : 'pos') : 'neg'}"><b>${r.d ? (lf < 0 ? '−' : '') + money0(Math.abs(lf)) : '−' + money0(r.out)}</b><small>${r.d ? `+${money0(r.inn)} − ${money0(r.bills)} bills${r.spend ? ` − ${money0(r.spend)} spending` : ''}` : 'from current balance'}</small></div></div>`; }).join('')}
       </section>`;
     }
   }
@@ -1999,7 +2013,7 @@ function openPay(billId, date) {
   const ro = S.readOnly, inc = isInc(b);
   openSheet(b.name, `<div class="form">
     <div class="toolbar">${stub(date, inc ? 'inc' : existing ? 'paid' : ord(date) < c.T ? 'overdue' : '')}<div><b>${inc ? 'Payday' : 'Due'} ${nice(date)}</b><div class="small muted">${FREQ[b.freq].label}${b.autopay ? ' · autopay' : ''}${b.owner ? ' · ' + esc(b.owner) : ''}</div></div></div>
-    ${b.amountType === 'varies' ? `<div class="small muted">${Number(b.amount) > 0 && Math.abs(e - b.amount) > 0.5 ? `Your estimate <b class="num">${money(b.amount)}</b> · real average <b class="num">${money(e)}</b>` : `Estimate <b class="num">${money(e)}</b>`}${r ? ` · last year ranged <span class="num">${money0(r.lo)}–${money0(r.hi)}</span>` : ''}${ly ? ` · same month last year <span class="num">${money(ly)}</span>` : ''}</div>` : ''}
+    ${b.amountType === 'varies' ? `<div class="small muted">${Number(b.amount) > 0 && Math.abs(e - b.amount) > 0.5 ? `Your estimate <b class="num">${money(b.amount)}</b> · typical <b class="num">${money(e)}</b>` : `Estimate <b class="num">${money(e)}</b>`}${r ? ` · last year ranged <span class="num">${money0(r.lo)}–${money0(r.hi)}</span>` : ''}${ly ? ` · same month last year <span class="num">${money(ly)}</span>` : ''}</div>` : ''}
     ${existing ? `<div class="warnbox" style="border-color:var(--ok);background:var(--ok-soft)">${existing.skipped ? 'Marked as skipped.' : `${inc ? 'Received' : 'Paid'} <b class="num">${money(existing.amount)}</b>${existing.paidOn ? ' on ' + nice(existing.paidOn) : ''}${existing.by ? ' by <span data-uid="' + esc(existing.by) + '"></span>' : ''}.`}</div>` : ''}
     <div class="f2"><div class="f"><label for="pAmt">${inc ? 'Amount received' : b.amountType === 'varies' ? 'Actual amount' : 'Amount paid'}</label><div class="amtwrap"><span>$</span><input type="number" id="pAmt" inputmode="decimal" step="0.01" min="0" value="${existing && !existing.skipped ? existing.amount : (e || '')}" ${ro ? 'disabled' : ''}></div></div>
     <div class="f"><label for="pOn">${inc ? 'Deposited on' : 'Paid on'}</label><input type="date" id="pOn" value="${existing && existing.paidOn ? existing.paidOn : (date < c.t ? date : c.t)}" ${ro ? 'disabled' : ''}></div></div>
