@@ -616,6 +616,17 @@ function scheduleMatch(existing, freq, list, used, bankName) {
 }
 const payId = (billId, date) => `${billId}_${date}`;
 const isInc = b => !!b && b.kind === 'income';
+/* How much of one due date is covered. A record can be partial: money paid or set aside so far, with the rest still owed.
+   Older records typed in by hand for less than a fixed bill's amount count as partial too. */
+function payStatus(b, p, est) {
+  if (!p || p.skipped) return null;
+  const paid = Number(p.amount) || 0;
+  const owed = Number(p.owed) > 0 ? Number(p.owed) : b.amountType === 'varies' ? (Number(est) || paid) : (Number(b.amount) || paid);
+  let partial = p.partial;
+  if (partial === undefined) partial = p.source === 'manual' && b.amountType !== 'varies' && b.kind !== 'income' && b.kind !== 'spending' && paid < owed - 0.5;
+  const left = round2(Math.max(0, owed - paid));
+  return { paid, owed, left, partial: !!partial && left > 0.5 };
+}
 const isSpend = b => !!b && b.kind === 'spending';
 const periodDays = b => (FREQ[b.freq] || FREQ.weekly).d || Math.round(((FREQ[b.freq] || FREQ.monthly).m || 1) * 30.44);
 /* The start of the spending period (week) a purchase falls in */
@@ -1387,7 +1398,7 @@ function ctx() {
   for (const l of byBill.values()) l.sort((a, b) => a.dueDate < b.dueDate ? 1 : -1);
   const bills = [...S.bills.values()].filter(b => b && b.name && isDate(b.anchor));
   const est = new Map();
-  for (const b of bills) est.set(b.id, estimate(b, (byBill.get(b.id) || []).filter(p => !p.skipped && (!isSpend(b) || ord(p.dueDate) + periodDays(b) <= T))));
+  for (const b of bills) est.set(b.id, estimate(b, (byBill.get(b.id) || []).filter(p => !p.skipped && !p.partial && (!isSpend(b) || ord(p.dueDate) + periodDays(b) <= T))));
   const c = { t, T, byBill, bills, est };
   c.inst = instancesBetween(c, iso(T - 60), iso(T + 92));
   c.out = c.inst.filter(i => !i.income && !i.spend); c.inc = c.inst.filter(i => i.income); c.sp = c.inst.filter(i => i.spend);
@@ -1415,7 +1426,13 @@ function instancesBetween(c, from, to) {
       else if (days < 0) state = b.autopay ? 'auto' : 'overdue';
       else if (days <= lead) state = 'soon';
       else state = 'upcoming';
-      out.push({ b, d, days, pay, state, income: isInc(b), amt: pay && !pay.skipped ? pay.amount : c.est.get(b.id), estd: !pay && b.amountType === 'varies' });
+      let amt = pay && !pay.skipped ? pay.amount : c.est.get(b.id), extra = null;
+      if (pay && !pay.skipped && !inc) {
+        const ps = payStatus(b, pay, c.est.get(b.id));
+        /* partly paid: still open, and only what's left counts toward the next paycheck */
+        if (ps && ps.partial) { state = days < 0 ? 'overdue' : days <= lead ? 'soon' : 'upcoming'; amt = ps.left; extra = { partial: true, paidSoFar: ps.paid, full: ps.owed }; }
+      }
+      out.push(Object.assign({ b, d, days, pay, state, income: inc, amt, estd: !pay && b.amountType === 'varies' }, extra || {}));
     }
   }
   out.sort((x, y) => x.d < y.d ? -1 : x.d > y.d ? 1 : x.b.name.localeCompare(y.b.name));
@@ -1470,6 +1487,7 @@ function whenPaid(p) {
   return n > 0 ? `${n} day${n === 1 ? '' : 's'} early` : n < 0 ? `${-n} day${n === -1 ? '' : 's'} late` : 'on the due date';
 }
 function stateChip(i) {
+  if (i.partial) return `<span class="chip ${i.state === 'overdue' ? 'late' : 'due'}">${money0(i.paidSoFar)} of ${money0(i.full)} paid</span><span class="muted">${i.state === 'overdue' ? rel(i.days) : 'due ' + rel(i.days).replace(/^in /, 'in ')}</span>`;
   if (i.state === 'received') return `<span class="chip in">Received${i.pay.by ? ` · <span data-uid="${esc(i.pay.by)}"></span>` : ''}</span>`;
   if (i.state === 'assumed') return `<span class="chip plain">Not logged</span>`;
   if (i.state === 'expected') return `<span class="chip in">Payday${i.days <= 1 ? ' · ' + rel(i.days).toLowerCase() : ''}</span><span class="muted">${i.days > 1 ? rel(i.days) : ''}</span>`;
@@ -1490,7 +1508,7 @@ function instRow(i) {
   return `<button class="row ${done ? 'done' : ''}" data-act="pay:${esc(i.b.id)}:${i.d}">
     ${stub(i.d, i.state)}
     <span class="mid"><span class="nm">${esc(i.b.name)}</span><span class="sub">${stateChip(i)}${i.b.autopay && i.state !== 'auto' ? '<span class="chip plain">Autopay</span>' : ''}${i.b.owner ? `<span>${esc(i.b.owner)}</span>` : ''}</span></span>
-    <span class="amt"><b>${i.estd ? '~' : ''}${money(i.amt)}</b>${i.estd ? '<small>estimate</small>' : ''}</span>
+    <span class="amt"><b>${i.estd ? '~' : ''}${money(i.amt)}</b>${i.partial ? '<small>still owed</small>' : i.estd ? '<small>estimate</small>' : ''}</span>
   </button>`;
 }
 function sparkline(list) {
@@ -1604,7 +1622,7 @@ function cashFlowPanel(c) {
       return { f, inn, out, past: true, now: false };
     }
     const inst = instancesBetween(c, f, l).filter(i => i.state !== 'skipped');
-    return { f, inn: inst.filter(i => i.income).reduce((s, i) => s + (i.amt || 0), 0), out: inst.filter(i => !i.income).reduce((s, i) => s + (i.amt || 0), 0), past: l < c.t, now: f <= c.t && c.t <= l };
+    return { f, inn: inst.filter(i => i.income).reduce((s, i) => s + (i.amt || 0), 0), out: inst.filter(i => !i.income).reduce((s, i) => s + (i.full || i.amt || 0), 0), past: l < c.t, now: f <= c.t && c.t <= l };
   });
   const max = Math.max(1, ...data.map(d => Math.max(d.inn, d.out)));
   const nice = Math.pow(10, Math.floor(Math.log10(max))), top = Math.ceil(max / nice) * nice;
@@ -1981,6 +1999,76 @@ function openBill(id, preset) {
 }
 
 /* ---------- mark paid ---------- */
+/* Paying a bill: all at once, or in parts (money paid or set aside from each paycheck) until it's covered */
+function openBillPay(b, date) {
+  const c = ctx(), pid = payId(b.id, date), existing = S.pays.get(pid), e = c.est.get(b.id), ro = S.readOnly;
+  const ps = existing && !existing.skipped ? payStatus(b, existing, e) : null;
+  const adding = !!(ps && ps.partial);
+  const owed0 = ps ? ps.owed : (b.amountType === 'varies' ? e : (Number(b.amount) || e));
+  const parts = existing && !existing.skipped ? (existing.parts && existing.parts.length ? existing.parts : [{ amount: existing.amount, on: existing.paidOn, by: existing.by }]) : [];
+  const list = (c.byBill.get(b.id) || []).filter(p => !p.skipped && !p.partial), r = amountRange(list, c.t);
+  openSheet(b.name, `<div class="form">
+    <div class="toolbar">${stub(date, ps && !ps.partial ? 'paid' : ord(date) < c.T ? 'overdue' : '')}<div><b>Due ${nice(date)}</b><div class="small muted">${FREQ[b.freq].label}${b.autopay ? ' · autopay' : ''}${b.owner ? ' · ' + esc(b.owner) : ''}</div></div></div>
+    ${b.amountType === 'varies' ? `<div class="small muted">${Number(b.amount) > 0 && Math.abs(e - b.amount) > 0.5 ? `Your estimate <b class="num">${money(b.amount)}</b> · typical <b class="num">${money(e)}</b>` : `Estimate <b class="num">${money(e)}</b>`}${r ? ` · range <span class="num">${money0(r.lo)}–${money0(r.hi)}</span>` : ''}</div>` : ''}
+    ${existing && existing.skipped ? '<div class="warnbox">Marked as skipped.</div>' : ''}
+    ${parts.length ? `<div class="warnbox" style="border-color:var(--${adding ? 'due' : 'ok'});background:var(--${adding ? 'due' : 'ok'}-soft)">
+      ${parts.map(x => `<div style="display:flex;justify-content:space-between;gap:8px"><span>${x.on ? short(x.on) : ''}${x.by ? ' · <span data-uid="' + esc(x.by) + '"></span>' : ''}</span><b class="num">${money(x.amount)}</b></div>`).join('')}
+      <div style="margin-top:4px">${adding ? `<b>${money(ps.left)}</b> still owed of ${money(ps.owed)}` : `Paid in full: <b class="num">${money(ps.paid)}</b>`}</div></div>` : ''}
+    <div class="f2"><div class="f"><label for="pAmt">${adding ? 'Add a payment' : 'Amount paid or set aside'}</label><div class="amtwrap"><span>$</span><input type="number" id="pAmt" inputmode="decimal" step="0.01" min="0" value="${adding ? ps.left : ps ? ps.paid : (owed0 || '')}" ${ro ? 'disabled' : ''}></div></div>
+      <div class="f"><label for="pOn">On</label><input type="date" id="pOn" value="${c.t > date && !ps ? date : c.t}" ${ro ? 'disabled' : ''}></div></div>
+    <div class="f"><span class="lbl">This payment…</span><div class="seg" role="group" aria-label="Full or partial">
+      <button type="button" data-mode="full">Pays it in full</button><button type="button" data-mode="part">Is part of it</button></div></div>
+    <div class="f" id="owedF"><label for="pOwed">Total due this time</label><div class="amtwrap"><span>$</span><input type="number" id="pOwed" inputmode="decimal" step="0.01" min="0" value="${round2(owed0) || ''}" ${ro ? 'disabled' : ''}></div></div>
+    <p class="small" id="pNote" style="margin:0"></p>
+    <label class="check" id="pUpdW" hidden><input type="checkbox" id="pUpd" checked><span id="pUpdT"></span></label>
+    <div id="pMsg"></div>
+    ${b.payUrl ? `<a class="btn" href="${esc(b.payUrl)}" target="_blank" rel="noopener">Open ${esc(b.name)} website</a>` : ''}
+    <div class="actions">${existing ? `<button class="btn danger" data-unpay ${ro ? 'disabled' : ''}>${parts.length > 1 ? 'Clear payments' : 'Undo'}</button><span class="spacer"></span>` : `<button class="btn ghost" data-skip ${ro ? 'disabled' : ''}>Skip this one</button><span class="spacer"></span>`}
+      <button class="btn" data-act="edit:${esc(b.id)}">Edit bill</button><button class="btn primary" data-dopay ${ro ? 'disabled' : ''}>Save</button></div></div>`, body => {
+    const $b = q => body.querySelector(q), amtEl = $b('#pAmt'), owedEl = $b('#pOwed');
+    const prev = adding ? ps.paid : 0;
+    let mode = null; /* null = decide from the numbers */
+    const total = () => round2(prev + (parseFloat(amtEl.value) || 0));
+    const owed = () => parseFloat(owedEl.value) || 0;
+    const autoMode = () => b.amountType === 'varies' && !adding ? 'full' : total() >= owed() - 0.5 ? 'full' : 'part';
+    const upd = () => {
+      const m = mode || autoMode();
+      body.querySelectorAll('[data-mode]').forEach(x => x.setAttribute('aria-pressed', x.dataset.mode === m));
+      $b('#owedF').hidden = m === 'full' && b.amountType !== 'varies' && !adding && Math.abs(total() - owed()) < 0.5;
+      const left = round2(owed() - total());
+      $b('#pNote').innerHTML = m === 'part' ? (left > 0.5 ? `After this: <b class="num">${money(left)}</b> still owed. It stays on your list and counts toward the next paycheck.` : 'That covers the whole bill, so it will be marked paid.')
+        : `Marks the ${short(date)} bill paid${adding ? ` (${money(total())} in total)` : ''}.`;
+      const showPrice = m === 'full' && !adding && b.amountType !== 'varies' && total() > 0 && Math.abs(total() - (Number(b.amount) || 0)) > 0.004;
+      $b('#pUpdW').hidden = !showPrice;
+      if (showPrice) $b('#pUpdT').textContent = `Change the regular amount from ${money(b.amount)} to ${money(total())} (price changed)`;
+    };
+    body.querySelectorAll('[data-mode]').forEach(x => x.onclick = () => { mode = x.dataset.mode; upd(); });
+    amtEl.addEventListener('input', upd); owedEl.addEventListener('input', upd); upd();
+    $b('[data-dopay]').onclick = async () => {
+      const a = parseFloat(amtEl.value), on = $b('#pOn').value;
+      if (!(a > 0)) { $b('#pMsg').innerHTML = '<p class="err">Enter the amount you paid or set aside.</p>'; return; }
+      if (!isDate(on)) { $b('#pMsg').innerHTML = '<p class="err">Pick the date.</p>'; return; }
+      const m = mode || autoMode(), t = adding ? total() : round2(a);
+      const partial = m === 'part' && t < owed() - 0.5;
+      const newParts = adding ? [...parts, { amount: round2(a), on, by: S.me || null }] : [{ amount: round2(a), on, by: S.me || null }];
+      const rec = { id: pid, billId: b.id, dueDate: date, amount: t, paidOn: on, by: S.me || null, source: 'manual', loggedOn: localToday(), partial, owed: partial ? round2(owed()) : t, parts: newParts };
+      if (!(await Store.putPay(rec))) return;
+      if (!$b('#pUpdW').hidden && $b('#pUpd').checked) {
+        const nb = structuredClone(b);
+        nb.priceHistory = [...(b.priceHistory || []), { on: date, from: Number(b.amount) || 0, amount: t }].slice(-24); nb.amount = t;
+        await Store.putBill(nb);
+      }
+      closeSheet();
+      const keep = existing ? structuredClone(existing) : null;
+      toast(partial ? `${b.name}: ${money(round2(owed() - t))} still owed` : `${b.name} marked paid`, () => keep ? Store.putPay(keep) : Store.delPay(pid));
+    };
+    const sk = $b('[data-skip]');
+    if (sk) sk.onclick = async () => { if (await Store.putPay({ id: pid, billId: b.id, dueDate: date, amount: 0, skipped: true, paidOn: null, by: S.me || null, source: 'manual', loggedOn: localToday() })) { closeSheet(); toast(`Skipped ${b.name} for ${short(date)}`, () => Store.delPay(pid)); } };
+    const un = $b('[data-unpay]');
+    if (un) un.onclick = async () => { const keep = structuredClone(existing); if (await Store.delPay(pid)) { closeSheet(); toast('Payments cleared', () => Store.putPay(keep)); } };
+  });
+  resolveNames();
+}
 /* A spending week: add receipts to the week's total, or type the total */
 function openSpend(b, date) {
   const c = ctx(), pid = payId(b.id, date), existing = S.pays.get(pid), e = c.est.get(b.id), ro = S.readOnly;
@@ -2008,6 +2096,7 @@ function openSpend(b, date) {
 function openPay(billId, date) {
   const b = S.bills.get(billId); if (!b) return;
   if (isSpend(b)) return openSpend(b, date);
+  if (!isInc(b)) return openBillPay(b, date);
   const c = ctx(), pid = payId(billId, date), existing = S.pays.get(pid);
   const e = c.est.get(billId), list = (c.byBill.get(billId) || []).filter(p => !p.skipped), r = amountRange(list, c.t), ly = sameMonthLastYear(list, date);
   const ro = S.readOnly, inc = isInc(b);
