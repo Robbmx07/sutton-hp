@@ -224,7 +224,7 @@ button{font:inherit;color:inherit;cursor:pointer}
   var PASS = lsGet('kitchen-pass') || '';
   var data = {}, state = {}, lastOk = {};
   KEYS.forEach(function (k) {
-    try { var c = JSON.parse(lsGet('kitchen-cache-' + k) || 'null'); if (c && c.data) { data[k] = c.data; lastOk[k] = c.at; } } catch (e) {}
+    try { var c = JSON.parse(lsGet('kitchen-cache-' + k) || 'null'); if (c && c.data) { data[k] = c.data; lastOk[k] = c.at; if (k === 'hp') { delete c.data.rewards; delete c.data.redemptions; } } } catch (e) {}
     state[k] = data[k] ? 'cached' : 'loading';
   });
 
@@ -239,6 +239,7 @@ button{font:inherit;color:inherit;cursor:pointer}
         var j; try { j = JSON.parse(t); } catch (e) { throw { code: 'not_json' }; }
         if (!j.ok) throw { code: j.error === 'bad_passcode' || j.error === 'locked' ? j.error : 'unavailable' };
         data[k] = j.data || {}; lastOk[k] = Date.now(); state[k] = 'ok';
+        if (k === 'hp') { delete data[k].rewards; delete data[k].redemptions; }   // rewards and cash-ins stay private to the House Points app
         lsSet('kitchen-cache-' + k, JSON.stringify({ at: lastOk[k], data: data[k] }));
       }, function (e) { if (timer) clearTimeout(timer); throw e && e.code ? e : { code: 'network' }; })
       .catch(function (e) { state[k] = e.code || 'network'; });
@@ -400,23 +401,13 @@ button{font:inherit;color:inherit;cursor:pointer}
     var ws = key(mondayOf(new Date())), we = key(addDays(mondayOf(new Date()), 6));
     var weeks = {};
     ents.forEach(function (e) { var wk = key(mondayOf(fromKey(e.day))); if (!weeks[wk]) weeks[wk] = { a: 0, b: 0 }; weeks[wk][e.who] += e.pts; });
-    var reds = vals(st.redemptions);
-    function tot(p) {
-      var o = p === 'a' ? 'b' : 'a', work = 0, bonus = 0;
-      ents.forEach(function (e) { if (e.who === p) work += e.pts; });
-      Object.keys(weeks).forEach(function (wk) {
-        if (wk > ws) return; var v = weeks[wk];
-        if (quota[p] > 0 && v[p] >= quota[p]) { bonus += 10; if (quota[o] > 0 && v[o] >= quota[o]) bonus += 5; }
-      });
-      var spent = 0; reds.forEach(function (r) { if (r && r.who === p && (r.status === 'requested' || r.status === 'done')) spent += Number(r.cost) || 0; });
-      return { week: (weeks[ws] && weeks[ws][p]) || 0, bal: work + bonus - spent };
-    }
+    function tot(p) { return { week: (weeks[ws] && weeks[ws][p]) || 0 }; }
     var h = '';
     ['a', 'b'].forEach(function (p) {
       var x = tot(p), pct = quota[p] ? Math.min(100, Math.round(x.week / quota[p] * 100)) : 0, done = quota[p] && x.week >= quota[p];
       h += '<div class="who-row"><div class="who-top"><span class="nm">' + esc(names[p]) + '</span><span class="pts">' + x.week + ' <small>/ ' + quota[p] + '</small></span></div>' +
         '<div class="bar' + (done ? ' done' : '') + '"><i style="width:' + pct + '%"></i></div>' +
-        '<div class="who-sub">' + (done ? 'Weekly goal met · ' : (quota[p] - x.week) + ' to go · ') + x.bal + ' pts to spend</div></div>';
+        '<div class="who-sub">' + (done ? 'Weekly goal met' : (quota[p] - x.week) + ' to go') + '</div></div>';
     });
     var goals = Array.isArray(c.goals) ? c.goals : [];
     var wkEnts = ents.filter(function (e) { return e.day >= ws && e.day <= we; });
