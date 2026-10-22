@@ -256,6 +256,10 @@ button{font:inherit;color:inherit;cursor:pointer}
 
   /* ---------- reading the sheets ---------- */
   var PASS = lsGet('kitchen-pass') || '';
+  /* an app whose sheet has its own passcode (House Points has a separate "household passcode") gets one saved just for it */
+  var OWN = {}, skipped = {};
+  KEYS.forEach(function (k) { OWN[k] = lsGet('kitchen-pass-' + k) || ''; });
+  function passFor(k) { return OWN[k] || PASS; }
   var data = {}, state = {}, lastOk = {};
   KEYS.forEach(function (k) {
     try { var c = JSON.parse(lsGet('kitchen-cache-' + k) || 'null'); if (c && c.data) { data[k] = c.data; lastOk[k] = c.at; if (k === 'hp') privateHp(c.data); } } catch (e) {}
@@ -275,7 +279,7 @@ button{font:inherit;color:inherit;cursor:pointer}
     var ctl = typeof AbortController === 'function' ? new AbortController() : null;
     var timer = ctl ? setTimeout(function () { ctl.abort(); }, 30000) : null;
     return fetch(SOURCES[k].url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action: 'load', passcode: PASS }), signal: ctl ? ctl.signal : undefined, redirect: 'follow', cache: 'no-store' })
+      body: JSON.stringify({ action: 'load', passcode: passFor(k) }), signal: ctl ? ctl.signal : undefined, redirect: 'follow', cache: 'no-store' })
       .then(function (r) { return r.text(); })
       .then(function (t) {
         if (timer) clearTimeout(timer);
@@ -299,19 +303,29 @@ button{font:inherit;color:inherit;cursor:pointer}
       busy = false; renderAll();
       var bad = KEYS.filter(function (k) { return state[k] === 'bad_passcode'; });
       if (bad.length === KEYS.length) askPass('That passcode didn’t match. Try again.');
+      else {
+        var one = bad.filter(function (k) { return !skipped[k]; })[0];
+        if (one && !$('gate').innerHTML) askPass(OWN[one] ? 'That didn’t match either. Try again.' : '', one);
+      }
     });
   }
 
-  function askPass(msg) {
-    $('gate').innerHTML = '<div class="gate"><form id="pf"><h2>Sutton Kitchen</h2><p>Enter the family passcode. This iPad will remember it.</p>' +
+  /* askPass(msg) asks for the family passcode; askPass(msg, k) asks for one app's own passcode */
+  function askPass(msg, k) {
+    var name = k ? SOURCES[k].name : '';
+    $('gate').innerHTML = '<div class="gate"><form id="pf"><h2>' + (k ? esc(name) + ' passcode' : 'Sutton Kitchen') + '</h2>' +
+      '<p>' + (k ? 'The family passcode works for the other apps but not ' + esc(name) + '. Enter the passcode ' + esc(name) + ' uses on your phones. This iPad will remember it.' : 'Enter the family passcode. This iPad will remember it.') + '</p>' +
       (msg ? '<p class="err">' + esc(msg) + '</p>' : '') +
-      '<input id="pi" type="password" inputmode="numeric" autocomplete="current-password" placeholder="Passcode" aria-label="Family passcode"><button type="submit">Show the board</button></form></div>';
+      '<input id="pi" type="password"' + (k ? '' : ' inputmode="numeric"') + ' autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Passcode" aria-label="' + (k ? esc(name) + ' passcode' : 'Family passcode') + '">' +
+      '<button type="submit">' + (k ? 'Save' : 'Show the board') + '</button>' +
+      (k ? '<button type="button" id="pskip" style="background:none;color:var(--muted);margin-top:8px">Skip for now</button>' : '') + '</form></div>';
     $('pf').onsubmit = function (e) {
       e.preventDefault(); var v = $('pi').value.trim(); if (!v) return;
-      PASS = v; lsSet('kitchen-pass', v);
-      KEYS.forEach(function (k) { if (state[k] === 'bad_passcode') state[k] = 'loading'; });
+      if (k) { OWN[k] = v; lsSet('kitchen-pass-' + k, v); skipped[k] = false; if (state[k] === 'bad_passcode') state[k] = 'loading'; }
+      else { PASS = v; lsSet('kitchen-pass', v); skipped = {}; KEYS.forEach(function (x) { if (state[x] === 'bad_passcode') state[x] = 'loading'; }); }
       $('gate').innerHTML = ''; renderAll(); refreshAll();
     };
+    if (k) $('pskip').onclick = function () { skipped[k] = true; $('gate').innerHTML = ''; };
     setTimeout(function () { var i = $('pi'); if (i) i.focus(); }, 60);
   }
 
@@ -537,7 +551,10 @@ button{font:inherit;color:inherit;cursor:pointer}
     var at = times.length ? new Date(Math.min.apply(null, times)).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
     $('status').innerHTML = (bad.length ? '<span class="warn">' + bad.length + ' of ' + KEYS.length + ' not updating</span>' : at ? 'Updated ' + esc(at) : 'Loading…') +
       '<button type="button" id="passBtn">Passcode</button>';
-    $('passBtn').onclick = function () { askPass(''); };
+    $('passBtn').onclick = function () {
+      var bad = KEYS.filter(function (k) { return state[k] === 'bad_passcode'; });
+      if (bad.length && bad.length < KEYS.length) askPass('', bad[0]); else askPass('');
+    };
   }
   function renderAll() {
     [renderDinner, renderLeftovers, renderShop, renderBills, renderPoints, renderStatus].forEach(function (f) { try { f(); } catch (e) { if (window.console) console.error(e); } });
