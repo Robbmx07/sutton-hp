@@ -85,7 +85,12 @@ button{font:inherit;color:inherit;cursor:pointer}
 .ph h2{font-size:15px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-family:var(--body);font-weight:600}
 .ph .tag{font-size:13px;color:var(--faint)}
 .ph h2::before{content:"";display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:8px;vertical-align:1px;background:var(--accent,var(--faint))}
-.dinner{--accent:var(--basil)} .left{--accent:var(--mustard)} .bills{--accent:var(--plum)} .hp{--accent:var(--blue)}
+.dinner{--accent:var(--basil)} .shop{--accent:var(--danger)}
+.shop-items{font-size:15px;line-height:1.5}
+.shop-items span{display:inline-block;margin-right:14px}
+.shop-items span::before{content:"• ";color:var(--faint)}
+.shop-items .sale{font-size:11px;font-weight:700;color:var(--danger);margin-left:4px}
+.shop-foot{margin-top:8px;padding-top:8px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)} .left{--accent:var(--mustard)} .bills{--accent:var(--plum)} .hp{--accent:var(--blue)}
 .muted{color:var(--muted)} .faint{color:var(--faint)}
 .empty{color:var(--faint);font-size:15px;padding:6px 0}
 .note-err{font-size:13px;color:var(--danger);margin-top:10px}
@@ -198,6 +203,7 @@ button{font:inherit;color:inherit;cursor:pointer}
   </div>
   <div class="col col2">
     <section class="panel left" aria-labelledby="hLo"><div class="ph"><h2 id="hLo">Leftovers</h2><span class="tag" id="loTag"></span></div><div id="leftovers"><p class="empty">Loading…</p></div></section>
+    <section class="panel shop" aria-labelledby="hShop" id="shopPanel" hidden><div class="ph"><h2 id="hShop">Shopping list</h2><span class="tag" id="shopTag"></span></div><div id="shop"><p class="empty">Loading…</p></div></section>
   </div>
   <div class="col col3">
     <section class="panel bills" aria-labelledby="hBills"><div class="ph"><h2 id="hBills">Bills this week</h2></div><div id="bills"><p class="empty">Loading…</p></div></section>
@@ -214,9 +220,11 @@ button{font:inherit;color:inherit;cursor:pointer}
   var SOURCES = {
     meal:  { name: 'Dinner Plan', url: 'https://script.google.com/macros/s/AKfycbx_xbFv9C6K_pvVLIBI0wRAIH0k4y5gpvVhX9FbWPz-x-yQ6J3tPCe4_xjlbxk-cb4m/exec' },
     hp:    { name: 'House Points', url: 'https://script.google.com/macros/s/AKfycbwhmRHwCkFvserzzrVKLG8QYLtYY1nCQ1ONTct6AZWIa0uN2YgkC0ZHq_voLGxfdFED/exec' },
-    bills: { name: 'Bill Book', url: 'https://script.google.com/macros/s/AKfycbyxt-6hXgWyWZ9i8NA33Awr4HgNWMNoaNI112kxLyHRyOH8aqV9_REgjk5fmY9yXxRO/exec' }
+    bills: { name: 'Bill Book', url: 'https://script.google.com/macros/s/AKfycbyxt-6hXgWyWZ9i8NA33Awr4HgNWMNoaNI112kxLyHRyOH8aqV9_REgjk5fmY9yXxRO/exec' },
+    shop:  { name: 'Shopping List', url: 'PASTE_SHOPPING_LIST_WEB_APP_URL_HERE' }
   };
-  var KEYS = ['meal', 'hp', 'bills'];
+  /* a sheet without an address yet (the shopping list, until it's set up) is simply left off the board */
+  var KEYS = Object.keys(SOURCES).filter(function (k) { return SOURCES[k].url.indexOf('script.google.com') > 0; });
   var REFRESH_MS = 2 * 60 * 1000;          // each sheet is read every 2 minutes
   var BILL_DAYS = 7;
   /* leftovers: same good-through rules as the Dinner Plan app (USDA 3-4 days, short end; a few foods 2) */
@@ -366,6 +374,26 @@ button{font:inherit;color:inherit;cursor:pointer}
     el.innerHTML = h + staleNote('meal');
   }
 
+  /* ---------- shopping list ---------- */
+  function renderShop() {
+    var panel = $('shopPanel');
+    if (KEYS.indexOf('shop') < 0) { panel.hidden = true; return; }
+    panel.hidden = false;
+    var st = data.shop, el = $('shop');
+    if (!st) { el.innerHTML = problem('shop'); return; }
+    var cat = st.catalog || {}, all = vals(st.items).filter(function (i) { return i && i.name; });
+    var need = all.filter(function (i) { return i.status !== 'sent'; }).sort(function (a, b) { return (a.addedAt || 0) - (b.addedAt || 0); });
+    var sent = all.filter(function (i) { return i.status === 'sent'; });
+    $('shopTag').textContent = need.length ? need.length + (need.length === 1 ? ' item' : ' items') : '';
+    var h = need.length ? '<div class="shop-items">' + need.slice(0, 14).map(function (i) {
+      var c = cat[i.ck] || {}, sale = c.promo > 0 && c.regular && c.promo < c.regular;
+      return '<span>' + esc(i.name) + (+i.qty > 1 ? ' ×' + (+i.qty) : '') + (sale ? '<b class="sale">SALE</b>' : '') + '</span>';
+    }).join('') + (need.length > 14 ? '<span class="faint">+ ' + (need.length - 14) + ' more</span>' : '') + '</div>'
+      : '<p class="empty">Nothing needed right now.</p>';
+    if (sent.length) h += '<div class="shop-foot">' + sent.length + (sent.length === 1 ? ' item is' : ' items are') + ' in the Kroger cart, waiting for checkout.</div>';
+    el.innerHTML = h + staleNote('shop');
+  }
+
   /* ---------- bills (names and dates only, no amounts) ---------- */
   var DAY = 864e5;
   function ord(s) { var p = s.split('-').map(Number); return Math.round(Date.UTC(p[0], p[1] - 1, p[2]) / DAY); }
@@ -507,12 +535,12 @@ button{font:inherit;color:inherit;cursor:pointer}
     var bad = KEYS.filter(function (k) { return state[k] !== 'ok' && state[k] !== 'loading' && state[k] !== 'cached'; });
     var times = KEYS.map(function (k) { return lastOk[k] || 0; }).filter(Boolean);
     var at = times.length ? new Date(Math.min.apply(null, times)).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
-    $('status').innerHTML = (bad.length ? '<span class="warn">' + bad.length + ' of 3 not updating</span>' : at ? 'Updated ' + esc(at) : 'Loading…') +
+    $('status').innerHTML = (bad.length ? '<span class="warn">' + bad.length + ' of ' + KEYS.length + ' not updating</span>' : at ? 'Updated ' + esc(at) : 'Loading…') +
       '<button type="button" id="passBtn">Passcode</button>';
     $('passBtn').onclick = function () { askPass(''); };
   }
   function renderAll() {
-    [renderDinner, renderLeftovers, renderBills, renderPoints, renderStatus].forEach(function (f) { try { f(); } catch (e) { if (window.console) console.error(e); } });
+    [renderDinner, renderLeftovers, renderShop, renderBills, renderPoints, renderStatus].forEach(function (f) { try { f(); } catch (e) { if (window.console) console.error(e); } });
   }
 
   /* ---------- weather (Open-Meteo, free, no key; Miamisburg town center, not the house address) ---------- */

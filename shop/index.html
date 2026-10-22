@@ -1,0 +1,650 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Shopping">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#f6f7f3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141916" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Sutton Shopping List</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Figtree:wght@400;500;600&display=swap">
+<style>
+/* Layout: a single column list. Add bar and "usuals" up top, the running list in the middle,
+   a sticky bottom bar with the delivery-minimum progress and the Send button. */
+:root{
+  --bg:#f6f7f3; --card:#ffffff; --ink:#1d2420; --muted:#5f6b63; --faint:#9aa59d;
+  --line:#dfe4dc; --basil:#2f6b4f; --basil-soft:#e3efe7; --mustard:#e2a92b; --mustard-soft:#fbf1d9;
+  --danger:#b3412f; --danger-soft:#f8e3de; --scrim:rgba(20,28,23,.45);
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"Figtree",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --r:14px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#141916; --card:#1c231f; --ink:#e8eee9; --muted:#a3b0a7; --faint:#6f7c73;
+  --line:#2c3630; --basil:#7cc4a0; --basil-soft:#21352b; --mustard:#f0bf55; --mustard-soft:#3a3020;
+  --danger:#ee8a77; --danger-soft:#3f2420; --scrim:rgba(0,0,0,.6); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141916; --card:#1c231f; --ink:#e8eee9; --muted:#a3b0a7; --faint:#6f7c73;
+  --line:#2c3630; --basil:#7cc4a0; --basil-soft:#21352b; --mustard:#f0bf55; --mustard-soft:#3a3020;
+  --danger:#ee8a77; --danger-soft:#3f2420; --scrim:rgba(0,0,0,.6); color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg)}
+body{color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45;-webkit-text-size-adjust:100%;
+  padding:max(18px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) 0 max(16px,env(safe-area-inset-left))}
+.wrap{max-width:640px;margin:0 auto;padding-bottom:calc(150px + env(safe-area-inset-bottom))}
+h1,h2{font-family:var(--display);font-weight:700;margin:0}
+h1{font-size:26px} h2{font-size:18px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--basil);outline-offset:2px}
+.top{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.status{font-size:12px;color:var(--muted);display:flex;align-items:center;margin-top:2px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--faint);margin-right:6px}
+.dot.live{background:var(--basil)}
+.btn{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:8px 14px;font-weight:500;font-size:14px}
+.btn.icon{width:40px;height:40px;padding:0;display:grid;place-items:center;font-size:19px;line-height:1}
+.btn.primary{background:var(--basil);border-color:var(--basil);color:var(--card);font-weight:600}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--muted)}
+.btn.danger{color:var(--danger)}
+.btn[disabled]{opacity:.5;cursor:default}
+.addbar{display:flex;margin-bottom:12px}
+.addbar input{flex:1;min-width:0;font:inherit;font-size:16px;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-right:8px}
+.addbar input:focus{border-color:var(--basil);outline:none}
+.addbar .btn{border-radius:12px;padding:0 18px}
+.usuals{display:flex;flex-wrap:wrap;margin:0 -3px 18px}
+.usuals button{border:1px dashed var(--line);background:transparent;border-radius:999px;padding:6px 12px;font-size:14px;margin:3px;color:var(--muted)}
+.usuals button::before{content:"+ ";color:var(--faint)}
+.usuals .lbl{width:100%;font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--faint);font-weight:600;margin:0 3px 3px}
+.sechead{display:flex;align-items:baseline;justify-content:space-between;margin:6px 0 10px}
+.sechead p{margin:0;font-size:13px;color:var(--muted)}
+.list{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-bottom:22px}
+.item{display:flex;align-items:flex-start;padding:12px 12px 12px 6px;border-top:1px solid var(--line)}
+.item:first-child{border-top:0}
+.item.off .nm,.item.off .pl{opacity:.45}
+.chk{flex:none;width:40px;height:40px;border:0;background:none;display:grid;place-items:center;margin-top:-6px}
+.chk span{width:22px;height:22px;border-radius:7px;border:1.5px solid var(--faint);display:grid;place-items:center;font-size:14px;color:var(--card)}
+.chk[aria-checked="true"] span{background:var(--basil);border-color:var(--basil)}
+.body{flex:1;min-width:0;border:0;background:none;text-align:left;padding:0}
+.nm{font-weight:600;font-size:16px;overflow-wrap:anywhere}
+.pl{font-size:13px;color:var(--muted);margin-top:2px;overflow-wrap:anywhere}
+.pl .pr{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.pl s{color:var(--faint)}
+.match{display:inline-block;margin-top:5px;font-size:13px;font-weight:600;color:var(--basil)}
+.chip{display:inline-block;font-size:11px;font-weight:700;padding:1px 8px;border-radius:999px;margin-left:6px;vertical-align:1px;letter-spacing:.02em}
+.chip.sale{background:var(--danger);color:var(--card)}
+.chip.low{background:var(--basil-soft);color:var(--basil)}
+.chip.warn{background:var(--mustard-soft);color:var(--ink)}
+.qty{flex:none;display:flex;align-items:center;margin-left:8px}
+.qty button{width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:var(--card);font-size:17px;line-height:1;display:grid;place-items:center}
+.qty output{min-width:26px;text-align:center;font-weight:600;font-variant-numeric:tabular-nums}
+.empty{padding:22px 16px;color:var(--muted);text-align:center;font-size:14px}
+.sent .item{padding-left:14px;align-items:center}
+.sent .nm{font-weight:500}
+.sent .back{flex:none;border:0;background:none;color:var(--muted);font-size:13px;text-decoration:underline;margin-left:8px}
+.banner{background:var(--mustard-soft);border-radius:var(--r);padding:12px 14px;font-size:14px;margin-bottom:14px}
+.banner button{border:0;background:none;padding:0;color:var(--basil);font-weight:600;text-decoration:underline}
+/* bottom bar */
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:10;background:var(--card);border-top:1px solid var(--line);
+  padding:12px max(16px,env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
+.bar .in{max-width:640px;margin:0 auto}
+.bar .row{display:flex;align-items:center;justify-content:space-between}
+.bar .tot{font-size:14px;color:var(--muted)}
+.bar .tot b{font-family:var(--display);font-size:20px;color:var(--ink);font-variant-numeric:tabular-nums;margin-right:6px}
+.meter{height:6px;border-radius:999px;background:var(--line);overflow:hidden;margin:8px 0 6px}
+.meter i{display:block;height:100%;background:var(--mustard);border-radius:999px}
+.meter.ok i{background:var(--basil)}
+.mtxt{font-size:12px;color:var(--muted);margin-bottom:10px}
+.bar .send{width:100%;padding:13px;font-size:16px;border-radius:12px}
+/* sheets */
+.scrim{position:fixed;top:0;right:0;bottom:0;left:0;background:var(--scrim);display:flex;align-items:center;justify-content:center;z-index:20;padding:16px}
+.sheet{background:var(--card);border-radius:18px;width:100%;max-width:480px;max-height:100%;overflow:auto;padding:20px}
+.sheet > * + *{margin-top:14px}
+.sheet h2{font-size:21px}
+.sub{color:var(--muted);font-size:13px;margin-top:3px}
+.field label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:5px}
+.field input{font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%}
+.field input:focus{border-color:var(--basil);outline:none}
+.inrow{display:flex}.inrow input{flex:1;min-width:0;margin-right:8px}
+.actions{display:flex;justify-content:space-between;flex-wrap:wrap;padding-top:4px}
+.actions .r{display:flex;margin-left:auto}.actions .r .btn + .btn{margin-left:8px}
+.err{color:var(--danger);font-size:13px}
+.seg{display:flex;flex-wrap:wrap;margin:-3px}
+.seg button{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:7px 13px;font-size:14px;margin:3px}
+.seg button[aria-pressed="true"]{background:var(--basil);border-color:var(--basil);color:var(--card);font-weight:600}
+.results{border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.res{display:flex;align-items:center;width:100%;text-align:left;border:0;border-top:1px solid var(--line);background:none;padding:10px 12px}
+.res:first-child{border-top:0}
+.res:hover{background:var(--bg)}
+.res img,.res .noimg{width:44px;height:44px;object-fit:contain;flex:none;margin-right:12px;border-radius:8px;background:#fff}
+.res .noimg{background:var(--line)}
+.res .d{flex:1;min-width:0;font-size:14px}
+.res .d small{display:block;color:var(--muted);font-size:12px}
+.res .p{flex:none;text-align:right;margin-left:10px;font-weight:600;font-variant-numeric:tabular-nums;font-size:14px}
+.res .p small{display:block;font-weight:400;color:var(--faint);font-size:12px}
+.setblock{border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.setblock h3{margin:0 0 4px;font-size:14px;font-family:var(--body)}
+.setblock p{margin:0;font-size:14px;color:var(--muted)}
+.setblock .btn{margin-top:10px}
+.mini{font-size:12px;color:var(--faint);word-break:break-all;margin-top:6px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(170px + env(safe-area-inset-bottom));background:var(--ink);color:var(--bg);
+  padding:9px 16px;border-radius:999px;font-size:14px;z-index:30;max-width:90vw;text-align:center}
+@media (max-width:520px){.scrim{align-items:flex-end;padding:0}.sheet{border-radius:18px 18px 0 0;padding-bottom:calc(20px + env(safe-area-inset-bottom))}}
+.gate{position:fixed;top:0;right:0;bottom:0;left:0;z-index:80;display:flex;align-items:center;justify-content:center;background:var(--bg);padding:24px}
+.gate-card{width:100%;max-width:360px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;text-align:center}
+.gate-card > * + *{margin-top:12px}
+.gate-card h2{font-size:22px}.gate-card p{margin:0;font-size:14px}.gate-card .muted{color:var(--muted)}
+.gate-card input{font:inherit;text-align:center;font-size:22px;letter-spacing:.3em;border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--bg);color:var(--ink);width:100%}
+.gate-card .btn{width:100%;padding:12px}
+body.locked{overflow:hidden}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Shopping List</h1>
+      <div class="status"><span class="dot" id="dot"></span><span id="statusTxt">Connecting…</span></div>
+    </div>
+    <button class="btn icon" id="setBtn" aria-label="Settings">⚙︎</button>
+  </header>
+  <div id="banner"></div>
+  <form class="addbar" id="addForm">
+    <input id="addIn" list="dl-names" placeholder="Running low on…" autocomplete="off" maxlength="60" aria-label="Item to add">
+    <button class="btn primary" type="submit">Add</button>
+  </form>
+  <div class="usuals" id="usuals"></div>
+  <section aria-labelledby="needH">
+    <div class="sechead"><h2 id="needH">Need to buy</h2><p id="needCount"></p></div>
+    <div class="list" id="need"></div>
+  </section>
+  <section aria-labelledby="sentH" id="sentSec" hidden>
+    <div class="sechead"><h2 id="sentH">In the Kroger cart</h2><button class="btn" id="doneBtn">Done shopping</button></div>
+    <div class="list sent" id="sent"></div>
+  </section>
+</div>
+<div class="bar" id="bar"><div class="in">
+  <div class="row"><div class="tot" id="tot"></div></div>
+  <div id="meterBox"></div>
+  <button class="btn primary send" id="sendBtn">Send to Kroger cart</button>
+</div></div>
+<datalist id="dl-names"></datalist>
+<div id="modal"></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+/* Data layer: the family list lives in a Google Sheet behind the family passcode, like the other apps.
+   Changes save right away on this phone and sync through an outbox, so a weak signal never loses a tap. */
+(function () {
+  var API_URL = 'PASTE_YOUR_WEB_APP_URL_HERE';
+  var LS = { pass: 'ssl-pass', outbox: 'ssl-outbox', cache: 'ssl-cache' };
+  function get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function put(k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {} }
+  var PASS = get(LS.pass) || '';
+
+  function api(body, ms) {
+    var ctl = typeof AbortController === 'function' ? new AbortController() : null;
+    var timer = ctl ? setTimeout(function () { ctl.abort(); }, ms || 30000) : null;
+    return fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(Object.assign({}, body, { passcode: PASS })), signal: ctl ? ctl.signal : undefined, redirect: 'follow', cache: 'no-store' })
+      .then(function (r) { if (timer) clearTimeout(timer); return r.text(); },
+            function (e) { if (timer) clearTimeout(timer); var err = new Error('network'); err.code = e && e.name === 'AbortError' ? 'timeout' : 'network'; throw err; })
+      .then(function (t) {
+        var j; try { j = JSON.parse(t); } catch (e) { var er = new Error('bad_response'); er.code = 'not_json'; throw er; }
+        if (!j.ok) { var err = new Error(j.detail || j.error || 'error'); err.code = j.error || 'unavailable'; err.until = j.until; throw err; }
+        return j;
+      });
+  }
+
+  var server = {}, store = {}, loaded = false, flushing = false, gen = 0, again = false, syncErr = false, subs = [];
+  var outbox = []; try { outbox = JSON.parse(get(LS.outbox) || '[]') || []; } catch (e) { outbox = []; }
+  function saveOutbox() { put(LS.outbox, JSON.stringify(outbox)); }
+  function isObj(v) { return v && typeof v === 'object' && !Array.isArray(v); }
+  function merge(t, src) { var o = isObj(t) ? Object.assign({}, t) : {}; for (var k in src) o[k] = isObj(src[k]) && isObj(o[k]) ? merge(o[k], src[k]) : src[k]; return o; }
+  function clone(v) { return JSON.parse(JSON.stringify(v)); }
+  function applyOp(st, o) { var c = (st[o.c] = st[o.c] || {}); if (o.op === 'delete') delete c[o.id]; else if (o.op === 'update') c[o.id] = merge(c[o.id], o.data); else c[o.id] = clone(o.data); }
+  function rebuild() { store = clone(server); outbox.forEach(function (o) { applyOp(store, o); }); }
+  function notify() { subs.forEach(function (fn) { try { fn(); } catch (e) { console.error(e); } }); }
+  var flushTimer = null, flushWaiters = [];
+  function flushSoon() { clearTimeout(flushTimer); flushTimer = setTimeout(flush, 250); }
+  function flush() {
+    if (flushing || !outbox.length) { if (!outbox.length) { flushWaiters.forEach(function (f) { f(); }); flushWaiters = []; } return Promise.resolve(); }
+    flushing = true;
+    var n = Math.min(outbox.length, 150), ops = outbox.slice(0, n);
+    return api({ action: 'write', ops: ops }).then(function () {
+      ops.forEach(function (o) { applyOp(server, o); });
+      outbox.splice(0, n); saveOutbox(); gen++; put(LS.cache, JSON.stringify(server));
+      syncErr = false; flushing = false; notify();
+      return flush();
+    }, function (e) {
+      syncErr = true; flushing = false; notify();
+      if (e && (e.code === 'bad_passcode' || e.code === 'locked')) { needPass(e); return; }
+      setTimeout(flush, 15000);
+    });
+  }
+  function whenSaved(ms) {
+    if (!outbox.length) return Promise.resolve();
+    return new Promise(function (res, rej) { flushWaiters.push(res); flush(); setTimeout(function () { rej(Object.assign(new Error('Still saving'), { code: 'not_saved' })); }, ms || 20000); });
+  }
+  function send(ops) { ops.forEach(function (o) { outbox.push(o); applyOp(store, o); }); saveOutbox(); notify(); flushSoon(); }
+  var refreshing = null;
+  function refresh() {
+    if (!loaded) return Promise.resolve();
+    if (refreshing) { again = true; return refreshing; }
+    var g = gen;
+    refreshing = api({ action: 'load' }).then(function (j) {
+      if (g !== gen) { again = true; return; }
+      server = j.data || {}; put(LS.cache, JSON.stringify(server)); rebuild(); syncErr = false; notify(); flush();
+    }).then(function () { refreshing = null; if (again) { again = false; setTimeout(function () { refresh().catch(function () {}); }, 300); } },
+            function (e) { refreshing = null; throw e; });
+    return refreshing;
+  }
+
+  /* passcode screen */
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function overlay(html) {
+    var el = document.getElementById('sslGate');
+    if (!html) { if (el) el.parentNode.removeChild(el); document.body.classList.remove('locked'); return null; }
+    if (!el) { el = document.createElement('div'); el.id = 'sslGate'; el.className = 'gate'; document.body.appendChild(el); }
+    el.innerHTML = '<div class="gate-card">' + html + '</div>'; document.body.classList.add('locked');
+    return el;
+  }
+  function needPass(e) {
+    PASS = ''; put(LS.pass, null);
+    var msg = e && e.code === 'locked' ? 'Too many wrong tries. The list is locked until ' + new Date(e.until).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' }) + '.'
+      : e && e.code === 'bad_passcode' ? 'That passcode didn’t match. Try again.' : '';
+    var el = overlay('<h2>Shopping List</h2><p class="muted">Enter the family passcode. This device will remember it.</p>' +
+      (msg ? '<p class="err">' + esc(msg) + '</p>' : '') +
+      '<form id="sslPassForm"><input id="sslPass" type="password" inputmode="numeric" autocomplete="current-password" placeholder="Passcode" aria-label="Family passcode"><button class="btn primary" type="submit" style="margin-top:12px">Unlock</button></form>');
+    el.querySelector('#sslPassForm').onsubmit = function (ev) { ev.preventDefault(); var v = el.querySelector('#sslPass').value.trim(); if (!v) return; PASS = v; put(LS.pass, v); start(); };
+    setTimeout(function () { var i = el.querySelector('#sslPass'); if (i) i.focus(); }, 60);
+  }
+  function start() {
+    if (API_URL.indexOf('script.google.com') < 0) { overlay('<h2>Almost set up</h2><p>This copy isn’t connected to its Google Sheet yet. Follow shop/SETUP.md, then paste the web app address into <code>API_URL</code>.</p>'); return; }
+    if (!PASS) { needPass(); return; }
+    overlay('<h2>Shopping List</h2><p class="muted" id="sslWait">Opening the list…</p>');
+    var slow = setTimeout(function () { var w = document.getElementById('sslWait'); if (w) w.textContent = 'Still connecting. The first open of the day can take up to 30 seconds.'; }, 7000);
+    api({ action: 'load' }, 30000).then(function (j) { server = j.data || {}; put(LS.cache, JSON.stringify(server)); },
+      function (e) {
+        if (e && (e.code === 'bad_passcode' || e.code === 'locked')) throw e;
+        var cached = null; try { cached = JSON.parse(get(LS.cache) || 'null'); } catch (x) {}
+        if (!cached) throw e;
+        server = cached; syncErr = true; setTimeout(function () { refresh().catch(function () {}); }, 15000);
+      })
+      .then(function () {
+        clearTimeout(slow); rebuild(); loaded = true; overlay(null); notify(); flush();
+        if (!start.polling) {
+          start.polling = true;
+          var poll = function () { if (!document.hidden) refresh().catch(function (e) { if (e && (e.code === 'bad_passcode' || e.code === 'locked')) needPass(e); else syncErr = true; }); };
+          setInterval(poll, 20000); document.addEventListener('visibilitychange', poll); window.addEventListener('focus', poll);
+        }
+        if (window.onListReady) window.onListReady();
+      }, function (e) {
+        clearTimeout(slow);
+        if (e && (e.code === 'bad_passcode' || e.code === 'locked')) { needPass(e); return; }
+        var el = overlay('<h2>Can’t open the list</h2><p>' + (e.code === 'network' ? 'This device couldn’t reach Google. Check the Wi-Fi.' : 'The Google Sheet didn’t answer the way the app expected.') + '</p><button class="btn primary" id="sslRetry">Try again</button><p class="muted">Error: ' + esc(e.code || 'unknown') + '</p>');
+        el.querySelector('#sslRetry').onclick = start;
+      });
+  }
+
+  window.SSL = {
+    col: function (c) { return store[c] || {}; },
+    set: function (c, id, data) { send([{ op: 'set', c: c, id: id, data: data }]); },
+    update: function (c, id, data) { send([{ op: 'update', c: c, id: id, data: data }]); },
+    remove: function (c, id) { send([{ op: 'delete', c: c, id: id }]); },
+    batch: function (ops) { send(ops); },
+    call: function (action, extra) { return api(Object.assign({ action: action }, extra || {})); },
+    refresh: refresh, whenSaved: whenSaved,
+    subscribe: function (fn) { subs.push(fn); },
+    pending: function () { return outbox.length; },
+    syncErr: function () { return syncErr; },
+    lock: function () { PASS = ''; put(LS.pass, null); needPass(); }
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+})();
+</script>
+
+<script>
+/* The shopping list itself */
+(function () {
+  'use strict';
+  var DB = window.SSL;
+  var $ = function (id) { return document.getElementById(id); };
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function clean(s) { return String(s == null ? '' : s).replace(/\s+/g, ' ').trim().slice(0, 60); }
+  function ck(name) { return clean(name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'item'; }
+  function newId() { return 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+  function money(n) { return '$' + (Math.round(n * 100) / 100).toFixed(2); }
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function dkey(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function toast(msg) { var t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(function () { t.hidden = true; }, 2600); }
+  function vals(o) { return Object.keys(o || {}).map(function (k) { var v = o[k]; return v && typeof v === 'object' ? Object.assign({ id: k }, v) : null; }).filter(Boolean); }
+  function when(ts) {
+    var d = new Date(ts), n = new Date(), days = Math.round((new Date(n.getFullYear(), n.getMonth(), n.getDate()) - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 864e5);
+    var t = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    return days === 0 ? 'today ' + t : days === 1 ? 'yesterday ' + t : d.toLocaleDateString(undefined, { weekday: 'short' }) + ' ' + t;
+  }
+
+  var K = { hasKeys: false, linked: false, known: false, redirectUri: '' };
+  function cfg() { return (DB.col('config').main) || {}; }
+  function cat() { return DB.col('catalog'); }
+
+  /* ---------- prices ---------- */
+  function effPrice(c) { return c && c.regular ? (c.promo > 0 && c.promo < c.regular ? c.promo : c.regular) : 0; }
+  function onSale(c) { return c && c.promo > 0 && c.regular && c.promo < c.regular; }
+  function usual(c) {
+    var today = dkey(new Date());
+    var v = (c && c.log || []).filter(function (x) { return x.d !== today && x.r; }).map(function (x) { return x.p > 0 && x.p < x.r ? x.p : x.r; }).sort(function (a, b) { return a - b; });
+    if (v.length < 3) return 0;
+    var m = Math.floor(v.length / 2); return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2;
+  }
+  function priceLine(c, qty) {
+    if (!c || !c.upc) return '';
+    var bits = [esc(c.desc || c.name)]; if (c.size) bits.push(esc(c.size));
+    var h = bits.join(' · ');
+    var p = effPrice(c);
+    if (p) {
+      h += ' · ' + (onSale(c) ? '<s>' + money(c.regular) + '</s> ' : '') + '<span class="pr">' + money(p) + '</span>' + (qty > 1 ? ' ×' + qty : '');
+      if (onSale(c)) h += '<span class="chip sale">SALE</span>';
+      else { var u = usual(c); if (u && p <= u * 0.9) h += '<span class="chip low">BELOW USUAL</span>'; }
+    }
+    if (c.stock === 'TEMPORARILY_OUT_OF_STOCK') h += '<span class="chip warn">OUT OF STOCK</span>';
+    else if (c.stock === 'LOW') h += '<span class="chip warn">LOW STOCK</span>';
+    if (c.priceAt && Date.now() - c.priceAt > 36 * 36e5) h += ' <span style="color:var(--faint)">(price from ' + new Date(c.priceAt).toLocaleDateString(undefined, { weekday: 'short' }) + ')</span>';
+    return h;
+  }
+
+  /* ---------- render ---------- */
+  function items() { return vals(DB.col('items')); }
+  function render() {
+    var all = items(), C = cat();
+    var need = all.filter(function (i) { return i.status !== 'sent'; }).sort(function (a, b) { return (a.addedAt || 0) - (b.addedAt || 0); });
+    var sent = all.filter(function (i) { return i.status === 'sent'; }).sort(function (a, b) { return (b.sentAt || 0) - (a.sentAt || 0) || String(a.name).localeCompare(String(b.name)); });
+
+    $('needCount').textContent = need.length ? need.length + (need.length === 1 ? ' item' : ' items') : '';
+    $('need').innerHTML = need.length ? need.map(function (i) {
+      var c = C[i.ck], on = i.on !== false, q = Math.max(1, +i.qty || 1);
+      return '<div class="item' + (on ? '' : ' off') + '" data-id="' + esc(i.id) + '">' +
+        '<button class="chk" role="checkbox" aria-checked="' + on + '" data-act="toggle" aria-label="Include ' + esc(i.name) + ' when sending"><span>' + (on ? '✓' : '') + '</span></button>' +
+        '<button class="body" data-act="edit"><div class="nm">' + esc(i.name) + '</div>' +
+        (c && c.upc ? '<div class="pl">' + priceLine(c, q) + '</div>' : '<span class="match">Match to a Kroger product ›</span>') + '</button>' +
+        '<div class="qty"><button data-act="minus" aria-label="One fewer ' + esc(i.name) + '">−</button><output aria-live="polite">' + q + '</output><button data-act="plus" aria-label="One more ' + esc(i.name) + '">+</button></div></div>';
+    }).join('') : '<div class="empty">Nothing on the list. When something runs low, add it above.</div>';
+
+    $('sentSec').hidden = !sent.length;
+    if (sent.length) {
+      var last = sent[0].sentAt;
+      $('sentH').textContent = 'In the Kroger cart';
+      $('sent').innerHTML = '<div class="item" style="font-size:13px;color:var(--muted)">Sent ' + esc(when(last)) + '. Check out in the Kroger app, then tap Done shopping.</div>' +
+        sent.map(function (i) { return '<div class="item" data-id="' + esc(i.id) + '"><div class="body"><div class="nm">' + esc(i.name) + (+i.qty > 1 ? ' ×' + (+i.qty) : '') + '</div></div><button class="back" data-act="back">Put back on list</button></div>'; }).join('');
+    }
+
+    /* usuals: things you've added before that aren't on the list right now */
+    var onList = {}; need.forEach(function (i) { onList[i.ck] = 1; });
+    var us = Object.keys(C).map(function (k) { return Object.assign({ k: k }, C[k]); }).filter(function (c) { return c.name && !onList[c.k] && (c.uses || 0) >= 1; })
+      .sort(function (a, b) { return (b.uses || 0) - (a.uses || 0) || (b.lastAdded || 0) - (a.lastAdded || 0); }).slice(0, 14);
+    $('usuals').innerHTML = us.length ? '<div class="lbl">Usuals</div>' + us.map(function (c) { return '<button data-name="' + esc(c.name) + '">' + esc(c.name) + '</button>'; }).join('') : '';
+    $('dl-names').innerHTML = Object.keys(C).map(function (k) { return C[k] && C[k].name ? '<option value="' + esc(C[k].name) + '"></option>' : ''; }).join('');
+
+    renderBar(need, C);
+    renderBanner();
+  }
+
+  function renderBar(need, C) {
+    var conf = cfg(), sel = need.filter(function (i) { return i.on !== false; });
+    var total = 0, unpriced = 0, matched = 0;
+    sel.forEach(function (i) { var c = C[i.ck], p = effPrice(c); if (c && c.upc) matched++; if (p) total += p * Math.max(1, +i.qty || 1); else unpriced++; });
+    $('tot').innerHTML = sel.length ? '<b>' + (total ? 'About ' + money(total) : '—') + '</b>' + sel.length + (sel.length === 1 ? ' item' : ' items') + (unpriced ? ', ' + unpriced + ' without a price' : '') : 'Nothing selected to send';
+    var delivery = conf.modality !== 'PICKUP', min = +conf.freeMin || 35;
+    if (delivery && sel.length && total > 0) {
+      var pct = Math.min(100, Math.round(total / min * 100)), ok = total >= min;
+      $('meterBox').innerHTML = '<div class="meter' + (ok ? ' ok' : '') + '"><i style="width:' + pct + '%"></i></div><div class="mtxt">' +
+        (ok ? 'Free delivery minimum reached (' + money(min) + ')' : money(min - total) + ' to the ' + money(min) + ' free-delivery minimum') + (unpriced ? '. Unpriced items aren’t counted.' : '') + '</div>';
+    } else $('meterBox').innerHTML = '<div style="height:10px"></div>';
+    var b = $('sendBtn');
+    if (K.known && !K.linked) { b.textContent = K.hasKeys ? 'Connect Kroger to send' : 'Kroger isn’t set up yet'; b.disabled = false; b.dataset.mode = 'settings'; }
+    else if (!matched) { b.textContent = sel.length ? 'Match items to send them' : 'Send to Kroger cart'; b.disabled = true; b.dataset.mode = ''; }
+    else { b.textContent = 'Send ' + matched + (matched === 1 ? ' item' : ' items') + ' to Kroger cart'; b.disabled = false; b.dataset.mode = 'send'; }
+  }
+
+  function renderBanner() {
+    var h = '';
+    if (K.known && !K.hasKeys) h = 'Kroger isn’t set up yet, so the list works but can’t look up prices or fill the cart. <button data-go="settings">See settings</button>';
+    else if (K.known && K.hasKeys && !(cfg().store || {}).locationId) h = 'Pick your Kroger store to see prices. <button data-go="settings">Choose store</button>';
+    $('banner').innerHTML = h ? '<div class="banner">' + h + '</div>' : '';
+  }
+
+  function setStatus() {
+    var n = DB.pending(), e = DB.syncErr();
+    $('dot').className = 'dot' + (!n && !e ? ' live' : '');
+    $('statusTxt').textContent = n ? 'Saving…' : e ? 'Offline. Changes will save when you reconnect' : 'Synced with the family';
+  }
+
+  /* ---------- actions ---------- */
+  function addItem(raw) {
+    var name = clean(raw); if (!name) return;
+    var k = ck(name), now = Date.now(), C = cat();
+    var dup = items().filter(function (i) { return i.status !== 'sent' && i.ck === k; })[0];
+    var ops = [];
+    if (dup) { var q = Math.min(99, (+dup.qty || 1) + 1); ops.push({ op: 'update', c: 'items', id: dup.id, data: { qty: q, on: true } }); toast(dup.name + ' is already on the list. Now ×' + q); }
+    else { ops.push({ op: 'set', c: 'items', id: newId(), data: { name: (C[k] && C[k].name) || name, ck: k, qty: 1, on: true, status: 'need', addedAt: now } }); }
+    ops.push(C[k] ? { op: 'update', c: 'catalog', id: k, data: { uses: (+C[k].uses || 0) + 1, lastAdded: now } }
+                  : { op: 'set', c: 'catalog', id: k, data: { name: name, uses: 1, lastAdded: now } });
+    DB.batch(ops);
+  }
+
+  var lastFocus = null;
+  function openSheet(html, ready) {
+    lastFocus = document.activeElement;
+    $('modal').innerHTML = '<div class="scrim" id="scrim"><div class="sheet" role="dialog" aria-modal="true">' + html + '</div></div>';
+    $('scrim').addEventListener('click', function (e) { if (e.target.id === 'scrim') closeSheet(); });
+    if (ready) ready();
+  }
+  function closeSheet() { $('modal').innerHTML = ''; if (lastFocus && lastFocus.focus) lastFocus.focus(); }
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && $('modal').innerHTML) closeSheet(); });
+  function errText(e) {
+    var c = e && e.code;
+    return c === 'no_keys' ? 'Kroger isn’t set up yet. The app keys still need to go into the Google script (see the setup guide).'
+      : c === 'not_linked' ? 'The Kroger account isn’t connected. Connect it in Settings.'
+      : c === 'network' || c === 'timeout' ? 'Couldn’t reach the family sheet. Check the connection and try again.'
+      : (e && e.message) || 'Something went wrong. Try again.';
+  }
+
+  function editItem(id) {
+    var i = DB.col('items')[id]; if (!i) return;
+    var c = cat()[i.ck];
+    openSheet('<div><h2>' + esc(i.name) + '</h2><div class="sub">' + (c && c.upc ? priceLine(c, 1) : 'Not matched to a Kroger product yet') + '</div></div>' +
+      '<div class="field"><label for="e-name">Name on the list</label><input id="e-name" value="' + esc(i.name) + '" maxlength="60" autocomplete="off"></div>' +
+      '<div class="actions"><button class="btn" id="e-match">' + (c && c.upc ? 'Change Kroger product' : 'Match to a Kroger product') + '</button></div>' +
+      '<div class="actions"><button class="btn ghost danger" id="e-del">Remove from list</button><div class="r"><button class="btn" id="e-cancel">Cancel</button><button class="btn primary" id="e-save">Save</button></div></div>', function () {
+        $('e-cancel').onclick = closeSheet;
+        $('e-del').onclick = function () { DB.remove('items', id); closeSheet(); toast(i.name + ' removed'); };
+        $('e-match').onclick = function () { matchItem(id); };
+        $('e-save').onclick = function () {
+          var name = clean($('e-name').value) || i.name, k = ck(name), C = cat(), ops = [];
+          ops.push({ op: 'update', c: 'items', id: id, data: { name: name, ck: k } });
+          if (k !== i.ck) {
+            /* renamed to something new: carry the Kroger match over so it isn't lost */
+            if (!C[k]) ops.push({ op: 'set', c: 'catalog', id: k, data: Object.assign({}, C[i.ck] || {}, { name: name, uses: 1, lastAdded: Date.now() }) });
+          } else if (C[k] && C[k].name !== name) ops.push({ op: 'update', c: 'catalog', id: k, data: { name: name } });
+          DB.batch(ops); closeSheet();
+        };
+      });
+  }
+
+  function matchItem(id) {
+    var i = DB.col('items')[id]; if (!i) return;
+    var found = [];
+    openSheet('<div><h2>Match “' + esc(i.name) + '”</h2><div class="sub">Pick the exact product. Next time it’s added, the list remembers it.</div></div>' +
+      '<form class="inrow" id="m-form"><input id="m-term" value="' + esc(i.name) + '" style="font:inherit;font-size:16px;flex:1;min-width:0;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--bg);color:var(--ink);margin-right:8px" autocomplete="off" aria-label="Search Kroger"><button class="btn primary" type="submit">Search</button></form>' +
+      '<div id="m-out" class="sub">Searching…</div>' +
+      '<div class="actions"><div class="r"><button class="btn" id="m-cancel">Cancel</button></div></div>', function () {
+        $('m-cancel').onclick = closeSheet;
+        function go() {
+          var term = clean($('m-term').value);
+          if (term.length < 3) { $('m-out').innerHTML = '<span class="err">Type at least 3 letters.</span>'; return; }
+          $('m-out').textContent = 'Searching Kroger…';
+          DB.call('kroger_search', { term: term }).then(function (j) {
+            found = j.products || [];
+            if (!found.length) { $('m-out').textContent = 'No products found. Try a simpler name, like “butter” or “2% milk”.'; return; }
+            $('m-out').className = '';
+            $('m-out').innerHTML = '<div class="results">' + found.map(function (p, n) {
+              var pr = p.promo > 0 && p.promo < p.regular ? p.promo : p.regular;
+              return '<button class="res" data-n="' + n + '">' + (p.img ? '<img src="' + esc(p.img) + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">' : '<span class="noimg"></span>') +
+                '<span class="d">' + esc(p.desc) + '<small>' + esc([p.size, p.stock === 'TEMPORARILY_OUT_OF_STOCK' ? 'Out of stock' : p.stock === 'LOW' ? 'Low stock' : ''].filter(Boolean).join(' · ')) + '</small></span>' +
+                '<span class="p">' + (pr ? money(pr) : '') + (pr && pr < p.regular ? '<small>was ' + money(p.regular) + '</small>' : '') + '</span></button>';
+            }).join('') + '</div>' + ((cfg().store || {}).locationId ? '' : '<p class="sub">Prices show once you pick your store in Settings.</p>');
+          }, function (e) { $('m-out').innerHTML = '<span class="err">' + esc(errText(e)) + '</span>'; });
+        }
+        $('m-form').onsubmit = function (e) { e.preventDefault(); go(); };
+        $('m-out').addEventListener('click', function (e) {
+          var b = e.target.closest('[data-n]'); if (!b) return;
+          var p = found[+b.dataset.n], now = Date.now(), cur = cat()[i.ck] || {};
+          var data = { name: cur.name || i.name, uses: cur.uses || 1, lastAdded: cur.lastAdded || now,
+            productId: p.productId, upc: p.upc, desc: p.desc, brand: p.brand, size: p.size, img: p.img, regular: p.regular, promo: p.promo, stock: p.stock, priceAt: now,
+            log: p.regular ? [{ d: dkey(new Date()), r: p.regular, p: p.promo }] : [] };
+          DB.set('catalog', i.ck, data);
+          closeSheet(); toast('Matched ' + i.name);
+        });
+        go();
+      });
+  }
+
+  function sendNow() {
+    var C = cat(), need = items().filter(function (i) { return i.status !== 'sent' && i.on !== false; });
+    var ready = need.filter(function (i) { return C[i.ck] && C[i.ck].upc; }), unmatched = need.length - ready.length;
+    if (!ready.length) return;
+    var conf = cfg(), mode = conf.modality === 'PICKUP' ? 'pickup' : 'delivery';
+    openSheet('<div><h2>Send ' + ready.length + (ready.length === 1 ? ' item' : ' items') + ' to the Kroger cart?</h2><div class="sub">They’re added to the family Kroger account’s cart for ' + mode +
+      ((conf.store || {}).name ? ' at ' + esc(conf.store.name) : '') + '. Nothing is ordered until you check out in the Kroger app.</div></div>' +
+      '<div class="sub" style="color:var(--ink)">' + ready.map(function (i) { return esc(i.name) + (+i.qty > 1 ? ' ×' + (+i.qty) : ''); }).join(', ') + '</div>' +
+      (unmatched ? '<div class="sub">' + unmatched + (unmatched === 1 ? ' item isn’t' : ' items aren’t') + ' matched to a Kroger product yet, so ' + (unmatched === 1 ? 'it stays' : 'they stay') + ' on the list.</div>' : '') +
+      '<div class="err" id="s-err" hidden></div>' +
+      '<div class="actions"><div class="r"><button class="btn" id="s-cancel">Cancel</button><button class="btn primary" id="s-go">Send</button></div></div>', function () {
+        $('s-cancel').onclick = closeSheet;
+        $('s-go').onclick = function () {
+          var btn = $('s-go'); btn.disabled = true; btn.textContent = 'Sending…';
+          DB.whenSaved().then(function () { return DB.call('kroger_send', { ids: ready.map(function (i) { return i.id; }) }); })
+            .then(function (j) {
+              return DB.refresh().catch(function () {}).then(function () {
+                openSheet('<div><h2>Sent to the Kroger cart</h2><div class="sub">' + j.sent + (j.sent === 1 ? ' item is' : ' items are') + ' in the family cart. Open the Kroger app to review and check out.</div></div>' +
+                  '<div class="actions"><a class="btn" href="https://www.kroger.com/cart" target="_blank" rel="noopener" style="text-decoration:none">Open Kroger cart</a><div class="r"><button class="btn primary" id="s-ok">OK</button></div></div>', function () { $('s-ok').onclick = closeSheet; });
+              });
+            }, function (e) {
+              btn.disabled = false; btn.textContent = 'Try again';
+              var el = $('s-err'); el.hidden = false; el.textContent = e && e.code === 'not_saved' ? 'Your last changes are still saving. Try again in a moment.' : errText(e);
+              if (e && e.code === 'not_linked') K.linked = false;
+            });
+        };
+      });
+  }
+
+  function doneShopping() {
+    var sent = items().filter(function (i) { return i.status === 'sent'; });
+    openSheet('<div><h2>Done shopping?</h2><div class="sub">Clears the ' + sent.length + (sent.length === 1 ? ' item' : ' items') + ' that went to the Kroger cart. Anything still under Need to buy stays for next time.</div></div>' +
+      '<div class="actions"><div class="r"><button class="btn" id="d-cancel">Cancel</button><button class="btn primary" id="d-go">Clear them</button></div></div>', function () {
+        $('d-cancel').onclick = closeSheet;
+        $('d-go').onclick = function () { DB.batch(sent.map(function (i) { return { op: 'delete', c: 'items', id: i.id }; })); closeSheet(); toast('Ready for next week'); };
+      });
+  }
+
+  /* ---------- settings ---------- */
+  function settings() {
+    var conf = cfg(), st = conf.store || {}, stores = [];
+    var kb = !K.known ? '<p>Checking…</p>'
+      : !K.hasKeys ? '<p>Not set up yet. The Kroger app keys go into the Google script first (see the setup guide).</p>'
+      : K.linked ? '<p>Connected' + (K.linkedAt ? ' since ' + esc(new Date(K.linkedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })) : '') + '. Everyone on this list can send to the family cart.</p><button class="btn ghost danger" id="k-unlink" style="padding-left:0">Disconnect Kroger</button>'
+      : '<p>Not connected. Sign in to the family Kroger account once and the list can fill the cart.</p><button class="btn primary" id="k-link">Connect Kroger</button><div id="k-msg" class="sub"></div>';
+    openSheet('<div><h2>Settings</h2></div>' +
+      '<div class="setblock"><h3>Kroger account</h3>' + kb + (K.redirectUri && !K.linked ? '<div class="mini">Redirect address for the Kroger app: ' + esc(K.redirectUri) + '</div>' : '') + '</div>' +
+      '<div class="setblock"><h3>Store</h3><p>' + (st.locationId ? esc(st.name) + (st.address ? ', ' + esc(st.address) : '') : 'No store picked yet.') + '</p>' +
+        '<form class="inrow" id="z-form" style="margin-top:10px"><input id="z-in" inputmode="numeric" maxlength="5" placeholder="ZIP code" style="font:inherit;font-size:16px;flex:1;min-width:0;border:1px solid var(--line);border-radius:10px;padding:9px 12px;background:var(--bg);color:var(--ink);margin-right:8px" aria-label="ZIP code"><button class="btn" type="submit">Find stores</button></form><div id="z-out" class="sub"></div></div>' +
+      '<div class="setblock"><h3>How you get groceries</h3><div class="seg" id="mode" style="margin-top:6px"><button type="button" data-m="DELIVERY" aria-pressed="' + (conf.modality !== 'PICKUP') + '">Delivery</button><button type="button" data-m="PICKUP" aria-pressed="' + (conf.modality === 'PICKUP') + '">Pickup</button></div>' +
+        '<div class="field" style="margin-top:12px"><label for="min-in">Free-delivery minimum ($)</label><input id="min-in" inputmode="decimal" value="' + esc(conf.freeMin || 35) + '" style="max-width:120px"></div></div>' +
+      '<div class="actions"><button class="btn ghost" id="lockBtn" style="padding-left:0">Lock this device</button><div class="r"><button class="btn primary" id="set-done">Done</button></div></div>', function () {
+        $('set-done').onclick = function () {
+          var m = parseFloat($('min-in').value);
+          if (m > 0 && m < 500 && m !== +(conf.freeMin || 35)) DB.update('config', 'main', { freeMin: Math.round(m * 100) / 100 });
+          closeSheet();
+        };
+        $('lockBtn').onclick = function () { closeSheet(); DB.lock(); };
+        $('mode').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return;
+          $('mode').querySelectorAll('button').forEach(function (x) { x.setAttribute('aria-pressed', x === b); }); DB.update('config', 'main', { modality: b.dataset.m }); });
+        $('z-form').onsubmit = function (e) {
+          e.preventDefault(); var z = $('z-in').value.trim();
+          if (!/^\d{5}$/.test(z)) { $('z-out').innerHTML = '<span class="err">Enter a 5-digit ZIP code.</span>'; return; }
+          $('z-out').textContent = 'Looking up stores…';
+          DB.call('kroger_locations', { zip: z }).then(function (j) {
+            stores = j.stores || [];
+            $('z-out').innerHTML = stores.length ? '<div class="results" style="margin-top:8px">' + stores.map(function (s, n) { return '<button class="res" data-s="' + n + '"><span class="d">' + esc(s.name) + '<small>' + esc(s.address) + '</small></span></button>'; }).join('') + '</div>' : 'No stores found near that ZIP.';
+          }, function (er) { $('z-out').innerHTML = '<span class="err">' + esc(errText(er)) + '</span>'; });
+        };
+        $('z-out').addEventListener('click', function (e) {
+          var b = e.target.closest('[data-s]'); if (!b) return; var s = stores[+b.dataset.s];
+          DB.update('config', 'main', { store: { locationId: s.locationId, name: s.name, address: s.address } });
+          toast('Store set: ' + s.name); closeSheet();
+          DB.whenSaved().then(function () { return DB.call('kroger_prices', { force: true }); }).then(function () { return DB.refresh(); }).catch(function () {});
+        });
+        if ($('k-link')) $('k-link').onclick = function () {
+          var w = window.open('about:blank', '_blank');   // open now, while the tap still counts, so Safari doesn't block it
+          $('k-msg').textContent = 'Opening Kroger…';
+          DB.call('kroger_auth_url').then(function (j) {
+            if (w) w.location.href = j.url; else location.href = j.url;
+            $('k-msg').textContent = 'Sign in to the family Kroger account in the new tab. When it says “Kroger is connected,” come back here.';
+          }, function (er) { if (w) w.close(); $('k-msg').innerHTML = '<span class="err">' + esc(errText(er)) + '</span>'; });
+        };
+        if ($('k-unlink')) $('k-unlink').onclick = function () {
+          DB.call('kroger_unlink').then(function () { K.linked = false; closeSheet(); render(); toast('Kroger disconnected'); }, function (er) { toast(errText(er)); });
+        };
+      });
+  }
+
+  function checkKroger() {
+    return DB.call('kroger_status').then(function (j) {
+      K = { known: true, hasKeys: !!j.hasKeys, linked: !!j.linked, linkedAt: j.linkedAt, redirectUri: j.redirectUri || '' };
+      render();
+      /* refresh stale prices in the background (the sheet only re-asks Kroger for prices older than 6 hours) */
+      if (K.hasKeys && (cfg().store || {}).locationId && Date.now() - (checkKroger.priced || 0) > 3 * 36e5) {
+        checkKroger.priced = Date.now();
+        DB.call('kroger_prices').then(function (r) { if (r.updated) DB.refresh(); }).catch(function () {});
+      }
+    }, function () {});
+  }
+
+  /* ---------- wiring ---------- */
+  $('addForm').onsubmit = function (e) { e.preventDefault(); addItem($('addIn').value); $('addIn').value = ''; };
+  $('usuals').addEventListener('click', function (e) { var b = e.target.closest('[data-name]'); if (b) { addItem(b.dataset.name); toast('Added ' + b.dataset.name); } });
+  $('need').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-act]'), row = e.target.closest('[data-id]'); if (!b || !row) return;
+    var id = row.dataset.id, i = DB.col('items')[id]; if (!i) return;
+    var act = b.dataset.act, q = Math.max(1, +i.qty || 1);
+    if (act === 'toggle') DB.update('items', id, { on: i.on === false });
+    else if (act === 'plus') DB.update('items', id, { qty: Math.min(99, q + 1) });
+    else if (act === 'minus') { if (q > 1) DB.update('items', id, { qty: q - 1 }); }
+    else if (act === 'edit') { var c = cat()[i.ck]; if (c && c.upc) editItem(id); else matchItem(id); }
+  });
+  $('sent').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-act="back"]'), row = e.target.closest('[data-id]'); if (!b || !row) return;
+    DB.update('items', row.dataset.id, { status: 'need', sentAt: null, on: true }); toast('Back on the list. It may still be in the Kroger cart.');
+  });
+  $('doneBtn').onclick = doneShopping;
+  $('setBtn').onclick = settings;
+  $('banner').addEventListener('click', function (e) { if (e.target.closest('[data-go]')) settings(); });
+  $('sendBtn').onclick = function () { var m = this.dataset.mode; if (m === 'settings') settings(); else if (m === 'send') sendNow(); };
+
+  DB.subscribe(function () { render(); setStatus(); });
+  setInterval(setStatus, 1500);
+  window.onListReady = function () { render(); checkKroger(); };
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && K.known) checkKroger(); });
+  render();
+})();
+</script>
+</body>
+</html>
