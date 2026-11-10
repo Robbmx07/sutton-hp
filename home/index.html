@@ -17,6 +17,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Figtree:wght@400;500;600&display=swap">
+<!-- Sutton Design System: theme switch + shared tokens -->
+<script src="https://robbmx07.github.io/sutton-hp/design/sutton-theme.js"></script>
+<link rel="stylesheet" href="https://robbmx07.github.io/sutton-hp/design/sutton.css">
 <style>
 /* Layout: a kitchen-counter board. Clock bar on top; three columns below:
    dinner (tonight + coming up), leftovers, then bills and house points. Written for older iPad Safari too:
@@ -183,6 +186,23 @@ button{font:inherit;color:inherit;cursor:pointer}
 .gate button{width:100%;border:0;border-radius:999px;padding:13px;background:var(--basil);color:#fff;font-weight:600;font-size:16px}
 .gate .err{color:var(--danger);font-size:14px;margin:0 0 12px}
 </style>
+<style id="sutton-map">
+/* Sutton Design System mapping for Sutton Kitchen (shared-room iPad board).
+   Kept on purpose: warm background and cards (your choice), clock header, large type, colored panel accents
+   (mustard leftovers, plum bills, blue house points), trash-night tile, no dollar amounts anywhere.
+   Shared: status colors, theme switch, fonts. Written for older iPad Safari: no gap, clamp or optional chaining. */
+html:root[data-theme="dark"]{
+  --bg:#121512; --card:#1b201c; --ink:#e7ece8; --muted:#a2ada5; --faint:#6c776f; --line:#2a312c;
+  --danger:var(--s-alert,#f08a76); --danger-soft:var(--s-alert-soft,#3f2420); --s-accent:var(--basil)}
+html:root[data-theme="light"]{
+  --bg:#f4f2ec; --card:#ffffff; --ink:#1c211d; --muted:#5d665f; --faint:#98a199; --line:#e0ded6;
+  --danger:var(--s-alert,#b3412f); --danger-soft:var(--s-alert-soft,#f8e3de); --s-accent:var(--basil)}
+[hidden]{display:none!important}
+.panel,.trash{box-shadow:var(--s-shadow,none)}
+.right .tools{margin-top:6px}
+.right .s-theme{min-height:36px;padding:0 12px;font-size:13px}
+</style>
+
 </head>
 <body>
 <header class="top">
@@ -194,6 +214,7 @@ button{font:inherit;color:inherit;cursor:pointer}
   <div class="right">
     <div class="trash quiet" id="trash"></div>
     <div class="status" id="status">Loading…</div>
+    <div class="tools" data-sutton-theme></div>
   </div>
 </header>
 

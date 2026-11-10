@@ -17,6 +17,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Figtree:wght@400;500;600&display=swap">
+<!-- Sutton Design System: theme switch + shared tokens -->
+<script src="https://robbmx07.github.io/sutton-hp/design/sutton-theme.js"></script>
+<link rel="stylesheet" href="https://robbmx07.github.io/sutton-hp/design/sutton.css">
 <style>
 /* Layout: a single column list. Add bar and "usuals" up top, the running list in the middle,
    a sticky bottom bar with the delivery-minimum progress and the Send button. */
@@ -145,15 +148,38 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--basil);outline-
 .gate-card .btn{width:100%;padding:12px}
 body.locked{overflow:hidden}
 </style>
+<style id="sutton-map">
+/* Sutton Design System mapping for Shopping List.
+   Shared: background, cards, text, lines, status colors, buttons, header.
+   Kept on purpose: basil accent + big "Send to Kroger cart" bar, mustard price-up/warn chips, Price Book deal tags. */
+html:root[data-theme="dark"]{
+  --bg:var(--s-bg,#141916); --card:var(--s-card,#1c231f); --ink:var(--s-ink,#e8eee9); --muted:var(--s-muted,#a3b0a7);
+  --faint:var(--s-faint,#6f7c73); --line:var(--s-line,#2c3630); --danger:var(--s-alert,#ee8a77); --danger-soft:var(--s-alert-soft,#3f2420);
+  --scrim:var(--s-scrim,rgba(0,0,0,.6)); --basil:#7cc4a0; --basil-soft:#21352b; --mustard:#f0bf55; --mustard-soft:#3a3020; --s-accent:var(--basil)}
+html:root[data-theme="light"]{
+  --bg:var(--s-bg,#f6f7f3); --card:var(--s-card,#ffffff); --ink:var(--s-ink,#1d2420); --muted:var(--s-muted,#5f6b63);
+  --faint:var(--s-faint,#9aa59d); --line:var(--s-line,#dfe4dc); --danger:var(--s-alert,#b3412f); --danger-soft:var(--s-alert-soft,#f8e3de);
+  --scrim:var(--s-scrim,rgba(20,28,23,.45)); --basil:#2f6b4f; --basil-soft:#e3efe7; --mustard:#e2a92b; --mustard-soft:#fbf1d9; --s-accent:var(--basil)}
+:root{--r:var(--s-r,14px)}
+[hidden]{display:none!important}
+.btn{min-height:var(--s-tap,44px);padding:0 16px;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn.icon{width:var(--s-tap,44px);height:var(--s-tap,44px);min-height:0}
+.btn.primary{color:var(--bg)}
+.qty button{width:36px;height:36px}
+.list,.gate-card{box-shadow:var(--s-shadow,none)}
+.top .tools{display:flex;align-items:center;gap:6px}
+</style>
+
 </head>
 <body>
 <div class="wrap">
   <header class="top">
     <div>
+      <span class="s-kicker">Sutton</span>
       <h1>Shopping List</h1>
       <div class="status"><span class="dot" id="dot"></span><span id="statusTxt">Connecting…</span></div>
     </div>
-    <button class="btn icon" id="setBtn" aria-label="Settings">⚙︎</button>
+    <div class="tools"><span data-sutton-theme></span><button class="btn icon" id="setBtn" aria-label="Settings">⚙︎</button></div>
   </header>
   <div id="banner"></div>
   <form class="addbar" id="addForm">

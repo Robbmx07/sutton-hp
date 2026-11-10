@@ -15,6 +15,9 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<!-- Sutton Design System: theme switch + shared tokens -->
+<script src="https://robbmx07.github.io/sutton-hp/design/sutton-theme.js"></script>
+<link rel="stylesheet" href="https://robbmx07.github.io/sutton-hp/design/sutton.css">
 <style>
 /* Layout: sticky two-person scoreboard on top, tabbed work area below; each person owns one color throughout. */
 :root{
@@ -213,12 +216,34 @@ textarea{width:100%;resize:vertical}
 body{padding-bottom:96px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
+<style id="sutton-map">
+/* Sutton Design System mapping for House Points.
+   Shared: background, cards, text, lines, done/attention colors, Figtree body font, 44px pill buttons and tabs, header.
+   Kept on purpose: Robert = blue (--a), Erica = pink (--b) on scores, bars, chips, calendar; Bricolage headings; rewards stay private. */
+html:root[data-theme="dark"]{
+  --bg:var(--s-bg,#11151C); --surface:var(--s-card,#1A202A); --ink:var(--s-ink,#E7EBF1); --muted:var(--s-muted,#9AA3B2); --line:var(--s-line,#2B3341);
+  --good:var(--s-ok,#5FC48A); --warn:var(--s-warn,#E3A44A); --shadow:var(--s-shadow,none);
+  --a:#73A9F0; --a-soft:#1C2C44; --b:#F07CAD; --b-soft:#3A1F2D; --s-accent:var(--me,var(--a))}
+html:root[data-theme="light"]{
+  --bg:var(--s-bg,#EDF0F4); --surface:var(--s-card,#FFFFFF); --ink:var(--s-ink,#1B2230); --muted:var(--s-muted,#5E6777); --line:var(--s-line,#D3D9E2);
+  --good:var(--s-ok,#2C7A4D); --warn:var(--s-warn,#A46200); --shadow:var(--s-shadow,0 1px 2px rgba(27,34,48,.08));
+  --a:#1F5FAE; --a-soft:#DDE8F7; --b:#B3336A; --b-soft:#F6DFE9; --s-accent:var(--me,var(--a))}
+:root{--f-body:var(--s-body,"Figtree","Segoe UI",system-ui,sans-serif)}
+[hidden]{display:none!important}
+.btn{min-height:var(--s-tap,44px);border-radius:999px;padding:0 16px;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+nav.tabs button{min-height:var(--s-tap,44px);border-radius:999px;padding:0 14px}
+.card{border-radius:var(--s-r,14px);box-shadow:var(--shadow)}
+.titlebar{flex-wrap:wrap}
+.titlebar .whoami{flex-basis:100%;margin-top:4px}
+@media (max-width:480px){.titlebar .s-theme span{display:none}.titlebar .s-theme{width:var(--s-tap,44px);padding:0;justify-content:center}}
+</style>
 </head>
 <body>
 <div class="wrap">
   <header>
     <div class="titlebar">
-      <h1>Sutton House Points</h1>
+      <div><span class="s-kicker">Sutton</span><h1>House Points</h1></div>
+      <span data-sutton-theme></span>
       <div class="whoami" id="whoami"></div>
     </div>
     <div class="board" id="board"></div>

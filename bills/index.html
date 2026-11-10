@@ -13,6 +13,9 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
+<!-- Sutton Design System: theme switch + shared tokens -->
+<script src="https://robbmx07.github.io/sutton-hp/design/sutton-theme.js"></script>
+<link rel="stylesheet" href="https://robbmx07.github.io/sutton-hp/design/sutton.css">
 <style>
 :root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 body{margin:0;font:14px system-ui,-apple-system,sans-serif}
@@ -489,15 +492,42 @@ button.row:hover .nm{color:var(--accent)}
 })();
 
 </script>
+
+<style id="sutton-map">
+/* Sutton Design System mapping for Bill Book.
+   Shared: background, cards, text, lines, paid/due/late colors, 44px pill buttons, header with theme switch.
+   Kept on purpose: teal accent, tear-off bill stubs, IBM Plex Mono amounts, money-in green / money-out orange. */
+html:root[data-theme="dark"]{
+  --paper:var(--s-bg,#0F1614); --card:var(--s-card,#17201D); --ink:var(--s-ink,#E4ECE8); --muted:var(--s-muted,#97A7A0);
+  --line:var(--s-line,#27332F); --line-strong:#3A4843;
+  --ok:var(--s-ok,#6CC58F); --ok-soft:var(--s-ok-soft,#183124); --due:var(--s-warn,#E7AC4C); --due-soft:var(--s-warn-soft,#382C14);
+  --late:var(--s-alert,#F28A80); --late-soft:var(--s-alert-soft,#3C1C19); --scrim:var(--s-scrim,rgba(0,0,0,.6));
+  --shadow:var(--s-shadow,none); --s-accent:var(--accent)}
+html:root[data-theme="light"]{
+  --paper:var(--s-bg,#F2F5F2); --card:var(--s-card,#FFFFFF); --ink:var(--s-ink,#16211D); --muted:var(--s-muted,#5B6964);
+  --line:var(--s-line,#D9E1DB); --line-strong:#C3CEC6;
+  --ok:var(--s-ok,#25734A); --ok-soft:var(--s-ok-soft,#DFF0E5); --due:var(--s-warn,#9A6510); --due-soft:var(--s-warn-soft,#FBEFD6);
+  --late:var(--s-alert,#B0261D); --late-soft:var(--s-alert-soft,#FBE3DF); --scrim:var(--s-scrim,rgba(14,22,19,.45));
+  --shadow:var(--s-shadow,0 1px 2px rgba(22,33,29,.06),0 4px 14px rgba(22,33,29,.06)); --s-accent:var(--accent)}
+:root{--r:var(--s-r,14px)}
+[hidden]{display:none!important}
+.btn{min-height:var(--s-tap,44px);border-radius:999px;padding:0 16px}
+.btn.sm{min-height:40px;padding:0 14px;border-radius:999px}
+.x{width:40px;height:40px}
+/* narrow phones: theme switch shows its icon only so the sync line keeps room */
+@media (max-width:480px){.top .s-theme span{display:none}.top .s-theme{width:var(--s-tap,44px);padding:0;justify-content:center}}
+.top .tools{display:flex;align-items:center;gap:8px}
+</style>
 </head>
 <body>
 <header class="top">
   <div class="top-in">
     <div class="brand">
-      <h1>Sutton Bill Book</h1>
+      <span class="s-kicker">Sutton</span>
+      <h1>Bill Book</h1>
       <small id="syncLine"><span class="sync"><span class="dot"></span>Opening…</span></small>
     </div>
-    <button class="btn primary" data-act="add" id="addBtn" aria-label="Add a bill or subscription">+ Add</button>
+    <div class="tools"><span data-sutton-theme></span><button class="btn primary" data-act="add" id="addBtn" aria-label="Add a bill or subscription">+ Add</button></div>
   </div>
 </header>
 

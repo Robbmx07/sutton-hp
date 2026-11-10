@@ -1,0 +1,61 @@
+/* Sutton Design System — shared look for the Sutton household apps.
+   Hosted at https://robbmx07.github.io/sutton-hp/design/sutton.css
+   Each app links this file, then maps its own variable names to the --s-* tokens
+   below and keeps its own special colors (partner colors, stubs, in/out, etc.).
+   Theme is set on <html data-theme="dark|light"> by sutton-theme.js (default: dark). */
+
+/* ---------- Tokens: dark (default) ---------- */
+:root,
+:root[data-theme="dark"]{
+  --s-bg:#121614;        /* page */
+  --s-card:#1B211E;      /* cards, header bar */
+  --s-card-2:#222A26;    /* raised / hover surface */
+  --s-ink:#E7ECE8;       /* main text */
+  --s-muted:#A2ADA5;     /* secondary text */
+  --s-faint:#6C776F;     /* hints, disabled */
+  --s-line:#2B332E;      /* borders, dividers */
+  --s-ok:#6CC58F;   --s-ok-soft:#183124;    /* paid / done */
+  --s-warn:#E7AC4C; --s-warn-soft:#382C14;  /* due soon / behind */
+  --s-alert:#F08A76;--s-alert-soft:#3F2420; /* late / problem */
+  --s-scrim:rgba(0,0,0,.6);
+  --s-shadow:none;       /* dark: cards lift by surface color, not shadow */
+  color-scheme:dark;
+}
+/* ---------- Tokens: light ---------- */
+:root[data-theme="light"]{
+  --s-bg:#F6F7F3; --s-card:#FFFFFF; --s-card-2:#F1F3EE;
+  --s-ink:#1D2420; --s-muted:#5F6B63; --s-faint:#9AA59D; --s-line:#DFE4DC;
+  --s-ok:#2C7A4D;   --s-ok-soft:#DFF0E5;
+  --s-warn:#A46200; --s-warn-soft:#FBF1D9;
+  --s-alert:#B3412F;--s-alert-soft:#F8E3DE;
+  --s-scrim:rgba(20,28,23,.45);
+  --s-shadow:0 1px 2px rgba(29,36,32,.05),0 4px 14px rgba(29,36,32,.05);
+  color-scheme:light;
+}
+
+/* ---------- Shared shape and type ---------- */
+:root{
+  --s-display:"Bricolage Grotesque","Segoe UI",system-ui,-apple-system,sans-serif;
+  --s-body:"Figtree","Segoe UI",system-ui,-apple-system,sans-serif;
+  --s-mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --s-r:14px;            /* card corners */
+  --s-r-sm:10px;         /* inputs, small tiles */
+  --s-tap:44px;          /* minimum tap target */
+}
+
+/* ---------- Header pieces ---------- */
+.s-kicker{display:block;font:700 11px/1.2 var(--s-body);letter-spacing:.08em;text-transform:uppercase;color:var(--s-accent,var(--s-ok));margin:0 0 2px}
+
+/* ---------- Theme switch (rendered by sutton-theme.js into [data-sutton-theme]) ---------- */
+.s-theme{display:inline-flex;align-items:center;gap:6px;min-height:var(--s-tap);padding:0 14px;border-radius:999px;
+  border:1px solid var(--s-line);background:transparent;color:var(--s-muted);font:600 14px var(--s-body);cursor:pointer;
+  -webkit-tap-highlight-color:transparent;white-space:nowrap}
+.s-theme:hover{color:var(--s-ink);border-color:var(--s-faint)}
+.s-theme svg{width:16px;height:16px;flex:none}
+.s-theme.on-dark-header{border-color:rgba(255,255,255,.35);color:#fff}
+
+/* ---------- Print: always black on white ---------- */
+@media print{
+  :root,:root[data-theme]{--s-bg:#fff;--s-card:#fff;--s-card-2:#fff;--s-ink:#000;--s-muted:#333;--s-line:#bbb;--s-shadow:none;color-scheme:light}
+  .s-theme{display:none!important}
+}
