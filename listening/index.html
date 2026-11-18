@@ -642,6 +642,7 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
       return { year: yrs.length ? Math.min.apply(null, yrs) : 0, subjects: tidySubjects(docs[0] && docs[0].subject) };
     }).catch(function () { return { year: 0, subjects: [] }; });
   }
+  function yearOf(it) { return cachedJson('year:' + it.key, 30 * 86400000, function () { return olYear(it.title, it.author).then(function (r) { return r.year || 0; }); }); }
   function gutendexOne(id) {
     return getJson(['https://gutendex.com/books/' + encodeURIComponent(id) + '/'], 15000).then(function (b) {
       return { desc: cleanSummary(b.summaries && b.summaries[0]), life: authorLife(b.authors && b.authors[0]), subjects: tidySubjects(b.subjects) };
@@ -898,7 +899,7 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
     var k = item.key, b = book(k);
     if (b) return b;
     b = { key: k, src: item.src, id: item.id, title: item.title, author: item.author, cover: item.cover || '', desc: (info && info.desc) || item.desc || '',
-      textUrls: item.textUrls || [], curated: !!item.curated, cols: ['Up Next'], addedAt: now(), updatedAt: now(), pos: { ch: 0, t: 0 }, chapters: (info && info.chapters) || [], finished: false };
+      textUrls: item.textUrls || [], curated: !!item.curated, year: item.yr || 0, cols: ['Up Next'], addedAt: now(), updatedAt: now(), pos: { ch: 0, t: 0 }, chapters: (info && info.chapters) || [], finished: false };
     S.lib.books[k] = b; delete S.lib.deleted[k]; saveLib();
     return b;
   }
@@ -1066,7 +1067,7 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
     var inLib = !!book(b.key), pct = inLib ? progressPct(book(b.key)) : 0;
     return '<button class="tile" data-act="' + (act || 'open') + '" data-key="' + esc(b.key) + '">' + coverHtml(b) +
       '<span class="bar" style="' + (pct > 0 && pct < 100 ? '' : 'visibility:hidden') + '"><i style="width:' + pct + '%"></i></span>' +
-      '<span class="t">' + esc(b.title) + '</span><span class="a ell">' + esc(b.author || '') + '</span>' +
+      '<span class="t">' + esc(b.title) + '</span><span class="a ell">' + esc(b.author || '') + ((b.yr || b.year || (inLib && book(b.key).year)) ? ' \u00b7 ' + (b.yr || b.year || book(b.key).year) : '') + '</span>' +
       '<span class="row" style="gap:6px">' + (b.src === 'lv' ? '<span class="badge">Human-read</span>' : '<span class="badge ai">AI voice</span>') + (inLib ? '<span class="badge ok">' + IC.check.replace('<svg', '<svg width="12" height="12"') + ' Saved</span>' : '') + '</span></button>';
   }
   function show(v) {
@@ -1136,7 +1137,8 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
     var box = $('#disc-res'); if (!box) return; var d = S.disc, h = '';
     if (d.err && !d.items.length) h = '<div class="card empty"><h3>Couldn’t reach the ' + (d.src === 'lv' ? 'audiobook' : 'ebook') + ' catalog</h3><p class="small">' + esc(d.err) + '</p><p style="margin-top:12px"><button class="btn" data-act="research">Try again</button></p></div>';
     else if (!d.items.length && !d.loading && d.loaded) h = '<div class="empty"><h3>No matches</h3><p>Try a shorter title or just the author’s last name.</p></div>';
-    else h = '<div class="grid">' + d.items.map(function (b) { return tileHtml(b, 'peek'); }).join('') + '</div>';
+    else h = (d.items.length ? '<p class="tiny faint" style="margin:0 0 10px">' + (d.sorting ? '<span class="spin" style="width:12px;height:12px;vertical-align:-2px"></span> Sorting newest to oldest\u2026' : 'Newest published first') + '</p>' : '') +
+      '<div class="grid">' + d.items.map(function (b) { return tileHtml(b, 'peek'); }).join('') + '</div>';
     if (d.loading) h += '<div class="row" style="justify-content:center;padding:18px;text-align:center"><span class="spin"></span><span class="muted">' + (d.slow ? (d.src === 'pg' ? 'The Gutenberg catalog is slow right now. If it doesn\u2019t answer soon, a backup catalog takes over.' : 'The audiobook catalog is slow right now\u2026') : 'Loading\u2026') + '</span></div>';
     else if (d.more) h += '<div class="row" style="justify-content:center;padding:14px"><button class="btn" data-act="more">Load more</button></div>';
     box.innerHTML = h;
@@ -1159,7 +1161,34 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
       var seen = {}; d.items.forEach(function (x) { seen[x.key] = 1; });
       d.items = d.items.concat(r.items.filter(function (x) { return !seen[x.key]; })); d.more = r.more;
     }, function (e) { if (seq !== searchSeq) return; d.err = (e && e.message) || 'Network problem'; })
-      .then(function () { if (seq !== searchSeq) return; d.loading = false; d.loaded = true; renderDiscoverResults(); });
+      .then(function () { if (seq !== searchSeq) return; d.loading = false; d.loaded = true; renderDiscoverResults(); sortByYear(seq); });
+  }
+  /* Results are shown newest-published first. Neither catalog can sort by publication date,
+     so each book's first-published year is looked up (Open Library, cached 30 days) and the list is reordered. */
+  function sortByYear(seq) {
+    var d = S.disc, todo = d.items.filter(function (x) { return x.yr === undefined; }), i = 0, active = 0, done = false;
+    function finish() {
+      if (done) return; done = true; clearTimeout(cap);
+      if (seq !== searchSeq) return;
+      d.sorting = false; applyYearSort(); renderDiscoverResults();
+    }
+    var cap = setTimeout(finish, 10000);
+    if (!todo.length) { finish(); return; }
+    d.sorting = true; renderDiscoverResults();
+    (function pump() {
+      while (active < 4 && i < todo.length) {
+        var it = todo[i++]; active++;
+        (function (it) {
+          yearOf(it).then(function (y) { it.yr = y || 0; }, function () { it.yr = 0; }).then(function () {
+            active--; if (i >= todo.length && active === 0) finish(); else pump();
+          });
+        })(it);
+      }
+    })();
+  }
+  function applyYearSort() {
+    var d = S.disc;
+    d.items = d.items.map(function (x, n) { return { x: x, n: n }; }).sort(function (a, b) { var ya = a.x.yr || 0, yb = b.x.yr || 0; return ya === yb ? a.n - b.n : yb - ya; }).map(function (o) { return o.x; });
   }
   function renderLibrary() {
     var cols = ['All'].concat(S.lib.collections), c = cols.indexOf(S.libCol) >= 0 ? S.libCol : 'All', bs = booksIn(c);
