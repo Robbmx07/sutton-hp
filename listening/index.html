@@ -1,0 +1,1377 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Listening">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#121614">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Listening Library</title>
+<!-- Sutton Design System: theme switch + shared tokens -->
+<script src="https://robbmx07.github.io/sutton-hp/design/sutton-theme.js"></script>
+<link rel="stylesheet" href="https://robbmx07.github.io/sutton-hp/design/sutton.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Listening Library — Sutton Design System tokens (--s-*) + its own amber accent */
+:root,:root[data-theme="dark"]{--accent:#F0A955;--accent-ink:#1E1407;--accent-soft:#3A2A14;--ai:#9BB8F5;--ai-soft:#1D2840}
+:root[data-theme="light"]{--accent:#A85F12;--accent-ink:#FFFFFF;--accent-soft:#FBEBD5;--ai:#3557A8;--ai-soft:#E2E9F8}
+:root{--s-accent:var(--accent);--nav-h:64px;--mini-h:64px}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--s-bg);color:var(--s-ink)}
+body{font:15px/1.45 var(--s-body);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
+[hidden]{display:none!important}
+img{max-width:100%;display:block}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+h1,h2,h3{font-family:var(--s-display);font-weight:700;letter-spacing:-.01em;margin:0}
+h1{font-size:24px}h2{font-size:19px}h3{font-size:16px}
+p{margin:0}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:8px}
+.muted{color:var(--s-muted)}.faint{color:var(--s-faint)}.small{font-size:13px}.tiny{font-size:12px}
+.row{display:flex;align-items:center;gap:10px}.wrap{flex-wrap:wrap}.grow{flex:1;min-width:0}
+.stack{display:flex;flex-direction:column;gap:12px}
+.ell{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ---------- Buttons ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:var(--s-tap);padding:0 18px;border-radius:999px;border:1px solid var(--s-line);background:var(--s-card);color:var(--s-ink);font-weight:600;font-size:15px;white-space:nowrap;text-decoration:none}
+.btn:hover{border-color:var(--s-faint)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.ghost{background:transparent}
+.btn.sm{min-height:36px;padding:0 14px;font-size:14px}
+.btn.block{width:100%}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.btn svg,.icon-btn svg{width:20px;height:20px;flex:none}
+.icon-btn{display:inline-flex;align-items:center;justify-content:center;width:var(--s-tap);height:var(--s-tap);border-radius:999px;border:0;background:transparent;color:var(--s-ink);padding:0;flex:none}
+.icon-btn:hover{background:var(--s-card-2)}
+.link{background:none;border:0;padding:0;color:var(--accent);font-weight:600;text-decoration:underline;text-underline-offset:3px}
+
+/* ---------- Header ---------- */
+.top{position:sticky;top:0;z-index:20;background:var(--s-bg);padding:calc(env(safe-area-inset-top,0px) + 10px) 16px 10px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--s-line)}
+.top h1{font-size:21px}
+.avatar{width:38px;height:38px;border-radius:999px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;overflow:hidden;border:0;padding:0;flex:none}
+.avatar img{width:100%;height:100%;object-fit:cover}
+.sync-dot{width:8px;height:8px;border-radius:9px;background:var(--s-faint);display:inline-block}
+.sync-dot.ok{background:var(--s-ok)}.sync-dot.busy{background:var(--s-warn)}.sync-dot.bad{background:var(--s-alert)}
+
+/* ---------- Layout ---------- */
+main{padding:16px 16px calc(var(--nav-h) + var(--mini-h) + 28px + env(safe-area-inset-bottom,0px));max-width:980px;margin:0 auto}
+.view{display:flex;flex-direction:column;gap:22px}
+.sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:10px}
+.card{background:var(--s-card);border:1px solid var(--s-line);border-radius:var(--s-r);padding:16px;box-shadow:var(--s-shadow)}
+.banner{display:flex;gap:12px;align-items:center;background:var(--s-warn-soft);color:var(--s-ink);border-radius:var(--s-r);padding:12px 14px}
+.banner.info{background:var(--accent-soft)}
+.empty{text-align:center;padding:32px 16px;color:var(--s-muted)}
+.empty h3{color:var(--s-ink);margin-bottom:6px}
+
+/* ---------- Continue card ---------- */
+.hero{display:grid;grid-template-columns:96px 1fr;gap:14px;align-items:center}
+.hero .cover{width:96px;height:96px}
+.bar{height:6px;border-radius:6px;background:var(--s-card-2);overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--accent);border-radius:6px}
+
+/* ---------- Covers & grids ---------- */
+.cover{position:relative;border-radius:10px;overflow:hidden;background:linear-gradient(145deg,var(--accent-soft),var(--s-card-2));aspect-ratio:1/1;flex:none}
+.cover img{width:100%;height:100%;object-fit:cover}
+.cover .ph{position:absolute;inset:0;display:flex;align-items:flex-end;padding:8px;font:700 12px/1.15 var(--s-display);color:var(--s-ink);opacity:.9}
+.cover.pg{background:linear-gradient(145deg,var(--ai-soft),var(--s-card-2))}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:14px}
+.tile{background:none;border:0;padding:0;text-align:left;display:flex;flex-direction:column;gap:7px;min-width:0}
+.tile .t{font-weight:600;font-size:14px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tile .a{font-size:12.5px;color:var(--s-muted)}
+.shelf{display:flex;gap:12px;overflow-x:auto;padding-bottom:4px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
+.shelf .tile{width:128px;scroll-snap-align:start;flex:none}
+.badge{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:2px 8px;font-size:11.5px;font-weight:600;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
+.badge.ai{background:var(--ai-soft);color:var(--ai)}
+.badge.ok{background:var(--s-ok-soft);color:var(--s-ok)}
+.cover .badge{position:absolute;top:6px;left:6px}
+
+/* ---------- Chips / segmented ---------- */
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch}
+.chip{flex:none;min-height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--s-line);background:transparent;color:var(--s-muted);font-weight:600;font-size:13.5px;white-space:nowrap}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.seg{display:flex;background:var(--s-card);border:1px solid var(--s-line);border-radius:999px;padding:3px;gap:3px}
+.seg button{flex:1;min-height:38px;border:0;border-radius:999px;background:transparent;font-weight:600;font-size:14px;color:var(--s-muted)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+
+/* ---------- Inputs ---------- */
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:13px;font-weight:600;color:var(--s-muted)}
+.input,select.input{min-height:var(--s-tap);width:100%;border-radius:var(--s-r-sm);border:1px solid var(--s-line);background:var(--s-card);padding:0 14px;color:var(--s-ink)}
+.search{position:relative}
+.search .input{padding-left:42px;border-radius:999px}
+.search svg{position:absolute;left:14px;top:12px;width:20px;height:20px;color:var(--s-faint)}
+
+/* ---------- List rows ---------- */
+.list{display:flex;flex-direction:column}
+.li{display:flex;align-items:center;gap:12px;padding:10px 4px;border-bottom:1px solid var(--s-line);background:none;border-left:0;border-right:0;border-top:0;text-align:left;width:100%;min-height:52px}
+.li:last-child{border-bottom:0}
+.li .num{width:28px;text-align:center;color:var(--s-faint);font-size:13px;flex:none}
+.li.now .num,.li.now .grow b{color:var(--accent)}
+.stat{font-size:12px;color:var(--s-faint);white-space:nowrap}
+.stat.ready{color:var(--s-ok)}.stat.work{color:var(--s-warn)}
+
+/* ---------- Mini player + nav ---------- */
+.dock{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--s-card);border-top:1px solid var(--s-line);padding-bottom:env(safe-area-inset-bottom,0px)}
+.mini{display:flex;align-items:center;gap:10px;padding:8px 10px 8px 12px;border-bottom:1px solid var(--s-line);height:var(--mini-h);background:none;border-left:0;border-right:0;border-top:0;width:100%;text-align:left}
+.mini .cover{width:46px;height:46px}
+.mini .prog{position:absolute;left:0;right:0;top:-1px;height:2px;background:transparent}
+.mini .prog i{display:block;height:100%;background:var(--accent)}
+nav.tabs{display:flex;height:var(--nav-h);max-width:600px;margin:0 auto}
+nav.tabs button{flex:1;border:0;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--s-faint);font-size:11.5px;font-weight:600}
+nav.tabs button svg{width:24px;height:24px}
+nav.tabs button[aria-current="page"]{color:var(--accent)}
+
+/* ---------- Sheets ---------- */
+.scrim{position:fixed;inset:0;z-index:40;background:var(--s-scrim);opacity:0;pointer-events:none;transition:opacity .2s}
+.scrim.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:50;max-height:92vh;max-height:92dvh;overflow-y:auto;background:var(--s-bg);border-radius:20px 20px 0 0;border-top:1px solid var(--s-line);transform:translateY(105%);transition:transform .25s ease;padding:8px 18px calc(24px + env(safe-area-inset-bottom,0px));max-width:760px;margin:0 auto;-webkit-overflow-scrolling:touch}
+.sheet.on{transform:none}
+.grab{width:40px;height:5px;border-radius:5px;background:var(--s-line);margin:4px auto 10px}
+.sheet-close{position:absolute;right:10px;top:10px}
+.detail-top{display:grid;grid-template-columns:120px 1fr;gap:16px;align-items:end;margin:6px 0 16px}
+.desc{color:var(--s-muted);font-size:14px;max-height:9.5em;overflow:hidden;position:relative}
+.desc.open{max-height:none}
+.actions{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0}
+
+/* ---------- Full player ---------- */
+.fp{display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;padding-top:6px}
+.fp .cover{width:min(68vw,300px);height:auto}
+.fp h2{font-size:20px}
+.scrub{width:100%;accent-color:var(--accent);height:28px}
+.times{display:flex;justify-content:space-between;width:100%;font-size:12.5px;color:var(--s-muted);margin-top:-6px}
+.ctrls{display:flex;align-items:center;justify-content:center;gap:14px}
+.ctrls .icon-btn svg{width:28px;height:28px}
+.play-big{width:72px;height:72px;border-radius:999px;border:0;background:var(--accent);color:var(--accent-ink);display:flex;align-items:center;justify-content:center}
+.play-big svg{width:34px;height:34px}
+.fp-opts{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.note{font-size:13px;color:var(--s-muted);background:var(--s-card);border:1px solid var(--s-line);border-radius:var(--s-r-sm);padding:10px 12px;text-align:left;width:100%}
+
+/* ---------- Gate ---------- */
+.gate{position:fixed;inset:0;z-index:90;background:var(--s-bg);display:flex;align-items:center;justify-content:center;padding:24px}
+.gate-card{width:100%;max-width:380px;display:flex;flex-direction:column;gap:14px;text-align:center}
+.gate .logo{width:84px;height:84px;margin:0 auto 4px;border-radius:22px}
+.gate h1{font-size:28px}
+
+/* ---------- Toast ---------- */
+.toast{position:fixed;left:50%;bottom:calc(var(--nav-h) + var(--mini-h) + 18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);z-index:95;background:var(--s-ink);color:var(--s-bg);padding:10px 16px;border-radius:999px;font-weight:600;font-size:14px;opacity:0;transition:all .2s;pointer-events:none;max-width:90vw;text-align:center}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+.spin{width:18px;height:18px;border-radius:99px;border:2px solid var(--s-line);border-top-color:var(--accent);animation:sp 0.8s linear infinite;display:inline-block;flex:none}
+@keyframes sp{to{transform:rotate(360deg)}}
+.set-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--s-line)}
+.set-row:last-child{border-bottom:0}
+@media (min-width:760px){
+  .grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}
+  .shelf .tile{width:150px}
+}
+</style>
+</head>
+<body>
+
+<!-- Sign-in gate -->
+<div class="gate" id="gate" hidden>
+  <div class="gate-card">
+    <img class="logo" src="icon-192.png" alt="">
+    <span class="s-kicker">Sutton</span>
+    <h1>Listening Library</h1>
+    <p class="muted">Free audiobooks and AI‑read classics. Your own library, saved to your own Google Drive.</p>
+    <button class="btn primary block" id="g-signin">Sign in with Google</button>
+    <p class="small faint" id="g-setup-note" hidden>Google sign‑in isn't switched on yet. Use this device only for now, or ask Robert to finish setup.</p>
+    <button class="link" id="g-local">Use on this device only (no sync)</button>
+  </div>
+</div>
+
+<header class="top" id="top">
+  <div class="grow">
+    <span class="s-kicker">Sutton</span>
+    <h1 id="view-title">Listen</h1>
+  </div>
+  <span class="sync-dot" id="sync-dot" title="Sync status"></span>
+  <button class="avatar" id="avatar" aria-label="Account and settings">?</button>
+</header>
+
+<main id="main">
+  <section class="view" id="v-home"></section>
+  <section class="view" id="v-discover" hidden></section>
+  <section class="view" id="v-library" hidden></section>
+  <section class="view" id="v-settings" hidden></section>
+</main>
+
+<div class="dock">
+  <button class="mini" id="mini" hidden style="position:relative">
+    <span class="prog"><i id="mini-prog" style="width:0"></i></span>
+    <span class="cover" id="mini-cover"></span>
+    <span class="grow" style="min-width:0">
+      <b class="ell" style="display:block" id="mini-title"></b>
+      <span class="ell small muted" style="display:block" id="mini-sub"></span>
+    </span>
+    <span class="icon-btn" id="mini-play" role="button" aria-label="Play or pause"></span>
+  </button>
+  <nav class="tabs" id="tabs">
+    <button data-v="home" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 14v-2a9 9 0 0 1 18 0v2"/><path d="M21 15a2 2 0 0 1-2 2h-1v-6h1a2 2 0 0 1 2 2zM3 15a2 2 0 0 0 2 2h1v-6H5a2 2 0 0 0-2 2z"/></svg>Listen</button>
+    <button data-v="discover"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Discover</button>
+    <button data-v="library"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5M9 19V5M14 19l-1-14M18 19 21 6"/><path d="M3 19h18"/></svg>Library</button>
+    <button data-v="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Settings</button>
+  </nav>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true"><div class="grab"></div><button class="icon-btn sheet-close" id="sheet-close" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button><div id="sheet-body"></div></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<audio id="au" preload="auto" playsinline></audio>
+<input type="file" id="file-in" accept=".txt,text/plain" hidden>
+
+<script>
+/* Listening Library — Sutton household app.
+   Free human-read audiobooks (LibriVox via Internet Archive) + free ebooks (Project Gutenberg)
+   turned into audio with Piper neural voices in the browser. Each person signs in with Google;
+   their library and converted audio live in their own Google Drive (drive.file scope only).
+   Written for older Safari: no optional chaining, no ?? , no class fields. */
+(function () {
+  'use strict';
+
+  /* ================= Config ================= */
+  var GOOGLE_CLIENT_ID = '717764813341-p30d7p5qqga2osa6vgspoiv45msv4f7s.apps.googleusercontent.com';
+  var SCOPE = 'https://www.googleapis.com/auth/drive.file';
+  var PIPER_URLS = ['https://cdn.jsdelivr.net/npm/@mintplex-labs/piper-tts-web@1.0.4/+esm'];
+  var LAME_URLS = ['https://cdn.jsdelivr.net/npm/@breezystack/lamejs@1.2.7/+esm', 'https://esm.sh/@breezystack/lamejs@1.2.7'];
+  var DRIVE = 'https://www.googleapis.com/drive/v3';
+  var UPLOAD = 'https://www.googleapis.com/upload/drive/v3';
+  var FOLDER_NAME = 'Listening Library';
+  var LIB_FILE = 'library.json';
+  var MP3_KBPS = 32;
+  var VOICES = [
+    { id: 'en_US-hfc_female-medium', name: 'Hannah (US, warm)' },
+    { id: 'en_US-lessac-medium', name: 'Linda (US, clear)' },
+    { id: 'en_US-amy-medium', name: 'Amy (US)' },
+    { id: 'en_US-hfc_male-medium', name: 'Henry (US)' },
+    { id: 'en_US-ryan-medium', name: 'Ryan (US, deep)' },
+    { id: 'en_US-joe-medium', name: 'Joe (US)' },
+    { id: 'en_GB-alan-medium', name: 'Alan (British)' },
+    { id: 'en_GB-jenny_dioco-medium', name: 'Jenny (British)' },
+    { id: 'device', name: 'Device voice (instant, robotic, stops when screen locks)' }
+  ];
+  var TOPICS_LV = ['Adventure', 'Mystery', 'Science Fiction', 'Horror', 'History', 'Biography', 'Philosophy', 'Science', 'Poetry', 'Humor', 'Self-Help', 'Fantasy', 'Romance', 'War'];
+  var TOPICS_PG = ['Adventure', 'Detective', 'Science fiction', 'Horror', 'History', 'Biography', 'Philosophy', 'Science', 'Economics', 'Psychology', 'Humor', 'Fantasy', 'Short stories', 'Self-help'];
+  var DEFAULT_COLS = ['Listening', 'Up Next', 'Learning', 'Entertainment', 'Finished'];
+  var SPEEDS = [0.8, 1, 1.1, 1.25, 1.5, 1.75, 2];
+  var SLEEPS = [0, 15, 30, 45, 60, -1]; // minutes; -1 = end of chapter
+
+  function clientId() {
+    var o = null; try { o = localStorage.getItem('ll-client-id'); } catch (e) {}
+    var id = o || GOOGLE_CLIENT_ID;
+    return /apps\.googleusercontent\.com$/.test(id) ? id : '';
+  }
+
+  /* ================= Small helpers ================= */
+  function $(s, r) { return (r || document).querySelector(s); }
+  function $$(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function stripHtml(s) { var d = document.createElement('div'); d.innerHTML = String(s || '').replace(/<br\s*\/?>/gi, '\n'); return (d.textContent || '').replace(/\n{3,}/g, '\n\n').trim(); }
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function fmt(t) { t = Math.max(0, Math.floor(t || 0)); var h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), s = t % 60; return h ? h + ':' + pad(m) + ':' + pad(s) : m + ':' + pad(s); }
+  function fmtDur(t) { if (!t) return ''; var h = Math.floor(t / 3600), m = Math.round(t % 3600 / 60); return h ? h + ' hr ' + m + ' min' : m + ' min'; }
+  function now() { return Date.now(); }
+  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  function debounce(fn, ms) { var t; return function () { clearTimeout(t); t = setTimeout(fn, ms); }; }
+  function flipName(a) { a = String(a || '').trim(); var m = /^([^,]+),\s*([^,]+)$/.exec(a); return m ? m[2] + ' ' + m[1] : a; }
+  function first(v) { return Array.isArray(v) ? v[0] : v; }
+  function safeName(s) { return String(s || '').replace(/[\\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80); }
+  function assign(t) { for (var i = 1; i < arguments.length; i++) { var s = arguments[i]; if (s) for (var k in s) if (Object.prototype.hasOwnProperty.call(s, k)) t[k] = s[k]; } return t; }
+  function lsGet(k, d) { try { var v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  var toastT;
+  function toast(msg, ms) { var t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(function () { t.classList.remove('on'); }, ms || 2600); }
+
+  var IC = {
+    play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>',
+    pause: '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4.2" height="14" rx="1.2"/><rect x="13.8" y="5" width="4.2" height="14" rx="1.2"/></svg>',
+    back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><text x="12" y="15.5" font-size="7.5" text-anchor="middle" fill="currentColor" stroke="none" font-family="sans-serif" font-weight="700">15</text></svg>',
+    fwd: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/><text x="12" y="15.5" font-size="7.5" text-anchor="middle" fill="currentColor" stroke="none" font-family="sans-serif" font-weight="700">30</text></svg>',
+    prev: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h2v14H6zM20 6.2v11.6a.8.8 0 0 1-1.2.7L10 12.7a.8.8 0 0 1 0-1.4l8.8-5.8a.8.8 0 0 1 1.2.7z"/></svg>',
+    next: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 5h2v14h-2zM4 6.2v11.6a.8.8 0 0 0 1.2.7l8.8-5.8a.8.8 0 0 0 0-1.4L5.2 5.5A.8.8 0 0 0 4 6.2z"/></svg>',
+    plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+    check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
+    down: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>',
+    wave: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 10v4M8 6v12M12 3v18M16 7v10M20 10v4"/></svg>',
+    search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+    moon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>',
+    list: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>',
+    trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>',
+    file: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6v18h12V7z"/><path d="M14 3v4h4"/></svg>'
+  };
+
+  /* ================= IndexedDB (ArrayBuffers, not Blobs, for old Safari) ================= */
+  var DB = (function () {
+    var p;
+    function open() {
+      if (!p) p = new Promise(function (res, rej) {
+        var r = indexedDB.open('listening-library', 1);
+        r.onupgradeneeded = function () { var d = r.result; d.createObjectStore('kv'); d.createObjectStore('blobs'); };
+        r.onsuccess = function () { res(r.result); };
+        r.onerror = function () { rej(r.error); };
+      });
+      return p;
+    }
+    function run(store, mode, fn) {
+      return open().then(function (d) {
+        return new Promise(function (res, rej) {
+          var t = d.transaction(store, mode), req = fn(t.objectStore(store));
+          t.oncomplete = function () { res(req ? req.result : undefined); };
+          t.onerror = function () { rej(t.error); }; t.onabort = function () { rej(t.error); };
+        });
+      });
+    }
+    return {
+      get: function (s, k) { return run(s, 'readonly', function (o) { return o.get(k); }); },
+      put: function (s, k, v) { return run(s, 'readwrite', function (o) { return o.put(v, k); }); },
+      del: function (s, k) { return run(s, 'readwrite', function (o) { return o.delete(k); }); },
+      keys: function (s) { return run(s, 'readonly', function (o) { return o.getAllKeys(); }); }
+    };
+  })();
+  function putBlob(key, blob) {
+    return new Promise(function (res, rej) { var fr = new FileReader(); fr.onload = function () { res(fr.result); }; fr.onerror = rej; fr.readAsArrayBuffer(blob); })
+      .then(function (buf) { return DB.put('blobs', key, { type: blob.type, buf: buf, size: buf.byteLength }); });
+  }
+  function getBlob(key) { return DB.get('blobs', key).then(function (v) { return v ? new Blob([v.buf], { type: v.type }) : null; }); }
+
+  /* ================= State ================= */
+  var S = {
+    acct: null, aid: 'local', lib: null, view: 'home',
+    token: null, tokenExp: 0, needAuth: false, sync: 'off', syncAt: 0, syncErr: '',
+    local: {}, // audio keys present on this device
+    jobs: [], jobBusy: false, prog: {}, // conversion
+    disc: { src: 'lv', q: '', topic: '', items: [], page: 1, loading: false, err: '', more: false, loaded: false },
+    libCol: 'All', sheet: null, detail: null,
+    play: { key: null, ch: 0, waiting: false, mode: 'audio' }, sleepIdx: 0, sleepUntil: 0, sleepEnd: false
+  };
+  function newLib() {
+    return { books: {}, deleted: {}, collections: DEFAULT_COLS.slice(), collectionsAt: 0, current: null, currentAt: 0,
+      settings: { speed: 1, voice: VOICES[0].id, english: true, relay: '' }, settingsAt: 0, updatedAt: 0 };
+  }
+  function libKey() { return 'lib:' + S.aid; }
+  function audioKey(key, ch) { return 'audio:' + S.aid + ':' + key + ':' + ch; }
+  function textKey(key) { return 'text:' + S.aid + ':' + key; }
+  function book(key) { return S.lib.books[key]; }
+  function set() { return S.lib.settings; }
+
+  /* ================= Library merge + save ================= */
+  function mergeLib(a, b) {
+    if (!a) return b; if (!b) return a;
+    var m = newLib(), k;
+    var del = assign({}, a.deleted || {});
+    for (k in (b.deleted || {})) del[k] = Math.max(del[k] || 0, b.deleted[k]);
+    var keys = {}; for (k in a.books) keys[k] = 1; for (k in b.books) keys[k] = 1;
+    for (k in keys) {
+      var x = a.books[k], y = b.books[k], w = !x ? y : !y ? x : ((y.updatedAt || 0) > (x.updatedAt || 0) ? y : x), o = w === x ? y : x;
+      if (del[k] && del[k] >= (w.updatedAt || 0)) continue;
+      w = JSON.parse(JSON.stringify(w));
+      if (o && o.chapters && w.chapters) { // Drive file ids only ever accumulate
+        for (var i = 0; i < w.chapters.length; i++) if (!w.chapters[i].driveId && o.chapters[i] && o.chapters[i].driveId) w.chapters[i].driveId = o.chapters[i].driveId;
+        if (!w.textDriveId && o.textDriveId) w.textDriveId = o.textDriveId;
+      }
+      m.books[k] = w;
+    }
+    for (k in del) if (!m.books[k]) m.deleted[k] = del[k];
+    var nc = (b.collectionsAt || 0) > (a.collectionsAt || 0) ? b : a; m.collections = nc.collections.slice(); m.collectionsAt = nc.collectionsAt || 0;
+    var ns = (b.settingsAt || 0) > (a.settingsAt || 0) ? b : a; m.settings = assign(newLib().settings, ns.settings); m.settingsAt = ns.settingsAt || 0;
+    var nu = (b.currentAt || 0) > (a.currentAt || 0) ? b : a; m.current = nu.current; m.currentAt = nu.currentAt || 0;
+    m.updatedAt = Math.max(a.updatedAt || 0, b.updatedAt || 0);
+    return m;
+  }
+  var pushSoon = debounce(function () { syncNow(); }, 4000);
+  var pushLater = debounce(function () { syncNow(); }, 30000);
+  function saveLib(opts) {
+    S.lib.updatedAt = now();
+    DB.put('kv', libKey(), JSON.stringify(S.lib));
+    if (S.acct && S.acct.mode === 'google') { if (opts && opts.progress) pushLater(); else pushSoon(); }
+  }
+  function touch(b) { b.updatedAt = now(); }
+
+  /* ================= Google sign-in (GIS token client) ================= */
+  var scripts = {};
+  function loadScript(src) {
+    if (!scripts[src]) scripts[src] = new Promise(function (res, rej) { var s = document.createElement('script'); s.src = src; s.async = true; s.onload = res; s.onerror = function () { delete scripts[src]; rej(new Error('Could not load ' + src)); }; document.head.appendChild(s); });
+    return scripts[src];
+  }
+  function requestToken(prompt, hint) {
+    return loadScript('https://accounts.google.com/gsi/client').then(function () {
+      return new Promise(function (res, rej) {
+        var opts = { client_id: clientId(), scope: SCOPE,
+          callback: function (r) { if (r && r.access_token) { S.token = r.access_token; S.tokenExp = now() + ((r.expires_in || 3600) - 120) * 1000; lsSet('ll-tok:' + (hint || 'new'), { t: S.token, e: S.tokenExp }); S.needAuth = false; res(S.token); } else rej(new Error((r && r.error) || 'Sign-in failed')); },
+          error_callback: function (e) { rej(new Error((e && e.type) || 'Sign-in closed')); } };
+        if (hint) opts.login_hint = hint;
+        var tc = window.google.accounts.oauth2.initTokenClient(opts);
+        tc.requestAccessToken({ prompt: prompt });
+      });
+    });
+  }
+  function getToken() {
+    if (S.token && now() < S.tokenExp) return Promise.resolve(S.token);
+    var e = new Error('Reconnect Google Drive'); e.needAuth = true; S.needAuth = true; renderAuthBits(); return Promise.reject(e);
+  }
+
+  /* ================= Google Drive (drive.file: only files this app made) ================= */
+  function gapi(method, url, body, headers, raw) {
+    return getToken().then(function (tok) {
+      var h = assign({}, headers || {}); h.Authorization = 'Bearer ' + tok;
+      return fetch(url, { method: method, headers: h, body: body }).then(function (r) {
+        if (r.status === 401) { S.token = null; S.tokenExp = 0; var e = new Error('Reconnect Google Drive'); e.needAuth = true; S.needAuth = true; renderAuthBits(); throw e; }
+        if (!r.ok) return r.text().then(function (t) { throw new Error('Drive ' + r.status + ': ' + t.slice(0, 160)); });
+        if (raw) return r;
+        return r.status === 204 ? null : r.json();
+      });
+    });
+  }
+  function q(s) { return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
+  function folderId() {
+    var k = 'll-folder:' + S.aid, c = lsGet(k, null);
+    if (c) return Promise.resolve(c);
+    return gapi('GET', DRIVE + '/files?spaces=drive&fields=files(id)&q=' + encodeURIComponent("name='" + FOLDER_NAME + "' and mimeType='application/vnd.google-apps.folder' and trashed=false"))
+      .then(function (j) {
+        if (j.files && j.files.length) return j.files[0].id;
+        return gapi('POST', DRIVE + '/files?fields=id', JSON.stringify({ name: FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' }), { 'Content-Type': 'application/json' }).then(function (f) { return f.id; });
+      }).then(function (id) { lsSet(k, id); return id; });
+  }
+  function findFile(name) {
+    return folderId().then(function (fid) {
+      return gapi('GET', DRIVE + '/files?fields=files(id,modifiedTime)&q=' + encodeURIComponent("name='" + q(name) + "' and '" + fid + "' in parents and trashed=false"));
+    }).then(function (j) { return j.files && j.files[0] ? j.files[0].id : null; });
+  }
+  function uploadNew(name, blob, mime) {
+    return folderId().then(function (fid) {
+      var meta = JSON.stringify({ name: name, parents: [fid], mimeType: mime });
+      return gapi('POST', UPLOAD + '/files?uploadType=resumable&fields=id', meta, { 'Content-Type': 'application/json; charset=UTF-8', 'X-Upload-Content-Type': mime }, true)
+        .then(function (r) {
+          var loc = r.headers.get('Location') || r.headers.get('location');
+          if (!loc) return uploadMultipart(meta, blob, mime);
+          return fetch(loc, { method: 'PUT', headers: { 'Content-Type': mime, Authorization: 'Bearer ' + S.token }, body: blob }).then(function (r2) { if (!r2.ok) throw new Error('Upload failed ' + r2.status); return r2.json(); }).then(function (j) { return j.id; });
+        });
+    });
+  }
+  function uploadMultipart(meta, blob, mime) {
+    var b = 'll' + Math.random().toString(36).slice(2);
+    var body = new Blob(['--' + b + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + meta + '\r\n--' + b + '\r\nContent-Type: ' + mime + '\r\n\r\n', blob, '\r\n--' + b + '--'], { type: 'multipart/related; boundary=' + b });
+    return gapi('POST', UPLOAD + '/files?uploadType=multipart&fields=id', body, { 'Content-Type': 'multipart/related; boundary=' + b }).then(function (j) { return j.id; });
+  }
+  function updateMedia(id, blob, mime) { return gapi('PATCH', UPLOAD + '/files/' + id + '?uploadType=media&fields=id', blob, { 'Content-Type': mime }); }
+  function download(id) { return gapi('GET', DRIVE + '/files/' + id + '?alt=media', null, null, true).then(function (r) { return r.blob(); }); }
+
+  /* ================= Sync ================= */
+  var syncing = null;
+  function setSync(st, err) { S.sync = st; S.syncErr = err || ''; if (st === 'ok') S.syncAt = now(); renderAuthBits(); }
+  function syncNow() {
+    if (!S.acct || S.acct.mode !== 'google') return Promise.resolve();
+    if (syncing) return syncing.then(function () { return syncNow(); });
+    setSync('busy');
+    var fileId = lsGet('ll-libfile:' + S.aid, null);
+    syncing = (fileId ? Promise.resolve(fileId) : findFile(LIB_FILE)).then(function (id) {
+      if (!id) return null;
+      return download(id).then(function (b) { return b.text(); }).then(function (t) { return { id: id, lib: JSON.parse(t) }; })
+        .catch(function (e) { if (/404/.test(e.message)) { lsSet('ll-libfile:' + S.aid, null); return null; } throw e; });
+    }).then(function (remote) {
+      var before = JSON.stringify(S.lib);
+      if (remote) S.lib = mergeLib(S.lib, remote.lib);
+      var blob = new Blob([JSON.stringify(S.lib)], { type: 'application/json' });
+      DB.put('kv', libKey(), JSON.stringify(S.lib));
+      var p = remote ? updateMedia(remote.id, blob, 'application/json').then(function () { return remote.id; }) : uploadNew(LIB_FILE, blob, 'application/json');
+      return p.then(function (id) { lsSet('ll-libfile:' + S.aid, id); if (JSON.stringify(S.lib) !== before) renderSoft(); });
+    }).then(function () { setSync('ok'); }, function (e) { setSync(e.needAuth ? 'auth' : 'bad', e.message); })
+      .then(function () { syncing = null; });
+    return syncing;
+  }
+
+  /* ================= Sources ================= */
+  function getJson(urls) {
+    var i = 0, lastErr;
+    function next() {
+      if (i >= urls.length) return Promise.reject(lastErr || new Error('Not reachable'));
+      var u = urls[i++];
+      return fetch(u).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }).catch(function (e) { lastErr = e; return next(); });
+    }
+    return next();
+  }
+  function iaSearch(qs, topic, page) {
+    var parts = ['collection:(librivoxaudio)'];
+    if (set().english) parts.push('language:(English OR eng)');
+    var t = String(qs || '').replace(/[():"\[\]{}^~*?\\\/]/g, ' ').trim();
+    if (t) parts.push('(title:(' + t + ') OR creator:(' + t + '))');
+    if (topic) parts.push('(subject:(' + topic + ') OR description:(' + topic + '))');
+    var p = 'q=' + encodeURIComponent(parts.join(' AND ')) + '&fl%5B%5D=identifier&fl%5B%5D=title&fl%5B%5D=creator&fl%5B%5D=description&fl%5B%5D=downloads&sort%5B%5D=downloads%20desc&rows=30&page=' + page + '&output=json';
+    return getJson(['https://archive.org/advancedsearch.php?' + p, 'https://cors.archive.org/advancedsearch.php?' + p]).then(function (j) {
+      var r = j.response || { docs: [], numFound: 0 };
+      return { more: page * 30 < r.numFound, items: r.docs.map(function (d) {
+        return { src: 'lv', id: d.identifier, key: 'lv:' + d.identifier, title: cleanTitle(first(d.title)), author: flipName(first(d.creator)), cover: 'https://archive.org/services/img/' + encodeURIComponent(d.identifier), desc: stripHtml(first(d.description)).slice(0, 1200) };
+      }) };
+    });
+  }
+  function cleanTitle(t) { return String(t || 'Untitled').replace(/\s*\(\s*version\s*\d+\s*\)\s*$/i, '').replace(/\s*-\s*librivox.*$/i, '').trim(); }
+  function parseLen(l) { if (!l) return 0; if (/:/.test(l)) { var p = String(l).split(':').map(Number), s = 0; for (var i = 0; i < p.length; i++) s = s * 60 + (p[i] || 0); return s; } return parseFloat(l) || 0; }
+  function iaItem(id) {
+    return getJson(['https://archive.org/metadata/' + encodeURIComponent(id), 'https://cors.archive.org/metadata/' + encodeURIComponent(id)]).then(function (m) {
+      var files = (m.files || []).filter(function (f) { return /\.mp3$/i.test(f.name); });
+      var use = files.filter(function (f) { return /_64kb\.mp3$/i.test(f.name); });
+      if (!use.length) use = files.filter(function (f) { return /64Kbps/i.test(f.format || ''); });
+      if (!use.length) use = files.filter(function (f) { return f.source === 'original'; });
+      if (!use.length) use = files;
+      use.sort(function (a, b) { var ta = parseInt(a.track, 10), tb = parseInt(b.track, 10); if (ta && tb && ta !== tb) return ta - tb; return a.name < b.name ? -1 : 1; });
+      var md = m.metadata || {};
+      return {
+        title: cleanTitle(first(md.title)), author: flipName(first(md.creator)), desc: stripHtml(first(md.description)),
+        chapters: use.map(function (f, i) {
+          return { title: f.title || ('Part ' + (i + 1)), url: 'https://archive.org/download/' + encodeURIComponent(id) + '/' + f.name.split('/').map(encodeURIComponent).join('/'), dur: parseLen(f.length) };
+        })
+      };
+    });
+  }
+  function pgSearch(qs, topic, page) {
+    var u = 'https://gutendex.com/books/?page=' + page + (set().english ? '&languages=en' : '') + (qs ? '&search=' + encodeURIComponent(qs) : '') + (topic ? '&topic=' + encodeURIComponent(topic) : '');
+    return getJson([u]).then(function (j) {
+      return { more: !!j.next, items: (j.results || []).filter(function (b) { return !b.copyright; }).map(function (b) {
+        var f = b.formats || {}, urls = [];
+        for (var k in f) if (/^text\/plain/.test(k) && !/\.zip$/i.test(f[k])) urls.push(f[k]);
+        return { src: 'pg', id: String(b.id), key: 'pg:' + b.id, title: b.title, author: flipName((b.authors && b.authors[0] && b.authors[0].name) || ''), cover: f['image/jpeg'] || '', desc: (b.summaries && b.summaries[0]) || (b.subjects || []).slice(0, 6).join(' · '), textUrls: urls };
+      }) };
+    });
+  }
+  function textUrlsFor(b) {
+    var urls = (b.textUrls || []).slice();
+    urls.push('https://www.gutenberg.org/cache/epub/' + b.id + '/pg' + b.id + '.txt');
+    urls.push('https://www.gutenberg.org/ebooks/' + b.id + '.txt.utf-8');
+    var seen = {}, out = [], relay = (set().relay || '').trim();
+    urls.forEach(function (u) { if (seen[u]) return; seen[u] = 1; if (relay) out.push(relay + encodeURIComponent(u)); out.push(u); });
+    return out;
+  }
+  function fetchText(urls) {
+    var i = 0;
+    function next() {
+      if (i >= urls.length) { var e = new Error('blocked'); e.blocked = true; return Promise.reject(e); }
+      return fetch(urls[i++]).then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); }).then(function (t) { if (t.length < 2000) throw new Error('short'); return t; }).catch(next);
+    }
+    return next();
+  }
+
+  /* ================= Book text → chapters ================= */
+  function parseBook(raw) {
+    var t = String(raw).replace(/^﻿/, '').replace(/\r\n?/g, '\n');
+    var s = t.search(/\*\*\*\s*START OF (THE|THIS) PROJECT GUTENBERG[^\n]*/i);
+    if (s >= 0) t = t.slice(t.indexOf('\n', s) + 1);
+    var e = t.search(/\*\*\*\s*END OF (THE|THIS) PROJECT GUTENBERG/i); if (e >= 0) t = t.slice(0, e);
+    e = t.search(/\n\s*End of (the )?Project Gutenberg/i); if (e >= 0) t = t.slice(0, e);
+    var lines = t.split('\n');
+    var re = /^\s*(chapter|book|part|letter|stave|canto|volume|section|act)\s+([ivxlcdm]+|\d+|the\s+[a-z]+|[a-z]+)\b[^\n]{0,70}$/i;
+    var heads = [];
+    for (var i = 0; i < lines.length; i++) { var L = lines[i].trim(); if (L && L.length < 90 && re.test(L) && (i === 0 || !lines[i - 1].trim())) heads.push(i); }
+    if (heads.length < 2) {
+      heads = [];
+      for (i = 0; i < lines.length; i++) { L = lines[i].trim(); if (/^[IVXLC]{1,7}\.?$/.test(L) && (i === 0 || !lines[i - 1].trim()) && (i + 1 >= lines.length || !lines[i + 1].trim())) heads.push(i); }
+    }
+    function paras(arr) {
+      return arr.join('\n').split(/\n\s*\n/).map(function (p) {
+        return p.replace(/\s*\n\s*/g, ' ').replace(/\[(Illustration|Footnote)[^\]]*\]/gi, '').replace(/_([^_]+)_/g, '$1').replace(/\s{2,}/g, ' ').trim();
+      }).filter(function (p) { return p && /[a-z]/i.test(p); });
+    }
+    function wc(ps) { var n = 0; ps.forEach(function (p) { n += p.split(' ').length; }); return n; }
+    var segs = [];
+    if (heads.length >= 2) {
+      var front = paras(lines.slice(0, heads[0]));
+      if (wc(front) >= 300) segs.push({ title: 'Opening', paras: front });
+      for (i = 0; i < heads.length; i++) {
+        var start = heads[i], end = i + 1 < heads.length ? heads[i + 1] : lines.length;
+        var title = lines[start].trim(), j = start + 1;
+        while (j < end && !lines[j].trim()) j++;
+        if (j < end && lines[j].trim().length < 70 && (j + 1 >= end || !lines[j + 1].trim()) && !/[.!?,;]$/.test(lines[j].trim().replace(/\.$/, '')) ) { title += ' — ' + lines[j].trim().replace(/\.$/, ''); j++; }
+        segs.push({ title: title, paras: paras(lines.slice(j, end)) });
+      }
+      // table of contents: a run of 3+ tiny sections at the start gets dropped
+      var firstBig = -1; for (i = 0; i < segs.length; i++) if (wc(segs[i].paras) >= 120) { firstBig = i; break; }
+      if (firstBig >= 3) { var tiny = 0; for (i = 0; i < firstBig; i++) if (wc(segs[i].paras) < 120) tiny++; if (tiny >= 3) segs = segs.slice(firstBig); }
+      var merged = [];
+      for (i = 0; i < segs.length; i++) {
+        var sg = segs[i];
+        var tocHits = (sg.paras.join(' ').match(/\b(chapter|book|part|letter|stave)\s+([ivxlcdm]+|\d+)\b/gi) || []).length;
+        if (wc(sg.paras) < 120 && tocHits >= 2) continue; // leftover table of contents
+        if (wc(sg.paras) < 120 && i + 1 < segs.length) { segs[i + 1].title = sg.title + ' · ' + segs[i + 1].title; segs[i + 1].paras = sg.paras.concat(segs[i + 1].paras); continue; }
+        merged.push(sg);
+      }
+      segs = merged;
+    } else {
+      var all = paras(lines), cur = [], n = 0, k = 1;
+      all.forEach(function (p) { cur.push(p); n += p.split(' ').length; if (n >= 4000) { segs.push({ title: 'Part ' + k++, paras: cur }); cur = []; n = 0; } });
+      if (cur.length) segs.push({ title: 'Part ' + k, paras: cur });
+    }
+    // split very long chapters so each converts in reasonable time
+    var out = [];
+    segs.forEach(function (sg) {
+      var total = wc(sg.paras);
+      if (total <= 9000) { out.push(sg); return; }
+      var parts = Math.ceil(total / 6000), size = total / parts, cur = [], n = 0, k = 1;
+      sg.paras.forEach(function (p) { cur.push(p); n += p.split(' ').length; if (n >= size && k < parts) { out.push({ title: sg.title + ' (part ' + k++ + ')', paras: cur }); cur = []; n = 0; } });
+      if (cur.length) out.push({ title: sg.title + ' (part ' + k + ')', paras: cur });
+    });
+    out.forEach(function (c) { c.title = niceTitle(c.title.replace(/\s+/g, ' ')).slice(0, 120); c.words = wc(c.paras); });
+    return out.filter(function (c) { return c.words > 0; });
+  }
+  function roman(r) { var v = { i: 1, v: 5, x: 10, l: 50, c: 100, d: 500, m: 1000 }, n = 0, s = r.toLowerCase(); for (var i = 0; i < s.length; i++) { var a = v[s[i]], b = v[s[i + 1]] || 0; n += a < b ? -a : a; } return n; }
+  function niceTitle(t) {
+    return t.split(' · ').map(function (part) {
+      return part.replace(/^(chapter|book|part|letter|stave|canto|volume|section|act)\s+([ivxlcdm]+|\d+)\b[.:]?\s*(.*)$/i, function (m, w, n, rest) {
+        rest = rest.replace(/^[\-—–:.\s]+/, '');
+        return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() + ' ' + (/^\d+$/.test(n) ? n : roman(n)) + (rest ? ' — ' + rest : '');
+      }).replace(/^([A-Z0-9 ,'’\-]{4,})$/, function (m) { return m.toLowerCase().replace(/\b[a-z]/g, function (c) { return c.toUpperCase(); }); });
+    }).join(' · ');
+  }
+  function chunkText(title, ps) {
+    var chunks = [];
+    function add(text, pause) {
+      var sents = text.match(/[^.!?]+[.!?]+["'”’)\]]*\s*|[^.!?]+$/g) || [text], cur = '';
+      sents.forEach(function (s) { if ((cur + s).length > 360 && cur) { chunks.push({ t: cur.trim(), p: 0.12 }); cur = ''; } cur += s; });
+      if (cur.trim()) chunks.push({ t: cur.trim(), p: pause });
+    }
+    add(title.replace(/\s+—\s+/, '. ') + '.', 0.8);
+    ps.forEach(function (p) { add(p, 0.35); });
+    return chunks;
+  }
+
+  /* ================= Audio encode helpers ================= */
+  function decodeWav(buf) {
+    var v = new DataView(buf), off = 12, rate = 22050, bits = 16, fmtTag = 1;
+    while (off + 8 <= v.byteLength) {
+      var id = String.fromCharCode(v.getUint8(off), v.getUint8(off + 1), v.getUint8(off + 2), v.getUint8(off + 3)), len = v.getUint32(off + 4, true);
+      if (id === 'fmt ') { fmtTag = v.getUint16(off + 8, true); rate = v.getUint32(off + 12, true); bits = v.getUint16(off + 22, true); }
+      if (id === 'data') {
+        var start = off + 8, n = Math.min(len, v.byteLength - start);
+        if (bits === 16) return { rate: rate, pcm: new Int16Array(buf.slice(start, start + n - (n % 2))) };
+        if (bits === 32 && fmtTag === 3) { var f = new Float32Array(buf.slice(start, start + n - (n % 4))), o = new Int16Array(f.length); for (var i = 0; i < f.length; i++) { var x = Math.max(-1, Math.min(1, f[i])); o[i] = x < 0 ? x * 32768 : x * 32767; } return { rate: rate, pcm: o }; }
+        throw new Error('Unsupported WAV');
+      }
+      off += 8 + len + (len % 2);
+    }
+    throw new Error('Bad WAV');
+  }
+  function makeWav(chunks, rate) {
+    var n = 0; chunks.forEach(function (c) { n += c.length; });
+    var buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf);
+    function w(o, s) { for (var i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); }
+    w(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); w(8, 'WAVE'); w(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, n * 2, true);
+    var o = new Int16Array(buf, 44), p = 0; chunks.forEach(function (c) { o.set(c, p); p += c.length; });
+    return new Blob([buf], { type: 'audio/wav' });
+  }
+  var piperP = null, lameP = null;
+  function importFirst(urls) {
+    var i = 0;
+    function next(err) { if (i >= urls.length) return Promise.reject(err || new Error('load failed')); return import(urls[i++]).catch(next); }
+    return next();
+  }
+  function loadPiper() { if (!piperP) piperP = importFirst(PIPER_URLS).catch(function (e) { piperP = null; throw e; }); return piperP; }
+  function loadLame() { if (!lameP) lameP = importFirst(LAME_URLS).then(function (m) { var E = m.Mp3Encoder || (m.default && m.default.Mp3Encoder); if (!E) throw new Error('no encoder'); return E; }).catch(function (e) { lameP = null; throw e; }); return lameP; }
+
+  /* ================= Converter (Piper → MP3 → device + Drive) ================= */
+  function progKey(key, ch) { return key + '#' + ch; }
+  function chapterReady(b, ch) { return !!(S.local[audioKey(b.key, ch)] || (b.chapters[ch] && b.chapters[ch].driveId)); }
+  function enqueue(key, ch, front) {
+    var b = book(key); if (!b || ch < 0 || ch >= b.chapters.length || chapterReady(b, ch)) return;
+    var pk = progKey(key, ch), exists = S.jobs.some(function (j) { return j.key === key && j.ch === ch; });
+    if (exists || (S.prog[pk] && S.prog[pk].state === 'converting')) { if (front && exists) { S.jobs = S.jobs.filter(function (j) { return !(j.key === key && j.ch === ch); }); S.jobs.unshift({ key: key, ch: ch }); } return; }
+    if (front) S.jobs.unshift({ key: key, ch: ch }); else S.jobs.push({ key: key, ch: ch });
+    S.prog[pk] = { state: 'queued', p: 0 };
+    renderProg(); runJobs();
+  }
+  var wakeLock = null;
+  function holdWake(on) {
+    try {
+      if (on && !wakeLock && navigator.wakeLock) navigator.wakeLock.request('screen').then(function (l) { wakeLock = l; }).catch(function () {});
+      if (!on && wakeLock) { wakeLock.release(); wakeLock = null; }
+    } catch (e) {}
+  }
+  function runJobs() {
+    if (S.jobBusy) return;
+    var j = S.jobs.shift(); if (!j) { holdWake(false); renderProg(); return; }
+    S.jobBusy = true; holdWake(true);
+    var pk = progKey(j.key, j.ch);
+    S.prog[pk] = { state: 'converting', p: 0 };
+    convertChapter(j.key, j.ch, function (p, note) { S.prog[pk] = { state: 'converting', p: p, note: note || '' }; renderProg(); })
+      .then(function () { delete S.prog[pk]; }, function (e) { S.prog[pk] = { state: 'error', msg: e.message || String(e) }; toast('Conversion problem: ' + (e.message || e)); })
+      .then(function () { S.jobBusy = false; renderProg(); if (S.sheet === 'detail') renderDetail(); runJobs(); });
+  }
+  function loadText(b) {
+    return DB.get('kv', textKey(b.key)).then(function (t) {
+      if (t) return JSON.parse(t);
+      if (b.textDriveId && S.acct.mode === 'google') return download(b.textDriveId).then(function (bl) { return bl.text(); }).then(function (s) { DB.put('kv', textKey(b.key), s); return JSON.parse(s); });
+      if (b.src === 'pg') return fetchText(textUrlsFor(b)).then(function (raw) { var ch = parseBook(raw); return storeText(b, ch).then(function () { return ch; }); });
+      throw new Error('Book text not found on this device');
+    });
+  }
+  function storeText(b, chapters) {
+    var s = JSON.stringify(chapters);
+    return DB.put('kv', textKey(b.key), s).then(function () {
+      if (S.acct.mode !== 'google' || b.textDriveId) return;
+      return uploadNew(safeName(b.title) + ' (' + b.key.replace(':', '') + ') text.json', new Blob([s], { type: 'application/json' }), 'application/json')
+        .then(function (id) { var fb = book(b.key); if (fb) { fb.textDriveId = id; touch(fb); saveLib(); } }).catch(function (e) { console.warn('text upload', e); });
+    });
+  }
+  function convertChapter(key, ch, onP) {
+    var b = book(key), voice = set().voice === 'device' ? VOICES[0].id : set().voice;
+    var tts, Enc, chunks, rate = 0, enc = null, mp3 = [], wavParts = [];
+    onP(0, 'Loading voice…');
+    return Promise.all([loadPiper(), loadLame().catch(function () { return null; }), loadText(b)]).then(function (r) {
+      tts = r[0]; Enc = r[1];
+      var c = r[2][ch]; if (!c) throw new Error('Chapter text missing');
+      chunks = chunkText(c.title, c.paras);
+      return tts.stored().then(function (have) {
+        if (have && have.indexOf(voice) >= 0) return;
+        return tts.download(voice, function (pr) { if (pr && pr.total) onP(0, 'Downloading voice ' + Math.round(pr.loaded * 100 / pr.total) + '%'); });
+      });
+    }).then(function () {
+      var i = 0;
+      function step() {
+        if (i >= chunks.length) return Promise.resolve();
+        var c = chunks[i];
+        return tts.predict({ text: c.t, voiceId: voice }).then(function (wav) { return wav.arrayBuffer ? wav.arrayBuffer() : new Response(wav).arrayBuffer(); }).then(function (buf) {
+          var d = decodeWav(buf);
+          if (!rate) { rate = d.rate; if (Enc) enc = new Enc(1, rate, MP3_KBPS); }
+          var gap = new Int16Array(Math.round(rate * c.p));
+          [d.pcm, gap].forEach(function (pcm) {
+            if (enc) { for (var k = 0; k < pcm.length; k += 11520) { var o = enc.encodeBuffer(pcm.subarray(k, k + 11520)); if (o.length) mp3.push(new Uint8Array(o)); } }
+            else wavParts.push(pcm);
+          });
+          i++; onP(i / chunks.length);
+          return sleep(0).then(step);
+        });
+      }
+      return step();
+    }).then(function () {
+      var blob;
+      if (enc) { var f = enc.flush(); if (f.length) mp3.push(new Uint8Array(f)); blob = new Blob(mp3, { type: 'audio/mpeg' }); }
+      else blob = makeWav(wavParts, rate || 22050);
+      onP(1, 'Saving…');
+      return putBlob(audioKey(key, ch), blob).then(function () {
+        S.local[audioKey(key, ch)] = blob.size; saveSizes();
+        if (S.acct.mode !== 'google') return;
+        var nm = safeName(b.title) + ' - ' + pad(ch + 1) + ' ' + safeName(b.chapters[ch].title) + (enc ? '.mp3' : '.wav');
+        return uploadNew(nm, blob, blob.type).then(function (id) { var fb = book(key); if (fb && fb.chapters[ch]) { fb.chapters[ch].driveId = id; touch(fb); saveLib(); } })
+          .catch(function (e) { toast('Saved on this device. Drive upload will retry: ' + e.message); });
+      });
+    }).then(function () {
+      if (S.play.waiting && S.play.key === key && S.play.ch === ch) { S.play.waiting = false; startChapter(key, ch, (b.pos && b.pos.ch === ch) ? b.pos.t : 0, true); }
+    });
+  }
+  function saveSizes() { lsSet('ll-sizes:' + S.aid, S.local); }
+  var retrying = {};
+  function retryUploads() { // anything converted while offline gets pushed up later
+    if (S.acct.mode !== 'google' || !S.token) return;
+    Object.keys(S.lib.books).forEach(function (k) {
+      var b = S.lib.books[k]; if (b.src === 'lv') return;
+      b.chapters.forEach(function (c, ch) {
+        var rk = k + '#' + ch; if (c.driveId || !S.local[audioKey(k, ch)] || retrying[rk]) return; retrying[rk] = 1;
+        getBlob(audioKey(k, ch)).then(function (bl) { if (!bl) return; return uploadNew(safeName(b.title) + ' - ' + pad(ch + 1) + ' ' + safeName(c.title) + '.mp3', bl, bl.type).then(function (id) { var fb = book(k); if (fb && fb.chapters[ch]) { fb.chapters[ch].driveId = id; touch(fb); saveLib(); } }); }).catch(function () {});
+      });
+    });
+  }
+
+  /* ================= Library actions ================= */
+  function addBook(item, info) {
+    var k = item.key, b = book(k);
+    if (b) return b;
+    b = { key: k, src: item.src, id: item.id, title: item.title, author: item.author, cover: item.cover || '', desc: (info && info.desc) || item.desc || '',
+      textUrls: item.textUrls || [], cols: ['Up Next'], addedAt: now(), updatedAt: now(), pos: { ch: 0, t: 0 }, chapters: (info && info.chapters) || [], finished: false };
+    S.lib.books[k] = b; delete S.lib.deleted[k]; saveLib();
+    return b;
+  }
+  function removeBook(k) {
+    var b = book(k); if (!b) return;
+    if (S.play.key === k) stopPlayback();
+    delete S.lib.books[k]; S.lib.deleted[k] = now(); saveLib();
+    b.chapters.forEach(function (c, i) { var ak = audioKey(k, i); if (S.local[ak]) { DB.del('blobs', ak); delete S.local[ak]; } });
+    DB.del('kv', textKey(k)); saveSizes();
+  }
+  function toggleCol(k, col) {
+    var b = book(k), i = b.cols.indexOf(col);
+    if (i >= 0) b.cols.splice(i, 1); else b.cols.push(col);
+    touch(b); saveLib();
+  }
+  function prepareText(b, raw) {
+    var ch = parseBook(raw);
+    if (!ch.length) throw new Error('No readable text found');
+    b.chapters = ch.map(function (c) { return { title: c.title, words: c.words }; }); touch(b); saveLib();
+    return storeText(b, ch);
+  }
+  function progressPct(b) {
+    if (!b.chapters.length) return 0;
+    if (b.finished) return 100;
+    var dur = b.chapters[b.pos.ch] && (b.chapters[b.pos.ch].dur || (b.chapters[b.pos.ch].words || 0) / 2.6);
+    var frac = dur ? Math.min(1, (b.pos.t || 0) / dur) : 0;
+    return Math.round((b.pos.ch + frac) / b.chapters.length * 100);
+  }
+
+  /* ================= Player ================= */
+  var au = $('#au'), curUrl = null, silentUrl = null, unlocked = false;
+  function unlock() { // iOS: first play() must happen inside a tap, so play a silent clip on the same element
+    if (unlocked) return; unlocked = true;
+    try { if (!silentUrl) silentUrl = URL.createObjectURL(makeWav([new Int16Array(800)], 8000)); au.src = silentUrl; var p = au.play(); if (p && p.then) p.then(function () { if (au.src === silentUrl) au.pause(); }).catch(function () {}); } catch (e) {}
+  }
+  function srcFor(b, ch) {
+    var ak = audioKey(b.key, ch);
+    if (S.local[ak]) return getBlob(ak).then(function (bl) { if (bl) return URL.createObjectURL(bl); delete S.local[ak]; return srcFor(b, ch); });
+    if (b.src === 'lv') return Promise.resolve(b.chapters[ch].url);
+    if (b.chapters[ch].driveId && S.acct.mode === 'google') return download(b.chapters[ch].driveId).then(function (bl) { putBlob(ak, bl).then(function () { S.local[ak] = bl.size; saveSizes(); }); return URL.createObjectURL(bl); });
+    var e = new Error('not ready'); e.notReady = true; return Promise.reject(e);
+  }
+  function playBook(key, ch, t) {
+    unlock();
+    var b = book(key); if (!b || !b.chapters.length) { toast('This book has no chapters yet'); return; }
+    if (ch == null) { ch = b.pos.ch || 0; t = b.pos.t || 0; if (b.finished) { ch = 0; t = 0; b.finished = false; } }
+    if (S.lib.current !== key) { S.lib.current = key; S.lib.currentAt = now(); }
+    if (b.cols.indexOf('Listening') < 0) { b.cols = b.cols.filter(function (c) { return c !== 'Up Next' && c !== 'Finished'; }); b.cols.push('Listening'); touch(b); }
+    saveLib();
+    startChapter(key, ch, t || 0, true);
+  }
+  var startSeq = 0;
+  function startChapter(key, ch, t, autoplay) {
+    var b = book(key), seq = ++startSeq;
+    stopSpeech();
+    S.play.key = key; S.play.ch = ch; S.play.waiting = false;
+    b.pos = { ch: ch, t: t || 0 };
+    S.play.mode = (b.src !== 'lv' && set().voice === 'device' && !chapterReady(b, ch)) ? 'speech' : 'audio';
+    renderPlayerBits();
+    if (S.play.mode === 'speech') { speakChapter(b, ch); return; }
+    srcFor(b, ch).then(function (url) {
+      if (seq !== startSeq) return;
+      if (curUrl && curUrl.indexOf('blob:') === 0 && curUrl !== url) URL.revokeObjectURL(curUrl);
+      curUrl = url; au.src = url; au.playbackRate = set().speed;
+      var seek = function () { au.removeEventListener('loadedmetadata', seek); if (t) try { au.currentTime = t; } catch (e) {} au.playbackRate = set().speed; };
+      au.addEventListener('loadedmetadata', seek);
+      if (autoplay) { var p = au.play(); if (p && p.catch) p.catch(function () { renderPlayerBits(); }); }
+      setMedia(b, ch); prefetch(b, ch);
+    }).catch(function (e) {
+      if (seq !== startSeq) return;
+      if (e.notReady) { S.play.waiting = true; enqueue(key, ch, true); renderPlayerBits(); return; }
+      if (e.needAuth) { toast('Reconnect Google Drive to play this chapter'); return; }
+      toast('Could not load audio: ' + e.message);
+    });
+  }
+  function prefetch(b, ch) { if (b.src !== 'lv' && set().voice !== 'device') { enqueue(b.key, ch + 1); enqueue(b.key, ch + 2); } }
+  function stopPlayback() { au.pause(); stopSpeech(); S.play.key = null; S.play.waiting = false; renderPlayerBits(); }
+  function isPlaying() { return S.play.mode === 'speech' ? speech.on && !speech.paused : !au.paused && !au.ended; }
+  function togglePlay() {
+    unlock();
+    if (!S.play.key) { if (S.lib.current && book(S.lib.current)) playBook(S.lib.current); return; }
+    if (S.play.mode === 'speech') { if (speech.paused || !speech.on) resumeSpeech(); else pauseSpeech(); renderPlayerBits(); return; }
+    if (au.paused) { var p = au.play(); if (p && p.catch) p.catch(function () {}); } else au.pause();
+  }
+  function skip(sec) { if (S.play.mode === 'speech') { speech.i = Math.max(0, speech.i + (sec > 0 ? 3 : -3)); if (speech.on) { speechSynthesis.cancel(); speakNext(); } return; } try { au.currentTime = Math.max(0, Math.min((au.duration || 1e9) - 1, au.currentTime + sec)); } catch (e) {} }
+  function nextCh(dir) { var b = book(S.play.key); if (!b) return; var n = S.play.ch + dir; if (n < 0) { au.currentTime = 0; return; } if (n >= b.chapters.length) { finishBook(b); return; } startChapter(b.key, n, 0, true); }
+  function finishBook(b) {
+    au.pause(); b.finished = true; b.pos = { ch: 0, t: 0 };
+    b.cols = b.cols.filter(function (c) { return c !== 'Listening' && c !== 'Up Next'; }); if (b.cols.indexOf('Finished') < 0) b.cols.push('Finished');
+    touch(b); saveLib(); toast('Finished “' + b.title + '”'); S.play.key = null; renderPlayerBits(); renderSoft();
+  }
+  var lastSave = 0;
+  au.addEventListener('timeupdate', function () {
+    if (!S.play.key || au.src === silentUrl) return;
+    var b = book(S.play.key); if (!b) return;
+    b.pos = { ch: S.play.ch, t: au.currentTime };
+    if (now() - lastSave > 5000) { lastSave = now(); touch(b); saveLib({ progress: true }); }
+    if (S.sleepUntil && now() >= S.sleepUntil) { au.pause(); S.sleepUntil = 0; S.sleepIdx = 0; toast('Sleep timer: paused'); }
+    updatePlayerTime();
+  });
+  au.addEventListener('play', renderPlayerBits);
+  au.addEventListener('pause', function () { if (S.play.key && au.src !== silentUrl) { var b = book(S.play.key); if (b) { b.pos = { ch: S.play.ch, t: au.currentTime }; touch(b); saveLib({ progress: true }); } } renderPlayerBits(); });
+  au.addEventListener('ended', function () {
+    if (au.src === silentUrl || !S.play.key) return;
+    if (S.sleepEnd) { S.sleepEnd = false; S.sleepIdx = 0; var b = book(S.play.key); if (b && S.play.ch + 1 < b.chapters.length) { b.pos = { ch: S.play.ch + 1, t: 0 }; touch(b); saveLib(); } toast('Sleep timer: stopped at end of chapter'); renderPlayerBits(); return; }
+    nextCh(1);
+  });
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden' && S.acct && S.acct.mode === 'google') syncNow(); });
+  function setMedia(b, ch) {
+    if (!('mediaSession' in navigator)) return;
+    try {
+      navigator.mediaSession.metadata = new MediaMetadata({ title: b.chapters[ch].title, artist: b.author, album: b.title, artwork: b.cover ? [{ src: b.cover, sizes: '512x512', type: 'image/jpeg' }] : [] });
+      var ms = navigator.mediaSession;
+      ms.setActionHandler('play', function () { togglePlay(); }); ms.setActionHandler('pause', function () { togglePlay(); });
+      ms.setActionHandler('seekbackward', function () { skip(-15); }); ms.setActionHandler('seekforward', function () { skip(30); });
+      ms.setActionHandler('previoustrack', function () { nextCh(-1); }); ms.setActionHandler('nexttrack', function () { nextCh(1); });
+      try { ms.setActionHandler('seekto', function (d) { if (d && d.seekTime != null) au.currentTime = d.seekTime; }); } catch (e) {}
+    } catch (e) {}
+  }
+  function cycleSpeed() { var i = SPEEDS.indexOf(set().speed); set().speed = SPEEDS[(i + 1) % SPEEDS.length]; S.lib.settingsAt = now(); au.playbackRate = set().speed; if (speech.u) speech.rate = set().speed; saveLib(); renderPlayerBits(); }
+  function cycleSleep() {
+    S.sleepIdx = (S.sleepIdx + 1) % SLEEPS.length; var m = SLEEPS[S.sleepIdx];
+    S.sleepEnd = m === -1; S.sleepUntil = m > 0 ? now() + m * 60000 : 0;
+    toast(m === 0 ? 'Sleep timer off' : m === -1 ? 'Stopping at end of chapter' : 'Pausing in ' + m + ' min'); renderPlayerBits();
+  }
+
+  /* ---------- Device voice (live speech fallback) ---------- */
+  var speech = { on: false, paused: false, i: 0, chunks: [], key: null, ch: 0 };
+  function speakChapter(b, ch) {
+    loadText(b).then(function (all) {
+      var c = all[ch]; speech.chunks = chunkText(c.title, c.paras); speech.key = b.key; speech.ch = ch;
+      speech.i = (b.pos && b.pos.ch === ch && b.pos.si) ? b.pos.si : 0; speech.on = true; speech.paused = false;
+      setMedia(b, ch); speakNext(); renderPlayerBits();
+    }).catch(function (e) { toast(e.message); });
+  }
+  function speakNext() {
+    if (!speech.on || speech.paused) return;
+    if (speech.i >= speech.chunks.length) { speech.on = false; if (S.sleepEnd) { S.sleepEnd = false; renderPlayerBits(); return; } nextCh(1); return; }
+    if (S.sleepUntil && now() >= S.sleepUntil) { S.sleepUntil = 0; S.sleepIdx = 0; pauseSpeech(); toast('Sleep timer: paused'); return; }
+    var u = new SpeechSynthesisUtterance(speech.chunks[speech.i].t); u.rate = set().speed; u.lang = 'en-US';
+    u.onend = function () { if (!speech.on || speech.paused) return; speech.i++; var b = book(speech.key); if (b) { b.pos = { ch: speech.ch, t: 0, si: speech.i }; if (speech.i % 5 === 0) { touch(b); saveLib({ progress: true }); } } updatePlayerTime(); speakNext(); };
+    speech.u = u; speechSynthesis.speak(u);
+  }
+  function pauseSpeech() { speech.paused = true; try { speechSynthesis.cancel(); } catch (e) {} var b = book(speech.key); if (b) { b.pos = { ch: speech.ch, t: 0, si: speech.i }; touch(b); saveLib({ progress: true }); } }
+  function resumeSpeech() { if (!speech.on) { var b = book(S.play.key); if (b) speakChapter(b, S.play.ch); return; } speech.paused = false; speakNext(); }
+  function stopSpeech() { if (speech.on) { speech.on = false; try { speechSynthesis.cancel(); } catch (e) {} } }
+
+  /* ================= Rendering ================= */
+  var TITLES = { home: 'Listen', discover: 'Discover', library: 'Library', settings: 'Settings' };
+  function coverHtml(b, cls) {
+    var isAi = b.src !== 'lv';
+    return '<span class="cover ' + (isAi ? 'pg ' : '') + (cls || '') + '">' + (b.cover ? '<img loading="lazy" src="' + esc(b.cover) + '" alt="" onerror="this.remove()">' : '') +
+      '<span class="ph">' + (b.cover ? '' : esc(b.title).slice(0, 60)) + '</span></span>';
+  }
+  function tileHtml(b, act) {
+    var inLib = !!book(b.key), pct = inLib ? progressPct(book(b.key)) : 0;
+    return '<button class="tile" data-act="' + (act || 'open') + '" data-key="' + esc(b.key) + '">' + coverHtml(b) +
+      '<span class="bar" style="' + (pct > 0 && pct < 100 ? '' : 'visibility:hidden') + '"><i style="width:' + pct + '%"></i></span>' +
+      '<span class="t">' + esc(b.title) + '</span><span class="a ell">' + esc(b.author || '') + '</span>' +
+      '<span class="row" style="gap:6px">' + (b.src === 'lv' ? '<span class="badge">Human-read</span>' : '<span class="badge ai">AI voice</span>') + (inLib ? '<span class="badge ok">' + IC.check.replace('<svg', '<svg width="12" height="12"') + ' Saved</span>' : '') + '</span></button>';
+  }
+  function show(v) {
+    S.view = v;
+    ['home', 'discover', 'library', 'settings'].forEach(function (x) { $('#v-' + x).hidden = x !== v; });
+    $$('#tabs button').forEach(function (b) { if (b.getAttribute('data-v') === v) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
+    $('#view-title').textContent = TITLES[v];
+    render(); window.scrollTo(0, 0);
+    if (v === 'discover' && !S.disc.loaded) runSearch(true);
+  }
+  function render() { if (S.view === 'home') renderHome(); else if (S.view === 'discover') renderDiscover(); else if (S.view === 'library') renderLibrary(); else renderSettings(); renderAuthBits(); renderPlayerBits(); }
+  function renderSoft() { if (S.view !== 'discover') render(); else renderDiscoverResults(); if (S.sheet === 'detail') renderDetail(); }
+  function authBanner() {
+    if (!S.acct || S.acct.mode !== 'google' || !S.needAuth) return '';
+    return '<div class="banner"><div class="grow"><b>Reconnect Google Drive</b><p class="small muted">Google sign-ins last about an hour. Tap to keep syncing your library and AI-voice audio.</p></div><button class="btn sm primary" data-act="reconnect">Reconnect</button></div>';
+  }
+  function renderHome() {
+    var v = $('#v-home'), h = authBanner(), cur = S.lib.current && book(S.lib.current);
+    if (cur) {
+      var ch = cur.chapters[cur.pos.ch] || {};
+      h += '<div class="card hero">' + coverHtml(cur) + '<div class="stack" style="gap:8px;min-width:0"><span class="s-kicker">' + (cur.finished ? 'Finished' : 'Continue') + '</span><h2 style="line-height:1.2">' + esc(cur.title) + '</h2>' +
+        '<p class="small muted ell">' + esc(ch.title || '') + '</p><span class="bar"><i style="width:' + progressPct(cur) + '%"></i></span>' +
+        '<div class="row"><button class="btn primary sm" data-act="playcur">' + IC.play + (cur.finished ? 'Listen again' : 'Resume') + '</button><button class="btn sm ghost" data-act="open" data-key="' + esc(cur.key) + '">Chapters</button></div></div></div>';
+    }
+    h += '<div id="home-prog"></div>';
+    var any = false;
+    ['Listening', 'Up Next'].concat(S.lib.collections.filter(function (c) { return c !== 'Listening' && c !== 'Up Next' && c !== 'Finished'; })).forEach(function (c) {
+      var bs = booksIn(c); if (!bs.length) return; any = true;
+      h += '<section><div class="sec-h"><h2>' + esc(c) + '</h2><button class="link small" data-act="gocol" data-col="' + esc(c) + '">See all</button></div><div class="shelf">' + bs.slice(0, 12).map(function (b) { return tileHtml(b); }).join('') + '</div></section>';
+    });
+    if (!any && !cur) h += '<div class="card empty"><h3>Your library is empty</h3><p>Find a free audiobook, or pick a classic and have it read to you in a natural AI voice.</p><p style="margin-top:14px"><button class="btn primary" data-act="go" data-v="discover">' + IC.search + 'Discover books</button></p></div>';
+    v.innerHTML = h; renderProg();
+  }
+  function booksIn(c) {
+    var arr = Object.keys(S.lib.books).map(function (k) { return S.lib.books[k]; });
+    if (c !== 'All') arr = arr.filter(function (b) { return b.cols.indexOf(c) >= 0; });
+    return arr.sort(function (a, b) { return (b.updatedAt || 0) - (a.updatedAt || 0); });
+  }
+  function renderProg() {
+    var box = $('#home-prog'); if (!box) return;
+    var ks = Object.keys(S.prog); if (!ks.length) { box.innerHTML = ''; return; }
+    var rows = ks.map(function (pk) {
+      var p = S.prog[pk], parts = pk.split('#'), b = book(parts[0]); if (!b) return '';
+      var c = b.chapters[+parts[1]] || {};
+      var st = p.state === 'converting' ? (p.note || Math.round((p.p || 0) * 100) + '%') : p.state === 'queued' ? 'Waiting' : 'Problem — tap to retry';
+      return '<button class="li" data-act="' + (p.state === 'error' ? 'retry' : 'open') + '" data-key="' + esc(b.key) + '" data-ch="' + parts[1] + '">' + (p.state === 'converting' ? '<span class="spin"></span>' : '<span class="num">' + (+parts[1] + 1) + '</span>') +
+        '<span class="grow"><b class="ell" style="display:block">' + esc(b.title) + '</b><span class="small muted ell" style="display:block">' + esc(c.title || '') + '</span></span><span class="stat ' + (p.state === 'error' ? '' : 'work') + '">' + esc(st) + '</span></button>';
+    }).join('');
+    box.innerHTML = '<div class="card"><div class="sec-h"><h3>Making AI-voice audio</h3><span class="tiny faint">Keep this app open</span></div><div class="list">' + rows + '</div></div>';
+  }
+  function renderDiscover() {
+    var d = S.disc, topics = d.src === 'lv' ? TOPICS_LV : TOPICS_PG;
+    var h = '<div class="seg" role="group"><button data-act="src" data-src="lv" aria-pressed="' + (d.src === 'lv') + '">Human-read</button><button data-act="src" data-src="pg" aria-pressed="' + (d.src === 'pg') + '">AI-voice classics</button></div>' +
+      '<p class="small muted">' + (d.src === 'lv' ? 'Free, volunteer-read recordings from LibriVox. They stream right away.' : 'Free public-domain ebooks from Project Gutenberg, read aloud by a natural AI voice. Each chapter is made the first time you play it.') + '</p>' +
+      '<form class="search" id="disc-form">' + IC.search + '<input class="input" id="disc-q" type="search" enterkeyhint="search" placeholder="Search title or author" value="' + esc(d.q) + '"></form>' +
+      '<div class="chips">' + ['Popular'].concat(topics).map(function (t) { var on = (t === 'Popular' && !d.topic) || t === d.topic; return '<button class="chip" data-act="topic" data-topic="' + esc(t) + '" aria-pressed="' + on + '">' + esc(t) + '</button>'; }).join('') + '</div>' +
+      (d.src === 'pg' ? '<button class="btn sm ghost" data-act="addtxt" style="align-self:flex-start">' + IC.file + 'Add your own .txt book</button>' : '') +
+      '<div id="disc-res"></div>';
+    $('#v-discover').innerHTML = h;
+    $('#disc-form').addEventListener('submit', function (e) { e.preventDefault(); d.q = $('#disc-q').value.trim(); d.topic = ''; $('#disc-q').blur(); runSearch(true); });
+    renderDiscoverResults();
+  }
+  function renderDiscoverResults() {
+    var box = $('#disc-res'); if (!box) return; var d = S.disc, h = '';
+    if (d.err && !d.items.length) h = '<div class="card empty"><h3>Couldn’t reach the ' + (d.src === 'lv' ? 'audiobook' : 'ebook') + ' catalog</h3><p class="small">' + esc(d.err) + '</p><p style="margin-top:12px"><button class="btn" data-act="research">Try again</button></p></div>';
+    else if (!d.items.length && !d.loading && d.loaded) h = '<div class="empty"><h3>No matches</h3><p>Try a shorter title or just the author’s last name.</p></div>';
+    else h = '<div class="grid">' + d.items.map(function (b) { return tileHtml(b, 'peek'); }).join('') + '</div>';
+    if (d.loading) h += '<div class="row" style="justify-content:center;padding:18px"><span class="spin"></span><span class="muted">Loading…</span></div>';
+    else if (d.more) h += '<div class="row" style="justify-content:center;padding:14px"><button class="btn" data-act="more">Load more</button></div>';
+    box.innerHTML = h;
+  }
+  var searchSeq = 0;
+  function runSearch(reset) {
+    var d = S.disc, seq = ++searchSeq;
+    if (reset) { d.items = []; d.page = 1; d.more = false; }
+    d.loading = true; d.err = ''; renderDiscoverResults();
+    (d.src === 'lv' ? iaSearch : pgSearch)(d.q, d.topic, d.page).then(function (r) {
+      if (seq !== searchSeq) return;
+      var seen = {}; d.items.forEach(function (x) { seen[x.key] = 1; });
+      d.items = d.items.concat(r.items.filter(function (x) { return !seen[x.key]; })); d.more = r.more;
+    }, function (e) { if (seq !== searchSeq) return; d.err = (e && e.message) || 'Network problem'; })
+      .then(function () { if (seq !== searchSeq) return; d.loading = false; d.loaded = true; renderDiscoverResults(); });
+  }
+  function renderLibrary() {
+    var cols = ['All'].concat(S.lib.collections), c = cols.indexOf(S.libCol) >= 0 ? S.libCol : 'All', bs = booksIn(c);
+    var h = '<div class="chips">' + cols.map(function (x) { return '<button class="chip" data-act="libcol" data-col="' + esc(x) + '" aria-pressed="' + (x === c) + '">' + esc(x) + ' <span class="faint">' + booksIn(x).length + '</span></button>'; }).join('') +
+      '<button class="chip" data-act="newcol">' + '+ New</button></div>';
+    if (!bs.length) h += '<div class="card empty"><h3>' + (c === 'All' ? 'Nothing saved yet' : 'Nothing in “' + esc(c) + '” yet') + '</h3><p>Open any book and tap a collection to add it here.</p><p style="margin-top:14px"><button class="btn primary" data-act="go" data-v="discover">Discover books</button></p></div>';
+    else h += '<div class="grid">' + bs.map(function (b) { return tileHtml(b); }).join('') + '</div>';
+    if (c !== 'All' && DEFAULT_COLS.indexOf(c) < 0) h += '<div><button class="btn sm ghost" data-act="delcol" data-col="' + esc(c) + '">' + IC.trash + 'Delete collection “' + esc(c) + '”</button></div>';
+    $('#v-library').innerHTML = h;
+  }
+  function renderSettings() {
+    var a = S.acct, s = set(), h = authBanner(), mb = 0;
+    for (var k in S.local) mb += S.local[k] || 0; mb = (mb / 1048576).toFixed(mb > 104857600 ? 0 : 1);
+    h += '<div class="card"><div class="row"><span class="avatar" style="width:48px;height:48px">' + avatarInner() + '</span><div class="grow"><b>' + esc(a.name || 'This device') + '</b><p class="small muted ell">' + esc(a.mode === 'google' ? a.email : 'Saved on this device only — not synced') + '</p></div></div>' +
+      '<div class="actions" style="margin-bottom:0">' + (a.mode === 'google' ? '<button class="btn sm" data-act="syncnow">Sync now</button><button class="btn sm ghost" data-act="switch">Switch person</button><button class="btn sm ghost" data-act="signout">Sign out &amp; clear this device</button>' :
+      (clientId() ? '<button class="btn sm primary" data-act="upgrade">Connect Google Drive</button>' : '') + '<button class="btn sm ghost" data-act="switch">Switch person</button>') + '</div>' +
+      (a.mode === 'google' ? '<p class="tiny faint" id="sync-text" style="margin-top:10px">' + syncText() + '</p>' : '') + '</div>';
+    h += '<section class="card"><h3>AI voice</h3><p class="small muted" style="margin:4px 0 10px">Used for Gutenberg classics. The first chapter downloads the voice once (about 60–75 MB), then it works offline.</p>' +
+      '<div class="field"><label for="set-voice">Voice</label><select class="input" id="set-voice">' + VOICES.map(function (x) { return '<option value="' + x.id + '"' + (x.id === s.voice ? ' selected' : '') + '>' + esc(x.name) + '</option>'; }).join('') + '</select></div>' +
+      '<div class="actions"><button class="btn sm" data-act="preview">' + IC.play + 'Preview voice</button><span class="small muted" id="voice-note"></span></div></section>';
+    h += '<section class="card"><h3>Listening</h3><div class="set-row"><span>Playback speed</span><select class="input" id="set-speed" style="width:auto">' + SPEEDS.map(function (x) { return '<option value="' + x + '"' + (x === s.speed ? ' selected' : '') + '>' + x + '×</option>'; }).join('') + '</select></div>' +
+      '<div class="set-row"><span>English books only</span><select class="input" id="set-eng" style="width:auto"><option value="1"' + (s.english ? ' selected' : '') + '>On</option><option value="0"' + (!s.english ? ' selected' : '') + '>Off</option></select></div>' +
+      '<div class="set-row"><span>Theme</span><div data-sutton-theme></div></div></section>';
+    h += '<section class="card"><h3>Storage on this device</h3><div class="set-row"><span>Downloaded audio</span><b>' + mb + ' MB</b></div><div class="actions" style="margin-bottom:0"><button class="btn sm ghost" data-act="clearaudio">' + IC.trash + 'Clear downloaded audio</button></div>' +
+      '<p class="tiny faint" style="margin-top:8px">' + (a.mode === 'google' ? 'AI-voice audio stays safe in your Google Drive; this only frees up space here.' : 'Not synced: clearing removes AI-voice audio for good.') + '</p></section>';
+    h += '<section class="card"><h3>Backup</h3><div class="actions" style="margin-bottom:0"><button class="btn sm" data-act="export">' + IC.down + 'Export library</button><button class="btn sm ghost" data-act="import">Import backup</button></div></section>';
+    h += '<section class="card"><h3>Advanced</h3><div class="field" style="margin-top:8px"><label for="set-relay">Text relay (only if Gutenberg books won’t load)</label><input class="input" id="set-relay" placeholder="https://your-relay.workers.dev/?url=" value="' + esc(s.relay) + '"></div>' +
+      '<p class="tiny faint" style="margin-top:8px">Book audio and lists come from LibriVox, the Internet Archive and Project Gutenberg. Voices: Piper (MIT). Nothing is sent anywhere else.</p></section>';
+    $('#v-settings').innerHTML = h;
+    if (window.SuttonTheme) window.SuttonTheme.set(window.SuttonTheme.get());
+    $('#set-voice').addEventListener('change', function () { s.voice = this.value; S.lib.settingsAt = now(); saveLib(); });
+    $('#set-speed').addEventListener('change', function () { s.speed = parseFloat(this.value); S.lib.settingsAt = now(); au.playbackRate = s.speed; saveLib(); renderPlayerBits(); });
+    $('#set-eng').addEventListener('change', function () { s.english = this.value === '1'; S.lib.settingsAt = now(); saveLib(); S.disc.loaded = false; });
+    $('#set-relay').addEventListener('change', function () { s.relay = this.value.trim(); S.lib.settingsAt = now(); saveLib(); });
+  }
+  function syncText() {
+    if (S.sync === 'busy') return 'Syncing…';
+    if (S.sync === 'auth') return 'Waiting for you to reconnect Google Drive.';
+    if (S.sync === 'bad') return 'Last sync failed: ' + esc(S.syncErr);
+    if (S.syncAt) return 'Synced with your Google Drive at ' + new Date(S.syncAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) + '. Folder: “' + FOLDER_NAME + '”.';
+    return 'Not synced yet.';
+  }
+  function avatarInner() { var a = S.acct || {}; return a.photo ? '<img src="' + esc(a.photo) + '" alt="" referrerpolicy="no-referrer">' : esc((a.name || '?').charAt(0).toUpperCase()); }
+  var shownAuth = false;
+  function renderAuthBits() {
+    var d = $('#sync-dot'); if (!d) return;
+    if (S.lib && S.needAuth !== shownAuth) { shownAuth = S.needAuth; if (S.view === 'home') renderHome(); else if (S.view === 'settings') renderSettings(); }
+    var g = S.acct && S.acct.mode === 'google';
+    d.hidden = !g; d.className = 'sync-dot ' + (S.sync === 'ok' ? 'ok' : S.sync === 'busy' ? 'busy' : (S.sync === 'auth' || S.sync === 'bad' || S.needAuth) ? 'bad' : '');
+    d.title = g ? syncText().replace(/&[a-z#0-9]+;/g, '') : '';
+    $('#avatar').innerHTML = avatarInner();
+    var st = $('#sync-text'); if (st) st.innerHTML = syncText();
+  }
+
+  /* ---------- Player bits (mini + full sheet) ---------- */
+  function renderPlayerBits() {
+    var key = S.play.key || (S.lib && S.lib.current), b = key && book(key), mini = $('#mini');
+    if (!b || !b.chapters.length) { mini.hidden = true; document.documentElement.style.setProperty('--mini-h', '0px'); if (S.sheet === 'player') closeSheet(); return; }
+    mini.hidden = false; document.documentElement.style.setProperty('--mini-h', '64px');
+    var ch = S.play.key ? S.play.ch : b.pos.ch, c = b.chapters[ch] || {};
+    $('#mini-cover').outerHTML = coverHtml(b).replace('<span class="cover', '<span id="mini-cover" class="cover');
+    $('#mini-title').textContent = b.title;
+    $('#mini-sub').textContent = S.play.waiting ? 'Making audio… ' + waitPct() : (c.title || '');
+    $('#mini-play').innerHTML = S.play.waiting ? '<span class="spin"></span>' : (isPlaying() ? IC.pause : IC.play);
+    if (S.sheet === 'player') renderFullPlayer();
+    updatePlayerTime();
+  }
+  function waitPct() { var p = S.prog[progKey(S.play.key, S.play.ch)]; return p ? (p.note || Math.round((p.p || 0) * 100) + '%') : ''; }
+  function updatePlayerTime() {
+    var dur = au.duration && isFinite(au.duration) ? au.duration : 0, t = au.currentTime || 0;
+    var mp = $('#mini-prog'); if (mp) mp.style.width = (S.play.mode === 'audio' && dur ? t / dur * 100 : speech.chunks.length ? speech.i / speech.chunks.length * 100 : 0) + '%';
+    if (S.sheet !== 'player') return;
+    var sc = $('#fp-scrub'); if (!sc) return;
+    if (S.play.mode === 'speech') { sc.max = speech.chunks.length || 1; if (!scrubbing) sc.value = speech.i; $('#fp-t').textContent = 'Passage ' + (speech.i + 1); $('#fp-d').textContent = 'of ' + (speech.chunks.length || '?'); return; }
+    sc.max = dur || 1; if (!scrubbing) sc.value = t; $('#fp-t').textContent = fmt(t); $('#fp-d').textContent = '-' + fmt(Math.max(0, dur - t) / (set().speed || 1));
+  }
+  var scrubbing = false;
+  function renderFullPlayer() {
+    var key = S.play.key || S.lib.current, b = book(key); if (!b) return;
+    var ch = S.play.key ? S.play.ch : b.pos.ch, c = b.chapters[ch] || {}, sl = SLEEPS[S.sleepIdx];
+    var h = '<div class="fp">' + coverHtml(b) + '<div><h2>' + esc(b.title) + '</h2><p class="muted small">' + esc(b.author) + '</p></div>' +
+      '<p class="small"><b>' + esc(c.title || '') + '</b> <span class="faint">· ' + (ch + 1) + ' of ' + b.chapters.length + '</span></p>' +
+      (S.play.waiting ? '<div class="note"><div class="row"><span class="spin"></span><b>Making this chapter’s audio… ' + esc(waitPct()) + '</b></div><p style="margin-top:6px">It starts playing automatically. The next two chapters are made in the background while you listen.</p></div>' : '') +
+      (S.play.mode === 'speech' ? '<div class="note">Reading with your device’s voice. It pauses if the screen locks. Pick a Piper voice in Settings for lock-screen playback.</div>' : '') +
+      '<input type="range" class="scrub" id="fp-scrub" min="0" max="1" step="1" value="0"><div class="times"><span id="fp-t">0:00</span><span id="fp-d"></span></div>' +
+      '<div class="ctrls"><button class="icon-btn" data-act="prevch" aria-label="Previous chapter">' + IC.prev + '</button><button class="icon-btn" data-act="back" aria-label="Back 15 seconds">' + IC.back + '</button>' +
+      '<button class="play-big" data-act="toggle" aria-label="Play or pause">' + (S.play.waiting ? '<span class="spin" style="width:30px;height:30px"></span>' : isPlaying() ? IC.pause : IC.play) + '</button>' +
+      '<button class="icon-btn" data-act="fwd" aria-label="Forward 30 seconds">' + IC.fwd + '</button><button class="icon-btn" data-act="nextch" aria-label="Next chapter">' + IC.next + '</button></div>' +
+      '<div class="fp-opts"><button class="btn sm" data-act="speed">' + set().speed + '×</button><button class="btn sm" data-act="sleep">' + IC.moon + (sl === 0 ? 'Sleep' : sl === -1 ? 'End of chapter' : sl + ' min') + '</button><button class="btn sm" data-act="open" data-key="' + esc(b.key) + '">' + IC.list + 'Chapters</button></div></div>';
+    $('#sheet-body').innerHTML = h;
+    var sc = $('#fp-scrub');
+    sc.addEventListener('input', function () { scrubbing = true; if (S.play.mode === 'audio') $('#fp-t').textContent = fmt(+sc.value); });
+    sc.addEventListener('change', function () { scrubbing = false; if (S.play.mode === 'speech') { speech.i = +sc.value; if (speech.on && !speech.paused) { speechSynthesis.cancel(); speakNext(); } } else try { au.currentTime = +sc.value; } catch (e) {} });
+    updatePlayerTime();
+  }
+
+  /* ---------- Detail sheet ---------- */
+  function openSheet(kind) { S.sheet = kind; $('#scrim').classList.add('on'); $('#sheet').classList.add('on'); $('#sheet').scrollTop = 0; }
+  function closeSheet() { S.sheet = null; S.detail = null; $('#scrim').classList.remove('on'); $('#sheet').classList.remove('on'); }
+  function openDetail(item) {
+    S.detail = { item: item, info: null, loading: false, err: '', textErr: false, descOpen: false };
+    openSheet('detail'); renderDetail();
+    var b = book(item.key);
+    if (item.src === 'lv' && (!b || !b.chapters.length)) {
+      S.detail.loading = true; renderDetail();
+      iaItem(item.id).then(function (info) {
+        if (!S.detail || S.detail.item.key !== item.key) return;
+        S.detail.info = info; S.detail.loading = false;
+        var bb = book(item.key); if (bb && !bb.chapters.length) { bb.chapters = info.chapters; if (!bb.desc) bb.desc = info.desc; touch(bb); saveLib(); }
+        renderDetail();
+      }, function (e) { if (!S.detail) return; S.detail.loading = false; S.detail.err = 'Couldn’t load the chapter list (' + e.message + ').'; renderDetail(); });
+    }
+  }
+  function renderDetail() {
+    if (!S.detail) return;
+    var d = S.detail, it = d.item, b = book(it.key), src = b || it, info = d.info, chapters = b && b.chapters.length ? b.chapters : (info ? info.chapters : []);
+    var desc = (b && b.desc) || (info && info.desc) || it.desc || '';
+    var total = 0; chapters.forEach(function (c) { total += c.dur || (c.words ? c.words / 2.6 : 0); });
+    var h = '<div class="detail-top">' + coverHtml(src) + '<div class="stack" style="gap:6px;min-width:0">' + (src.src === 'lv' ? '<span class="badge" style="align-self:flex-start">Human-read · LibriVox</span>' : '<span class="badge ai" style="align-self:flex-start">AI voice · ' + (src.src === 'pg' ? 'Gutenberg' : 'Your file') + '</span>') +
+      '<h2 style="line-height:1.2">' + esc(src.title) + '</h2><p class="muted">' + esc(src.author || '') + '</p>' + (chapters.length ? '<p class="small faint">' + chapters.length + ' chapters' + (total ? ' · ' + (src.src === 'lv' ? '' : 'about ') + fmtDur(total) : '') + '</p>' : '') + '</div></div>';
+    h += '<div class="actions">';
+    if (b) {
+      var resume = b.pos.ch || b.pos.t;
+      h += '<button class="btn primary" data-act="play" data-key="' + esc(b.key) + '"' + (chapters.length ? '' : ' disabled') + '>' + IC.play + (resume && !b.finished ? 'Resume' : 'Play') + '</button>';
+      if (b.src === 'lv' && chapters.length) h += '<button class="btn" data-act="offline" data-key="' + esc(b.key) + '">' + IC.down + 'Save for offline</button>';
+      if (b.src !== 'lv' && chapters.length) h += '<button class="btn" data-act="convall" data-key="' + esc(b.key) + '">' + IC.wave + 'Make all audio</button>';
+    } else {
+      h += '<button class="btn primary" data-act="add" data-key="' + esc(it.key) + '"' + (it.src === 'lv' && !info ? ' disabled' : '') + '>' + IC.plus + 'Add to library</button>';
+      if (it.src === 'lv' && info && info.chapters.length) h += '<button class="btn" data-act="addplay" data-key="' + esc(it.key) + '">' + IC.play + 'Play now</button>';
+    }
+    h += '</div>';
+    if (b) h += '<div class="chips" style="flex-wrap:wrap;margin-bottom:12px">' + S.lib.collections.map(function (c) { return '<button class="chip" data-act="col" data-key="' + esc(b.key) + '" data-col="' + esc(c) + '" aria-pressed="' + (b.cols.indexOf(c) >= 0) + '">' + (b.cols.indexOf(c) >= 0 ? '✓ ' : '') + esc(c) + '</button>'; }).join('') + '</div>';
+    if (b && b.src === 'pg' && !b.chapters.length) {
+      h += d.textErr ? '<div class="note" style="margin-bottom:12px"><b>Project Gutenberg didn’t let this app download the book text directly.</b><ol style="margin:8px 0 0;padding-left:20px"><li>Tap <a class="link" href="https://www.gutenberg.org/ebooks/' + esc(b.id) + '.txt.utf-8" target="_blank" rel="noopener">Open the book text</a> and save the page/file (on iPhone: Share → Save to Files).</li><li>Come back and tap <b>Choose the .txt file</b>.</li></ol><p style="margin-top:10px"><button class="btn sm primary" data-act="picktxt" data-key="' + esc(b.key) + '">' + IC.file + 'Choose the .txt file</button></p></div>'
+        : '<div class="note" style="margin-bottom:12px"><div class="row"><span class="spin"></span><b>Getting the book text and finding chapters…</b></div></div>';
+    }
+    if (desc) h += '<p class="desc' + (d.descOpen ? ' open' : '') + '">' + esc(desc).replace(/\n/g, '<br>') + '</p>' + (desc.length > 360 ? '<button class="link small" data-act="moredesc" style="margin-top:4px">' + (d.descOpen ? 'Show less' : 'Show more') + '</button>' : '');
+    if (d.loading) h += '<div class="row" style="padding:16px 0"><span class="spin"></span><span class="muted">Loading chapters…</span></div>';
+    if (d.err) h += '<div class="note" style="margin-top:12px">' + esc(d.err) + ' <button class="link" data-act="reopen">Try again</button></div>';
+    if (chapters.length) {
+      h += '<h3 style="margin:18px 0 4px">Chapters</h3><div class="list">' + chapters.map(function (c, i) {
+        var cur = b && (S.play.key === b.key ? S.play.ch === i : b.pos.ch === i), st = '';
+        if (src.src !== 'lv') {
+          var p = b && S.prog[progKey(b.key, i)];
+          st = p ? (p.state === 'converting' ? '<span class="stat work">' + esc(p.note || Math.round(p.p * 100) + '%') + '</span>' : p.state === 'queued' ? '<span class="stat work">Waiting</span>' : '<span class="stat">Problem</span>')
+            : (b && chapterReady(b, i) ? '<span class="stat ready">Ready</span>' : '<span class="stat">~' + Math.max(1, Math.round((c.words || 0) / 155)) + ' min</span>');
+        } else st = '<span class="stat' + (b && S.local[audioKey(b.key, i)] ? ' ready">Offline · ' : '">') + (c.dur ? fmt(c.dur) : '') + '</span>';
+        return '<button class="li' + (cur ? ' now' : '') + '" data-act="playch" data-key="' + esc(it.key) + '" data-ch="' + i + '"><span class="num">' + (i + 1) + '</span><span class="grow"><b class="ell" style="display:block;font-weight:' + (cur ? 700 : 500) + '">' + esc(c.title) + '</b></span>' + st + '</button>';
+      }).join('') + '</div>';
+    }
+    if (b) h += '<div class="actions" style="margin-top:20px"><button class="btn sm ghost" data-act="remove" data-key="' + esc(b.key) + '">' + IC.trash + 'Remove from library</button></div>';
+    $('#sheet-body').innerHTML = h;
+  }
+
+  /* ================= Actions ================= */
+  function findItem(key) {
+    if (book(key)) return book(key);
+    for (var i = 0; i < S.disc.items.length; i++) if (S.disc.items[i].key === key) return S.disc.items[i];
+    return null;
+  }
+  function addFromDetail(play) {
+    var d = S.detail; if (!d) return;
+    var b = addBook(d.item, d.info);
+    toast('Added to Up Next');
+    if (b.src === 'pg' && !b.chapters.length) { renderDetail(); getPgText(b, play); return; }
+    renderDetail(); renderSoft();
+    if (play) playBook(b.key, 0, 0);
+  }
+  function getPgText(b, play) {
+    fetchText(textUrlsFor(b)).then(function (raw) { return prepareText(b, raw); }).then(function () {
+      if (S.detail) { S.detail.textErr = false; renderDetail(); } renderSoft(); toast('Ready: ' + b.chapters.length + ' chapters');
+      if (play) playBook(b.key, 0, 0);
+    }, function (e) { if (S.detail && S.detail.item.key === b.key) { S.detail.textErr = true; if (!e.blocked) toast(e.message); renderDetail(); } });
+  }
+  var pickFor = null;
+  $('#file-in').addEventListener('change', function () {
+    var f = this.files && this.files[0]; this.value = ''; if (!f) return;
+    var r = new FileReader();
+    r.onload = function () {
+      var b;
+      try {
+        if (pickFor) b = book(pickFor);
+        else { var nm = f.name.replace(/\.txt$/i, '').replace(/[_-]+/g, ' '); var k = 'txt:' + now(); b = addBook({ key: k, src: 'txt', id: k, title: nm, author: '' }); }
+        prepareText(b, r.result).then(function () { toast('Ready: ' + b.chapters.length + ' chapters'); if (S.detail && S.detail.item.key === b.key) { S.detail.textErr = false; renderDetail(); } else openDetail(b); renderSoft(); }, function (e) { toast(e.message); });
+      } catch (e) { toast(e.message); }
+    };
+    r.readAsText(f);
+  });
+  function saveOffline(b) {
+    var todo = b.chapters.map(function (c, i) { return i; }).filter(function (i) { return !S.local[audioKey(b.key, i)]; });
+    if (!todo.length) { toast('Already saved for offline'); return; }
+    var n = 0; toast('Saving ' + todo.length + ' chapters for offline…', 4000);
+    (function next() {
+      if (!todo.length) { toast('Saved for offline: ' + b.title); renderSoft(); return; }
+      var i = todo.shift();
+      fetch(b.chapters[i].url).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.blob(); })
+        .then(function (bl) { return putBlob(audioKey(b.key, i), bl).then(function () { S.local[audioKey(b.key, i)] = bl.size; saveSizes(); n++; if (S.sheet === 'detail') renderDetail(); next(); }); })
+        .catch(function (e) { toast(n ? 'Saved ' + n + ' chapters; the rest will stream (' + e.message + ')' : 'This recording can only stream here, not save offline.', 5000); renderSoft(); });
+    })();
+  }
+  function exportLib() {
+    var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(S.lib, null, 1)], { type: 'application/json' }));
+    a.download = 'listening-library-backup.json'; document.body.appendChild(a); a.click(); setTimeout(function () { a.remove(); }, 500);
+  }
+  function importLib() {
+    var i = document.createElement('input'); i.type = 'file'; i.accept = '.json,application/json';
+    i.onchange = function () { var f = i.files[0]; if (!f) return; var r = new FileReader(); r.onload = function () { try { var lib = JSON.parse(r.result); if (!lib.books) throw new Error('Not a library backup'); S.lib = mergeLib(S.lib, lib); saveLib(); render(); toast('Backup merged in'); } catch (e) { toast(e.message); } }; r.readAsText(f); };
+    i.click();
+  }
+  function previewVoice() {
+    var v = set().voice, note = $('#voice-note');
+    if (v === 'device') { var u = new SpeechSynthesisUtterance('This is your device voice. It starts instantly, but stops when the screen locks.'); u.rate = set().speed; speechSynthesis.speak(u); return; }
+    note.innerHTML = '<span class="spin"></span> Loading voice…';
+    loadPiper().then(function (tts) {
+      return tts.stored().then(function (have) { if (have && have.indexOf(v) >= 0) return; return tts.download(v, function (p) { if (p && p.total) note.textContent = 'Downloading voice ' + Math.round(p.loaded * 100 / p.total) + '%'; }); })
+        .then(function () { note.textContent = 'Speaking…'; return tts.predict({ text: 'It was a bright cold day in April. This is how your audiobooks will sound.', voiceId: v }); });
+    }).then(function (wav) { var a = new Audio(URL.createObjectURL(wav)); a.playbackRate = set().speed; a.play(); note.textContent = 'Voice ready on this device'; })
+      .catch(function (e) { note.textContent = 'Couldn’t load the AI voice here (' + e.message + '). Device voice still works.'; });
+  }
+
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest ? e.target.closest('[data-act]') : null;
+    if (!t) return;
+    var act = t.getAttribute('data-act'), key = t.getAttribute('data-key'), b = key ? book(key) : null;
+    switch (act) {
+      case 'go': show(t.getAttribute('data-v')); break;
+      case 'open': case 'peek': { closeSheet(); var it = findItem(key); if (it) openDetail(it); break; }
+      case 'reopen': if (S.detail) openDetail(S.detail.item); break;
+      case 'moredesc': S.detail.descOpen = !S.detail.descOpen; renderDetail(); break;
+      case 'add': addFromDetail(false); break;
+      case 'addplay': unlock(); addFromDetail(true); break;
+      case 'play': closeSheet(); playBook(key); openPlayer(); break;
+      case 'playcur': playBook(S.lib.current); openPlayer(); break;
+      case 'playch': {
+        unlock(); var ch = +t.getAttribute('data-ch');
+        if (!b) { var it2 = findItem(key); if (!it2) break; S.detail.item = it2; b = addBook(it2, S.detail.info); }
+        if (!b.chapters.length) break;
+        playBook(b.key, ch, (b.pos.ch === ch && !b.finished) ? b.pos.t : 0); openPlayer(); break;
+      }
+      case 'col': toggleCol(key, t.getAttribute('data-col')); renderDetail(); renderSoft(); break;
+      case 'remove': if (confirm('Remove “' + b.title + '” from your library? Audio in your Drive stays in the “' + FOLDER_NAME + '” folder.')) { removeBook(key); closeSheet(); render(); toast('Removed'); } break;
+      case 'offline': saveOffline(b); break;
+      case 'convall': for (var i = 0; i < b.chapters.length; i++) enqueue(key, i); toast('Making audio for every chapter. Keep the app open.'); renderDetail(); break;
+      case 'retry': delete S.prog[progKey(key, +t.getAttribute('data-ch'))]; enqueue(key, +t.getAttribute('data-ch'), true); break;
+      case 'picktxt': pickFor = key; $('#file-in').click(); break;
+      case 'addtxt': pickFor = null; $('#file-in').click(); break;
+      case 'src': S.disc.src = t.getAttribute('data-src'); S.disc.topic = ''; renderDiscover(); runSearch(true); break;
+      case 'topic': { var tp = t.getAttribute('data-topic'); S.disc.topic = tp === 'Popular' ? '' : tp; S.disc.q = ''; renderDiscover(); runSearch(true); break; }
+      case 'more': S.disc.page++; runSearch(false); break;
+      case 'research': runSearch(true); break;
+      case 'libcol': S.libCol = t.getAttribute('data-col'); renderLibrary(); break;
+      case 'gocol': S.libCol = t.getAttribute('data-col'); show('library'); break;
+      case 'newcol': { var nm = prompt('Name the new collection'); nm = nm && nm.trim().slice(0, 40); if (nm && S.lib.collections.indexOf(nm) < 0) { S.lib.collections.push(nm); S.lib.collectionsAt = now(); saveLib(); S.libCol = nm; renderLibrary(); } break; }
+      case 'delcol': { var c = t.getAttribute('data-col'); if (confirm('Delete the collection “' + c + '”? Books stay in your library.')) { S.lib.collections = S.lib.collections.filter(function (x) { return x !== c; }); S.lib.collectionsAt = now(); Object.keys(S.lib.books).forEach(function (k) { var bk = S.lib.books[k], j = bk.cols.indexOf(c); if (j >= 0) { bk.cols.splice(j, 1); touch(bk); } }); saveLib(); S.libCol = 'All'; renderLibrary(); } break; }
+      case 'toggle': togglePlay(); break;
+      case 'back': skip(-15); break;
+      case 'fwd': skip(30); break;
+      case 'prevch': nextCh(-1); break;
+      case 'nextch': nextCh(1); break;
+      case 'speed': cycleSpeed(); break;
+      case 'sleep': cycleSleep(); break;
+      case 'reconnect': reconnect(); break;
+      case 'syncnow': syncNow(); renderSettings(); break;
+      case 'switch': switchPerson(false); break;
+      case 'signout': if (confirm('Sign out and remove this person’s library and downloaded audio from this device? Everything stays in their Google Drive.')) switchPerson(true); break;
+      case 'upgrade': upgradeToGoogle(); break;
+      case 'clearaudio': if (confirm('Clear downloaded audio from this device?')) { Object.keys(S.local).forEach(function (k) { DB.del('blobs', k); }); S.local = {}; saveSizes(); renderSettings(); toast('Cleared'); } break;
+      case 'export': exportLib(); break;
+      case 'import': importLib(); break;
+      case 'preview': previewVoice(); break;
+    }
+  });
+  function openPlayer() { openSheet('player'); renderFullPlayer(); }
+  $('#mini').addEventListener('click', function (e) { if (e.target.closest('#mini-play')) { togglePlay(); return; } openPlayer(); });
+  $$('#tabs button').forEach(function (b) { b.addEventListener('click', function () { closeSheet(); show(b.getAttribute('data-v')); }); });
+  $('#avatar').addEventListener('click', function () { closeSheet(); show('settings'); });
+  $('#scrim').addEventListener('click', closeSheet);
+  $('#sheet-close').addEventListener('click', closeSheet);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeSheet(); });
+
+  /* ================= Accounts ================= */
+  function reconnect() {
+    requestToken('', S.acct.email).then(function () { S.needAuth = false; render(); return syncNow(); }).then(retryUploads)
+      .catch(function (e) { toast('Google sign-in didn’t finish: ' + e.message); });
+  }
+  function googleSignIn() {
+    if (!clientId()) { toast('Google sign-in isn’t set up yet'); return; }
+    var tokHint;
+    requestToken('select_account').then(function () {
+      return fetch(DRIVE + '/about?fields=user(displayName,emailAddress,photoLink)', { headers: { Authorization: 'Bearer ' + S.token } }).then(function (r) { if (!r.ok) throw new Error('Drive ' + r.status); return r.json(); });
+    }).then(function (j) {
+      var u = j.user || {}; tokHint = u.emailAddress;
+      lsSet('ll-tok:' + tokHint, { t: S.token, e: S.tokenExp });
+      var acct = { mode: 'google', email: u.emailAddress, name: (u.displayName || u.emailAddress || '').split(' ')[0], photo: u.photoLink || '' };
+      var prevLocal = S.acct && S.acct.mode === 'local' ? S.lib : null;
+      return start(acct, prevLocal);
+    }).catch(function (e) { toast('Sign-in didn’t finish: ' + e.message, 4000); });
+  }
+  function upgradeToGoogle() { googleSignIn(); }
+  function switchPerson(clear) {
+    stopPlayback(); closeSheet();
+    var p = Promise.resolve();
+    if (clear) {
+      p = DB.keys('blobs').then(function (ks) { return Promise.all(ks.filter(function (k) { return String(k).indexOf('audio:' + S.aid + ':') === 0; }).map(function (k) { return DB.del('blobs', k); })); })
+        .then(function () { return DB.keys('kv'); }).then(function (ks) { return Promise.all(ks.filter(function (k) { return String(k).indexOf(':' + S.aid) > 0 || String(k).indexOf('text:' + S.aid + ':') === 0; }).map(function (k) { return DB.del('kv', k); })); })
+        .then(function () { try { localStorage.removeItem('ll-tok:' + S.aid); localStorage.removeItem('ll-folder:' + S.aid); localStorage.removeItem('ll-libfile:' + S.aid); localStorage.removeItem('ll-sizes:' + S.aid); } catch (e) {} });
+      if (S.token && window.google && window.google.accounts) try { window.google.accounts.oauth2.revoke(S.token, function () {}); } catch (e) {}
+    }
+    p.then(function () { S.acct = null; S.token = null; S.tokenExp = 0; lsSet('ll-acct', null); showGate(); });
+  }
+  function showGate() {
+    $('#gate').hidden = false;
+    var ok = !!clientId(); $('#g-signin').disabled = !ok; $('#g-setup-note').hidden = ok;
+  }
+  $('#g-signin').addEventListener('click', googleSignIn);
+  $('#g-local').addEventListener('click', function () { start({ mode: 'local', name: 'This device', email: '' }); });
+
+  function start(acct, carryLocal) {
+    S.acct = acct; S.aid = acct.mode === 'google' ? acct.email : 'local';
+    lsSet('ll-acct', acct);
+    if (acct.mode === 'google' && !S.token) { var tk = lsGet('ll-tok:' + acct.email, null); if (tk && tk.e > now()) { S.token = tk.t; S.tokenExp = tk.e; } else S.needAuth = true; }
+    S.local = lsGet('ll-sizes:' + S.aid, {}) || {};
+    return DB.get('kv', libKey()).then(function (s) {
+      S.lib = s ? JSON.parse(s) : newLib();
+      if (!S.lib.settings) S.lib.settings = newLib().settings;
+      if (carryLocal) S.lib = mergeLib(S.lib, carryLocal);
+      $('#gate').hidden = true;
+      S.disc.loaded = false;
+      au.playbackRate = set().speed;
+      show(S.view || 'home');
+      if (acct.mode === 'google') { if (S.token) { S.needAuth = false; syncNow().then(retryUploads); } else { S.sync = 'auth'; render(); } }
+      return DB.keys('blobs').then(function (ks) { // reconcile device audio list
+        var have = {}; ks.forEach(function (k) { have[k] = 1; });
+        Object.keys(S.local).forEach(function (k) { if (!have[k]) delete S.local[k]; });
+        saveSizes();
+      });
+    });
+  }
+
+  /* ================= Boot ================= */
+  if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(function () {});
+  var saved = lsGet('ll-acct', null);
+  if (saved && saved.mode) start(saved).catch(function (e) { console.error(e); showGate(); });
+  else showGate();
+  window.__LL = S; // for troubleshooting from the browser console
+})();
+
+</script>
+</body>
+</html>
