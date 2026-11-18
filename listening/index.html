@@ -96,9 +96,12 @@ main{padding:16px 16px calc(var(--nav-h) + var(--mini-h) + 28px + env(safe-area-
 /* ---------- Chips / segmented ---------- */
 .chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 .chips::-webkit-scrollbar{display:none}
-@media (hover:hover) and (pointer:fine){.chips{flex-wrap:wrap;overflow:visible}}
+@media (hover:hover) and (pointer:fine) and (min-width:700px){.chips{flex-wrap:wrap;overflow:visible}}
 .chip{flex:none;min-height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--s-line);background:transparent;color:var(--s-muted);font-weight:600;font-size:13.5px;white-space:nowrap}
 .chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.chip.shelf{border-color:var(--accent-soft);color:var(--s-ink)}
+.chip.shelf[aria-pressed="true"]{color:var(--accent);border-color:var(--accent)}
+.shelf-warn{color:var(--s-ink);background:var(--s-warn-soft);border-radius:var(--s-r-sm);padding:10px 12px}
 .seg{display:flex;background:var(--s-card);border:1px solid var(--s-line);border-radius:999px;padding:3px;gap:3px}
 .seg button{flex:1;min-height:38px;border:0;border-radius:999px;background:transparent;font-weight:600;font-size:14px;color:var(--s-muted)}
 .seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
@@ -141,6 +144,11 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
 .detail-top{display:grid;grid-template-columns:120px 1fr;gap:16px;align-items:end;margin:6px 0 16px}
 .desc{color:var(--s-muted);font-size:14px;max-height:9.5em;overflow:hidden;position:relative}
 .desc.open{max-height:none}
+.about{background:var(--s-card);border:1px solid var(--s-line);border-radius:var(--s-r);padding:14px 16px;margin:4px 0 8px}
+.about h3{margin-bottom:8px}
+.about dl{display:grid;grid-template-columns:max-content 1fr;gap:4px 14px;margin:0 0 10px;font-size:14px}
+.about dt{color:var(--s-muted);font-weight:600}
+.about dd{margin:0}
 .actions{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0}
 
 /* ---------- Full player ---------- */
@@ -351,7 +359,7 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
     token: null, tokenExp: 0, needAuth: false, sync: 'off', syncAt: 0, syncErr: '',
     local: {}, // audio keys present on this device
     jobs: [], jobBusy: false, prog: {}, // conversion
-    disc: { src: 'lv', q: '', topic: '', items: [], page: 1, loading: false, err: '', more: false, loaded: false },
+    disc: { src: 'lv', q: '', topic: '', shelf: null, items: [], page: 1, loading: false, err: '', more: false, loaded: false },
     libCol: 'All', sheet: null, detail: null,
     play: { key: null, ch: 0, waiting: false, mode: 'audio' }, sleepIdx: 0, sleepUntil: 0, sleepEnd: false
   };
@@ -526,6 +534,53 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
       }) };
     });
   }
+
+  /* Hand-picked shelves. Gutenberg numbers checked against gutenberg.org; LibriVox picks are matched by title. */
+  function P(id, title, author) { return { id: String(id), title: title, author: author }; }
+  var SHELVES = [
+    { name: 'Homestead & garden', note: 'Small farms, vegetable gardens, soil and bees: growing your own food.',
+      pg: [P(4509, 'Three Acres and Liberty', 'Bolton Hall'), P(48753, 'Ten Acres Enough', 'Edmund Morris'), P(77032, 'The Garden Yard', 'Bolton Hall'), P(7123, 'Home Vegetable Gardening', 'F. F. Rockwell'),
+        P(9550, 'Manual of Gardening', 'L. H. Bailey'), P(5350, 'Farmers of Forty Centuries', 'F. H. King'), P(24583, 'Langstroth on the Hive and the Honey-Bee', 'L. L. Langstroth'), P(68157, 'Manual of the Apiary', 'A. J. Cook'), P(205, 'Walden', 'Henry David Thoreau')],
+      lv: ['Three Acres and Liberty', 'Ten Acres Enough', 'Walden', 'My Summer in a Garden', 'Farmers of Forty Centuries', 'The Fat of the Land', 'Elizabeth and Her German Garden', 'Gardening for the Million'],
+      lvTopic: 'gardening OR farming OR homesteading OR agriculture', pgTopic: 'gardening' },
+    { name: 'Food preservation & kitchen', note: 'Canning, drying, storing and cooking. Older canning methods don’t meet today’s safety standards — listen for ideas, but follow current USDA / National Center for Home Food Preservation guidance when you actually can.',
+      pg: [P(66136, 'Home Canning of Fruits and Vegetables', 'U.S. Department of Agriculture'), P(59977, 'Canning, Freezing, Storing Garden Produce', 'U.S. Department of Agriculture'), P(13775, 'Every Step in Canning', 'Grace Viall Gray'), P(10136, 'The Book of Household Management', 'Isabella Beeton')],
+      lv: ['Every Step in Canning', 'Canning and Preserving', 'The Boston Cooking-School Cook Book', 'Book of Household Management', 'Science in the Kitchen'],
+      lvTopic: 'canning OR preserving OR cooking OR cookery', pgTopic: 'canning' },
+    { name: 'Money & thrift', note: 'Saving, spending, earning and the classic money parables.',
+      pg: [P(59844, 'The Science of Getting Rich', 'Wallace D. Wattles'), P(8581, 'The Art of Money Getting', 'P. T. Barnum'), P(14418, 'Thrift', 'Samuel Smiles'), P(368, 'Acres of Diamonds', 'Russell H. Conwell'),
+        P(24518, 'Extraordinary Popular Delusions and the Madness of Crowds', 'Charles Mackay'), P(3300, 'The Wealth of Nations', 'Adam Smith')],
+      lv: ['The Science of Getting Rich', 'The Art of Money Getting', 'The Richest Man in Babylon', 'Acres of Diamonds', 'The Way to Wealth', 'Thrift', 'Extraordinary Popular Delusions', 'Reminiscences of a Stock Operator'],
+      lvTopic: 'money OR wealth OR thrift OR finance OR economics', pgTopic: 'finance' },
+    { name: 'Self-reliance & mindset', note: 'Character, discipline and doing things for yourself.',
+      pg: [P(935, 'Self Help', 'Samuel Smiles'), P(4507, 'As a Man Thinketh', 'James Allen'), P(2680, 'Meditations', 'Marcus Aurelius'), P(20203, 'Autobiography of Benjamin Franklin', 'Benjamin Franklin'), P(132, 'The Art of War', 'Sun Tzu')],
+      lv: ['Self-Reliance', 'Self-Help', 'As a Man Thinketh', 'Meditations', 'Autobiography of Benjamin Franklin', 'Letters from a Self-Made Merchant to His Son', 'Character', 'The Art of War'],
+      lvTopic: 'self-help OR success OR self-reliance OR character', pgTopic: 'success' },
+    { name: 'Everyday skills', note: 'Time, focus, speaking and practical know-how for daily life.',
+      pg: [P(2274, 'How to Live on 24 Hours a Day', 'Arnold Bennett'), P(16317, 'The Art of Public Speaking', 'Dale Carnegie')],
+      lv: ['How to Live on 24 Hours a Day', 'The Art of Public Speaking', 'The Power of Concentration', 'Mental Efficiency', 'Camping and Woodcraft', 'The Human Machine', 'How to Analyze People on Sight'],
+      lvTopic: 'self-improvement OR habits OR concentration OR speaking OR woodcraft', pgTopic: 'conduct of life' }
+  ];
+  function shelfPg(sh) {
+    return sh.pg.map(function (b) { return { src: 'pg', id: b.id, key: 'pg:' + b.id, title: b.title, author: b.author, cover: 'https://www.gutenberg.org/cache/epub/' + b.id + '/pg' + b.id + '.cover.medium.jpg', desc: '', textUrls: [], curated: true }; });
+  }
+  function iaTitles(titles) {
+    var parts = ['collection:(librivoxaudio)'];
+    if (set().english) parts.push('language:(English OR eng)');
+    parts.push('title:(' + titles.map(function (t) { return '"' + t.replace(/"/g, '') + '"'; }).join(' OR ') + ')');
+    var p = 'q=' + encodeURIComponent(parts.join(' AND ')) + '&fl%5B%5D=identifier&fl%5B%5D=title&fl%5B%5D=creator&fl%5B%5D=description&fl%5B%5D=downloads&sort%5B%5D=downloads%20desc&rows=80&page=1&output=json';
+    return cachedJson('ia-titles:' + p, 7 * 86400000, function () {
+      return getJson(['https://archive.org/advancedsearch.php?' + p, 'https://cors.archive.org/advancedsearch.php?' + p]).then(function (j) {
+        var seen = {}, out = [];
+        ((j.response || {}).docs || []).forEach(function (d) {
+          var t = cleanTitle(first(d.title)), k = t.toLowerCase().replace(/[^a-z0-9]/g, '');
+          if (seen[k]) return; seen[k] = 1; // keep the most-listened recording of each title
+          out.push({ src: 'lv', id: d.identifier, key: 'lv:' + d.identifier, title: t, author: flipName(first(d.creator)), cover: 'https://archive.org/services/img/' + encodeURIComponent(d.identifier), desc: stripHtml(first(d.description)).slice(0, 1200) });
+        });
+        return out;
+      });
+    });
+  }
   function cleanTitle(t) { return String(t || 'Untitled').replace(/\s*\(\s*version\s*\d+\s*\)\s*$/i, '').replace(/\s*-\s*librivox.*$/i, '').trim(); }
   function parseLen(l) { if (!l) return 0; if (/:/.test(l)) { var p = String(l).split(':').map(Number), s = 0; for (var i = 0; i < p.length; i++) s = s * 60 + (p[i] || 0); return s; } return parseFloat(l) || 0; }
   function iaItem(id) {
@@ -570,8 +625,36 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
       return { more: !!j.next, items: (j.results || []).filter(function (b) { return !b.copyright; }).map(function (b) {
         var f = b.formats || {}, urls = [];
         for (var k in f) if (/^text\/plain/.test(k) && !/\.zip$/i.test(f[k])) urls.push(f[k]);
-        return { src: 'pg', id: String(b.id), key: 'pg:' + b.id, title: b.title, author: flipName((b.authors && b.authors[0] && b.authors[0].name) || ''), cover: f['image/jpeg'] || '', desc: (b.summaries && b.summaries[0]) || (b.subjects || []).slice(0, 6).join(' · '), textUrls: urls };
+        return { src: 'pg', id: String(b.id), key: 'pg:' + b.id, title: b.title, author: flipName((b.authors && b.authors[0] && b.authors[0].name) || ''), cover: f['image/jpeg'] || '', desc: cleanSummary((b.summaries && b.summaries[0]) || ''), life: authorLife(b.authors && b.authors[0]), subjects: tidySubjects(b.subjects), textUrls: urls };
       }) };
+    });
+  }
+  function authorLife(a) { if (!a) return ''; var b = a.birth_year, d = a.death_year; if (b == null && d == null) return ''; return (b == null ? '?' : (b < 0 ? -b + ' BC' : b)) + '\u2013' + (d == null ? '?' : (d < 0 ? -d + ' BC' : d)); }
+  function cleanSummary(t) { return String(t || '').replace(/\s*\(This is an automatically generated summary\.\)\s*$/i, '').trim(); }
+  function tidySubjects(arr) { var seen = {}, out = []; (arr || []).forEach(function (x) { var t = String(x).split(' -- ')[0].replace(/\s*\(.*?\)\s*/g, '').trim(); if (t && !seen[t.toLowerCase()] && t.length < 40) { seen[t.toLowerCase()] = 1; out.push(t); } }); return out.slice(0, 4); }
+  function normT(t) { return String(t || '').toLowerCase().split(/[:;(]/)[0].replace(/^(the|a|an)\s+/, '').replace(/[^a-z0-9]/g, ''); }
+  function olYear(title, author) { // first-published year from Open Library
+    var t = String(title).split(/[:;]/)[0].trim(), au = /department|anonymous|various/i.test(author || '') ? '' : String(author || '').split(' ').slice(-1)[0];
+    var u = 'https://openlibrary.org/search.json?fields=title,first_publish_year,subject&limit=5&title=' + encodeURIComponent(t) + (au ? '&author=' + encodeURIComponent(au) : '');
+    return getJson([u], 12000).then(function (j) {
+      var want = normT(t), docs = (j.docs || []).filter(function (d) { var n = normT(d.title); return n && (n === want || n.indexOf(want) === 0 || want.indexOf(n) === 0); });
+      var yrs = docs.map(function (d) { return d.first_publish_year; }).filter(function (y) { return y > 0; });
+      return { year: yrs.length ? Math.min.apply(null, yrs) : 0, subjects: tidySubjects(docs[0] && docs[0].subject) };
+    }).catch(function () { return { year: 0, subjects: [] }; });
+  }
+  function gutendexOne(id) {
+    return getJson(['https://gutendex.com/books/' + encodeURIComponent(id) + '/'], 15000).then(function (b) {
+      return { desc: cleanSummary(b.summaries && b.summaries[0]), life: authorLife(b.authors && b.authors[0]), subjects: tidySubjects(b.subjects) };
+    }).catch(function () { return {}; });
+  }
+  function fetchAbout(it) {
+    return cachedJson('about:' + it.key, 30 * 86400000, function () {
+      var jobs = [olYear(it.title, it.author)];
+      if (it.src === 'pg' && (!it.desc || !it.life)) jobs.push(gutendexOne(it.id));
+      return Promise.all(jobs).then(function (r) {
+        var ol = r[0] || {}, gd = r[1] || {};
+        return { year: ol.year || 0, desc: gd.desc || '', life: gd.life || it.life || '', subjects: (gd.subjects && gd.subjects.length ? gd.subjects : (it.subjects && it.subjects.length ? it.subjects : ol.subjects)) || [] };
+      });
     });
   }
   function textUrlsFor(b) {
@@ -815,7 +898,7 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
     var k = item.key, b = book(k);
     if (b) return b;
     b = { key: k, src: item.src, id: item.id, title: item.title, author: item.author, cover: item.cover || '', desc: (info && info.desc) || item.desc || '',
-      textUrls: item.textUrls || [], cols: ['Up Next'], addedAt: now(), updatedAt: now(), pos: { ch: 0, t: 0 }, chapters: (info && info.chapters) || [], finished: false };
+      textUrls: item.textUrls || [], curated: !!item.curated, cols: ['Up Next'], addedAt: now(), updatedAt: now(), pos: { ch: 0, t: 0 }, chapters: (info && info.chapters) || [], finished: false };
     S.lib.books[k] = b; delete S.lib.deleted[k]; saveLib();
     return b;
   }
@@ -831,10 +914,19 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
     if (i >= 0) b.cols.splice(i, 1); else b.cols.push(col);
     touch(b); saveLib();
   }
+  function checkTitle(b, raw) {
+    if (!b.curated) return;
+    var head = raw.slice(0, 6000).toLowerCase();
+    var words = b.title.toLowerCase().replace(/[^a-z ]/g, ' ').split(' ').filter(function (w) { return w.length > 3 && ['with', 'from', 'that', 'their', 'book'].indexOf(w) < 0; });
+    var hits = words.filter(function (w) { return head.indexOf(w) >= 0; }).length;
+    if (words.length && hits < Math.ceil(words.length / 2)) throw assign(new Error('The downloaded text doesn\u2019t look like \u201c' + b.title + '\u201d, so it wasn\u2019t added. Search for it by name instead.'), { mismatch: true });
+  }
   function prepareText(b, raw) {
     var ch = parseBook(raw);
     if (!ch.length) throw new Error('No readable text found');
-    b.chapters = ch.map(function (c) { return { title: c.title, words: c.words }; }); touch(b); saveLib();
+    b.chapters = ch.map(function (c) { return { title: c.title, words: c.words }; });
+    var op = /Original publication:[^\n]*?\b(1[4-9]\d\d|20[0-2]\d)\b/.exec(String(raw).slice(0, 4000)); if (op && !b.year) b.year = +op[1];
+    touch(b); saveLib();
     return storeText(b, ch);
   }
   function progressPct(b) {
@@ -1030,11 +1122,14 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
     var h = '<div class="seg" role="group"><button data-act="src" data-src="lv" aria-pressed="' + (d.src === 'lv') + '">Human-read</button><button data-act="src" data-src="pg" aria-pressed="' + (d.src === 'pg') + '">AI-voice classics</button></div>' +
       '<p class="small muted">' + (d.src === 'lv' ? 'Free, volunteer-read recordings from LibriVox. They stream right away.' : 'Free public-domain ebooks from Project Gutenberg, read aloud by a natural AI voice. Each chapter is made the first time you play it.') + '</p>' +
       '<form class="search" id="disc-form">' + IC.search + '<input class="input" id="disc-q" type="search" enterkeyhint="search" placeholder="Search title or author" value="' + esc(d.q) + '"></form>' +
-      '<div class="chips">' + ['Popular'].concat(topics).map(function (t) { var on = (t === 'Popular' && !d.topic) || t === d.topic; return '<button class="chip" data-act="topic" data-topic="' + esc(t) + '" aria-pressed="' + on + '">' + esc(t) + '</button>'; }).join('') + '</div>' +
+      '<div class="chips">' + '<button class="chip" data-act="topic" data-topic="Popular" aria-pressed="' + (!d.topic && d.shelf == null) + '">Popular</button>' +
+        SHELVES.map(function (sh, i) { return '<button class="chip shelf" data-act="shelf" data-shelf="' + i + '" aria-pressed="' + (d.shelf === i) + '">\u2605 ' + esc(sh.name) + '</button>'; }).join('') +
+        topics.map(function (t) { return '<button class="chip" data-act="topic" data-topic="' + esc(t) + '" aria-pressed="' + (t === d.topic) + '">' + esc(t) + '</button>'; }).join('') + '</div>' +
+      (d.shelf != null ? '<p class="small ' + (d.shelf === 1 ? 'shelf-warn' : 'muted') + '">' + esc(SHELVES[d.shelf].note) + '</p>' : '') +
       (d.src === 'pg' ? '<button class="btn sm ghost" data-act="addtxt" style="align-self:flex-start">' + IC.file + 'Add your own .txt book</button>' : '') +
       '<div id="disc-res"></div>';
     $('#v-discover').innerHTML = h;
-    $('#disc-form').addEventListener('submit', function (e) { e.preventDefault(); d.q = $('#disc-q').value.trim(); d.topic = ''; $('#disc-q').blur(); runSearch(true); });
+    $('#disc-form').addEventListener('submit', function (e) { e.preventDefault(); d.q = $('#disc-q').value.trim(); d.topic = ''; d.shelf = null; $('#disc-q').blur(); runSearch(true); });
     renderDiscoverResults();
   }
   function renderDiscoverResults() {
@@ -1052,7 +1147,14 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
     if (reset) { d.items = []; d.page = 1; d.more = false; }
     d.loading = true; d.slow = false; d.err = ''; renderDiscoverResults();
     setTimeout(function () { if (seq === searchSeq && d.loading) { d.slow = true; renderDiscoverResults(); } }, 5000);
-    (d.src === 'lv' ? iaSearch : pgSearch)(d.q, d.topic, d.page).then(function (r) {
+    var sh = d.shelf != null ? SHELVES[d.shelf] : null, topic = sh ? (d.src === 'lv' ? sh.lvTopic : sh.pgTopic) : d.topic;
+    var picksP = (sh && d.page === 1) ? (d.src === 'pg' ? Promise.resolve(shelfPg(sh)) : iaTitles(sh.lv).catch(function () { return []; })) : Promise.resolve([]);
+    picksP.then(function (picks) {
+      if (seq !== searchSeq) return;
+      if (picks.length) { d.items = picks; renderDiscoverResults(); }
+      return (d.src === 'lv' ? iaSearch : pgSearch)(d.q, topic, d.page).catch(function (e) { if (picks.length) return { items: [], more: false }; throw e; });
+    }).then(function (r) {
+      if (!r) return;
       if (seq !== searchSeq) return;
       var seen = {}; d.items.forEach(function (x) { seen[x.key] = 1; });
       d.items = d.items.concat(r.items.filter(function (x) { return !seen[x.key]; })); d.more = r.more;
@@ -1158,9 +1260,15 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
   function openSheet(kind) { S.sheet = kind; $('#scrim').classList.add('on'); $('#sheet').classList.add('on'); $('#sheet').scrollTop = 0; }
   function closeSheet() { S.sheet = null; S.detail = null; $('#scrim').classList.remove('on'); $('#sheet').classList.remove('on'); }
   function openDetail(item) {
-    S.detail = { item: item, info: null, loading: false, err: '', textErr: false, descOpen: false };
+    S.detail = { item: item, info: null, loading: false, err: '', textErr: false, descOpen: false, about: null, aboutLoading: true };
     openSheet('detail'); renderDetail();
     var b = book(item.key);
+    fetchAbout(b || item).then(function (a) {
+      if (!S.detail || S.detail.item.key !== item.key) return;
+      S.detail.about = a; S.detail.aboutLoading = false;
+      var bb = book(item.key); if (bb) { var ch = false; if (!bb.year && a.year) { bb.year = a.year; ch = true; } if (!bb.desc && a.desc) { bb.desc = a.desc; ch = true; } if (!bb.life && a.life) { bb.life = a.life; ch = true; } if (ch) { touch(bb); saveLib(); } }
+      renderDetail();
+    }, function () { if (S.detail) { S.detail.aboutLoading = false; renderDetail(); } });
     if (item.src === 'lv' && (!b || !b.chapters.length)) {
       S.detail.loading = true; renderDetail();
       iaItem(item.id).then(function (info) {
@@ -1174,7 +1282,8 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
   function renderDetail() {
     if (!S.detail) return;
     var d = S.detail, it = d.item, b = book(it.key), src = b || it, info = d.info, chapters = b && b.chapters.length ? b.chapters : (info ? info.chapters : []);
-    var desc = (b && b.desc) || (info && info.desc) || it.desc || '';
+    var ab = d.about || {}, desc = (b && b.desc) || (info && info.desc) || it.desc || ab.desc || '';
+    var year = (b && b.year) || ab.year || 0, life = (b && b.life) || ab.life || it.life || '', subj = ab.subjects || [];
     var total = 0; chapters.forEach(function (c) { total += c.dur || (c.words ? c.words / 2.6 : 0); });
     var h = '<div class="detail-top">' + coverHtml(src) + '<div class="stack" style="gap:6px;min-width:0">' + (src.src === 'lv' ? '<span class="badge" style="align-self:flex-start">Human-read · LibriVox</span>' : '<span class="badge ai" style="align-self:flex-start">AI voice · ' + (src.src === 'pg' ? 'Gutenberg' : 'Your file') + '</span>') +
       '<h2 style="line-height:1.2">' + esc(src.title) + '</h2><p class="muted">' + esc(src.author || '') + '</p>' + (chapters.length ? '<p class="small faint">' + chapters.length + ' chapters' + (total ? ' · ' + (src.src === 'lv' ? '' : 'about ') + fmtDur(total) : '') + '</p>' : '') + '</div></div>';
@@ -1194,7 +1303,13 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
       h += d.textErr ? '<div class="note" style="margin-bottom:12px"><b>Project Gutenberg didn’t let this app download the book text directly.</b><ol style="margin:8px 0 0;padding-left:20px"><li>Tap <a class="link" href="https://www.gutenberg.org/ebooks/' + esc(b.id) + '.txt.utf-8" target="_blank" rel="noopener">Open the book text</a> and save the page/file (on iPhone: Share → Save to Files).</li><li>Come back and tap <b>Choose the .txt file</b>.</li></ol><p style="margin-top:10px"><button class="btn sm primary" data-act="picktxt" data-key="' + esc(b.key) + '">' + IC.file + 'Choose the .txt file</button></p></div>'
         : '<div class="note" style="margin-bottom:12px"><div class="row"><span class="spin"></span><b>Getting the book text and finding chapters…</b></div></div>';
     }
-    if (desc) h += '<p class="desc' + (d.descOpen ? ' open' : '') + '">' + esc(desc).replace(/\n/g, '<br>') + '</p>' + (desc.length > 360 ? '<button class="link small" data-act="moredesc" style="margin-top:4px">' + (d.descOpen ? 'Show less' : 'Show more') + '</button>' : '');
+    h += '<section class="about"><h3>About this book</h3><dl>' +
+      '<dt>First published</dt><dd>' + (year ? year : d.aboutLoading ? '<span class="faint">Looking up\u2026</span>' : '<span class="faint">Not listed</span>') + '</dd>' +
+      '<dt>Author</dt><dd>' + esc(src.author || 'Unknown') + (life ? ' <span class="faint">(' + esc(life) + ')</span>' : '') + '</dd>' +
+      '<dt>Format</dt><dd>' + (src.src === 'lv' ? 'Human-read by LibriVox volunteers' : 'Read aloud by an AI voice from the free text') + '</dd>' +
+      (subj.length ? '<dt>Subjects</dt><dd>' + subj.map(esc).join(' \u00b7 ') + '</dd>' : '') + '</dl>' +
+      (desc ? '<p class="desc' + (d.descOpen ? ' open' : '') + '">' + esc(desc).replace(/\n/g, '<br>') + '</p>' + (desc.length > 360 ? '<button class="link small" data-act="moredesc" style="margin-top:4px">' + (d.descOpen ? 'Show less' : 'Show more') + '</button>' : '')
+        : (d.aboutLoading || d.loading ? '<p class="desc faint">Looking up a description\u2026</p>' : '<p class="desc faint">No description available for this one.</p>')) + '</section>';
     if (d.loading) h += '<div class="row" style="padding:16px 0"><span class="spin"></span><span class="muted">Loading chapters…</span></div>';
     if (d.err) h += '<div class="note" style="margin-top:12px">' + esc(d.err) + ' <button class="link" data-act="reopen">Try again</button></div>';
     if (chapters.length) {
@@ -1221,16 +1336,17 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
   function addFromDetail(play) {
     var d = S.detail; if (!d) return;
     var b = addBook(d.item, d.info);
+    if (d.about) { if (!b.year && d.about.year) b.year = d.about.year; if (!b.desc && d.about.desc) b.desc = d.about.desc; if (!b.life && d.about.life) b.life = d.about.life; touch(b); saveLib(); }
     toast('Added to Up Next');
     if (b.src === 'pg' && !b.chapters.length) { renderDetail(); getPgText(b, play); return; }
     renderDetail(); renderSoft();
     if (play) playBook(b.key, 0, 0);
   }
   function getPgText(b, play) {
-    fetchText(textUrlsFor(b)).then(function (raw) { return prepareText(b, raw); }).then(function () {
+    fetchText(textUrlsFor(b)).then(function (raw) { checkTitle(b, raw); return prepareText(b, raw); }).then(function () {
       if (S.detail) { S.detail.textErr = false; renderDetail(); } renderSoft(); toast('Ready: ' + b.chapters.length + ' chapters');
       if (play) playBook(b.key, 0, 0);
-    }, function (e) { if (S.detail && S.detail.item.key === b.key) { S.detail.textErr = true; if (!e.blocked) toast(e.message); renderDetail(); } });
+    }, function (e) { if (e.mismatch) { removeBook(b.key); closeSheet(); render(); toast(e.message, 6000); return; } if (S.detail && S.detail.item.key === b.key) { S.detail.textErr = true; if (!e.blocked) toast(e.message); renderDetail(); } });
   }
   var pickFor = null;
   $('#file-in').addEventListener('change', function () {
@@ -1304,8 +1420,9 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
       case 'retry': delete S.prog[progKey(key, +t.getAttribute('data-ch'))]; enqueue(key, +t.getAttribute('data-ch'), true); break;
       case 'picktxt': pickFor = key; $('#file-in').click(); break;
       case 'addtxt': pickFor = null; $('#file-in').click(); break;
-      case 'src': S.disc.src = t.getAttribute('data-src'); S.disc.topic = ''; renderDiscover(); runSearch(true); break;
-      case 'topic': { var tp = t.getAttribute('data-topic'); S.disc.topic = tp === 'Popular' ? '' : tp; S.disc.q = ''; renderDiscover(); runSearch(true); break; }
+      case 'src': S.disc.src = t.getAttribute('data-src'); S.disc.topic = ''; renderDiscover(); runSearch(true); break; // shelf choice carries over between the two sources
+      case 'topic': { var tp = t.getAttribute('data-topic'); S.disc.topic = tp === 'Popular' ? '' : tp; S.disc.shelf = null; S.disc.q = ''; renderDiscover(); runSearch(true); break; }
+      case 'shelf': S.disc.shelf = +t.getAttribute('data-shelf'); S.disc.topic = ''; S.disc.q = ''; renderDiscover(); runSearch(true); break;
       case 'more': S.disc.page++; runSearch(false); break;
       case 'research': runSearch(true); break;
       case 'libcol': S.libCol = t.getAttribute('data-col'); renderLibrary(); break;
