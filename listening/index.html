@@ -21,8 +21,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
 <style>
 /* Listening Library — Sutton Design System tokens (--s-*) + its own amber accent */
-:root,:root[data-theme="dark"]{--accent:#F0A955;--accent-ink:#1E1407;--accent-soft:#3A2A14;--ai:#9BB8F5;--ai-soft:#1D2840}
-:root[data-theme="light"]{--accent:#A85F12;--accent-ink:#FFFFFF;--accent-soft:#FBEBD5;--ai:#3557A8;--ai-soft:#E2E9F8}
+:root,:root[data-theme="dark"]{--accent:#F0A955;--accent-ink:#1E1407;--accent-soft:#3A2A14;--ai:#9BB8F5;--ai-soft:#1D2840;--pod:#7FD1C7;--pod-soft:#163330}
+:root[data-theme="light"]{--accent:#A85F12;--accent-ink:#FFFFFF;--accent-soft:#FBEBD5;--ai:#3557A8;--ai-soft:#E2E9F8;--pod:#1F7A70;--pod-soft:#DDF2EF}
 :root{--s-accent:var(--accent);--nav-h:64px;--mini-h:64px}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--s-bg);color:var(--s-ink)}
@@ -91,6 +91,7 @@ main{padding:16px 16px calc(var(--nav-h) + var(--mini-h) + 28px + env(safe-area-
 .badge{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:2px 8px;font-size:11.5px;font-weight:600;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
 .badge.ai{background:var(--ai-soft);color:var(--ai)}
 .badge.ok{background:var(--s-ok-soft);color:var(--s-ok)}
+.badge.pod{background:var(--pod-soft);color:var(--pod)}
 .cover .badge{position:absolute;top:6px;left:6px}
 
 /* ---------- Chips / segmented ---------- */
@@ -237,7 +238,7 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
 <div class="sheet" id="sheet" role="dialog" aria-modal="true"><div class="grab"></div><button class="icon-btn sheet-close" id="sheet-close" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button><div id="sheet-body"></div></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <audio id="au" preload="auto" playsinline></audio>
-<input type="file" id="file-in" accept=".txt,text/plain" hidden>
+<input type="file" id="file-in" accept=".txt,.pdf,text/plain,application/pdf" multiple hidden>
 
 <script>
 /* Listening Library — Sutton household app.
@@ -253,6 +254,8 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
   var SCOPE = 'https://www.googleapis.com/auth/drive.file';
   var PIPER_URLS = ['https://cdn.jsdelivr.net/npm/@mintplex-labs/piper-tts-web@1.0.4/+esm'];
   var LAME_URLS = ['https://cdn.jsdelivr.net/npm/@breezystack/lamejs@1.2.7/+esm', 'https://esm.sh/@breezystack/lamejs@1.2.7'];
+  var PDFJS = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@6.2.108/build/pdf.min.mjs';
+  var PDFJS_WORKER = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@6.2.108/build/pdf.worker.min.mjs';
   var DRIVE = 'https://www.googleapis.com/drive/v3';
   var UPLOAD = 'https://www.googleapis.com/upload/drive/v3';
   var FOLDER_NAME = 'Listening Library';
@@ -271,6 +274,7 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
   ];
   var TOPICS_LV = ['Adventure', 'Mystery', 'Science Fiction', 'Horror', 'History', 'Biography', 'Philosophy', 'Science', 'Poetry', 'Humor', 'Self-Help', 'Fantasy', 'Romance', 'War'];
   var TOPICS_PG = ['Adventure', 'Detective', 'Science fiction', 'Horror', 'History', 'Biography', 'Philosophy', 'Science', 'Economics', 'Psychology', 'Humor', 'Fantasy', 'Short stories', 'Self-help'];
+  var TOPICS_POD = ['Homesteading', 'Gardening', 'Food preservation', 'Personal finance', 'Frugal living', 'Self-reliance', 'Cooking', 'Woodworking', 'DIY home repair', 'History', 'Science', 'Health'];
   var DEFAULT_COLS = ['Listening', 'Up Next', 'Learning', 'Entertainment', 'Finished'];
   var SPEEDS = [0.8, 1, 1.1, 1.25, 1.5, 1.75, 2];
   var SLEEPS = [0, 15, 30, 45, 60, -1]; // minutes; -1 = end of chapter
@@ -561,6 +565,22 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
       lv: ['How to Live on 24 Hours a Day', 'The Art of Public Speaking', 'The Power of Concentration', 'Mental Efficiency', 'Camping and Woodcraft', 'The Human Machine', 'How to Analyze People on Sight'],
       lvTopic: 'self-improvement OR habits OR concentration OR speaking OR woodcraft', pgTopic: 'conduct of life' }
   ];
+  SHELVES[0].pod = 'homesteading'; SHELVES[1].pod = 'canning food preservation'; SHELVES[1].warn = true;
+  SHELVES[2].pod = 'personal finance'; SHELVES[3].pod = 'self reliance'; SHELVES[4].pod = 'productivity habits';
+  function G(slug, title, author, yr, desc, license, pageUrl, pdfUrl) { return { slug: slug, title: title, author: author, yr: yr, desc: desc, license: license, pageUrl: pageUrl, pdfUrl: pdfUrl }; }
+  SHELVES.push({ name: 'Modern free guides (2000+)', note: 'Recent U.S. government guides and an open textbook \u2014 free and legal to use. The AI voice reads them like any other book.',
+    pdf: [G('usda-canning-2015', 'Complete Guide to Home Canning (2015 revision)', 'U.S. Department of Agriculture', 2015, 'The current USDA reference for safe home canning: equipment, processing times and step-by-step directions for fruits, tomatoes, vegetables, meats, pickles and jams. It comes as 8 PDF parts \u2014 choose them all at once.', 'U.S. government publication \u2014 free to use', 'https://nchfp.uga.edu/resources/entry/printed-copy-of-the-usda-guide-to-home-canning', ''),
+      G('cfpb-ymyg', 'Your Money, Your Goals: A Financial Empowerment Toolkit', 'Consumer Financial Protection Bureau', 2016, 'Plain-language money tools from the CFPB: setting goals, saving, spending plans, paying down debt, understanding credit and handling bills.', 'U.S. government publication \u2014 free to use', 'https://www.consumerfinance.gov/consumer-tools/educator-tools/your-money-your-goals/toolkit/', 'https://files.consumerfinance.gov/f/documents/cfpb_ymyg_a-financial-empowerment-toolkit_large-print.pdf'),
+      G('fema-are-you-ready', 'Are You Ready? An In-depth Guide to Citizen Preparedness', 'FEMA', 2004, 'FEMA\u2019s guide to getting a household ready for emergencies: family plans, supply kits, shutting off utilities, and what to do before, during and after specific disasters.', 'U.S. government publication \u2014 free to use', 'https://bready.sd.gov/bReady/areyouready_full.pdf', 'https://bready.sd.gov/bReady/areyouready_full.pdf'),
+      G('openstax-finance', 'Principles of Finance', 'Julie Dahlquist & Rainford Knight (OpenStax)', 2022, 'A free college textbook on how money works: time value of money, budgeting, risk and return, stocks, bonds, and personal and business finance. Long and detailed.', 'CC BY 4.0 \u2014 free to share and adapt with credit to OpenStax (openstax.org)', 'https://openstax.org/books/principles-finance/pages/preface', '')] },
+    { name: 'Creative Commons (modern authors)', note: 'Newer books whose authors chose to share them free on Project Gutenberg. For personal listening \u2014 each book\u2019s license is on its info panel.', cc: [P(30142, 'Little Brother', 'Cory Doctorow'), P(19000, 'Printcrime', 'Cory Doctorow'), P(11077, 'Ebooks: Neither E, Nor Books', 'Cory Doctorow')], ccYears: { '30142': 2008, '19000': 2006, '11077': 2004 } });
+  function shelfAvail(sh, src) { return src === 'pod' ? !!sh.pod : src === 'lv' ? !!sh.lv : !!(sh.pg || sh.pdf || sh.cc); }
+  function shelfPicksPg(sh) {
+    var out = sh.pg ? shelfPg(sh) : [];
+    (sh.pdf || []).forEach(function (g) { out.push({ src: 'pdf', id: g.slug, key: 'pdf:' + g.slug, title: g.title, author: g.author, cover: '', desc: g.desc, yr: g.yr, license: g.license, pageUrl: g.pageUrl, pdfUrl: g.pdfUrl, curated: true }); });
+    (sh.cc || []).forEach(function (b) { out.push({ src: 'pg', id: b.id, key: 'pg:' + b.id, title: b.title, author: b.author, cover: 'https://www.gutenberg.org/cache/epub/' + b.id + '/pg' + b.id + '.cover.medium.jpg', desc: '', textUrls: [], curated: true, copyright: true, yr: (sh.ccYears || {})[b.id] || undefined }); });
+    return out;
+  }
   function shelfPg(sh) {
     return sh.pg.map(function (b) { return { src: 'pg', id: b.id, key: 'pg:' + b.id, title: b.title, author: b.author, cover: 'https://www.gutenberg.org/cache/epub/' + b.id + '/pg' + b.id + '.cover.medium.jpg', desc: '', textUrls: [], curated: true }; });
   }
@@ -600,9 +620,10 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
       };
     });
   }
-  function pgSearch(qs, topic, page) {
-    var u = 'https://gutendex.com/books/?page=' + page + (set().english ? '&languages=en' : '') + (qs ? '&search=' + encodeURIComponent(qs) : '') + (topic ? '&topic=' + encodeURIComponent(topic.toLowerCase()) : '');
-    return cachedJson(u, 86400000, function () { return gutendex(u).catch(function () { return olSearch(qs, topic, page); }); });
+  function pgSearch(qs, topic, page, opts) {
+    var cc = opts && opts.cc;
+    var u = 'https://gutendex.com/books/?page=' + page + (set().english ? '&languages=en' : '') + (qs ? '&search=' + encodeURIComponent(qs) : '') + (topic ? '&topic=' + encodeURIComponent(topic.toLowerCase()) : '') + (cc ? '&copyright=true' : '');
+    return cachedJson(u, 86400000, function () { return gutendex(u).catch(function (e) { if (cc) throw e; return olSearch(qs, topic, page); }); });
   }
   function olSearch(qs, topic, page) { // backup catalog: Open Library, keeping only books that have a Project Gutenberg edition
     var parts = []; var t = String(qs || '').replace(/[():"\[\]{}^~*?\\\/]/g, ' ').trim();
@@ -622,10 +643,10 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
   }
   function gutendex(u) {
     return getJson([u], 15000).then(function (j) {
-      return { more: !!j.next, items: (j.results || []).filter(function (b) { return !b.copyright; }).map(function (b) {
+      return { more: !!j.next, items: (j.results || []).map(function (b) {
         var f = b.formats || {}, urls = [];
         for (var k in f) if (/^text\/plain/.test(k) && !/\.zip$/i.test(f[k])) urls.push(f[k]);
-        return { src: 'pg', id: String(b.id), key: 'pg:' + b.id, title: b.title, author: flipName((b.authors && b.authors[0] && b.authors[0].name) || ''), cover: f['image/jpeg'] || '', desc: cleanSummary((b.summaries && b.summaries[0]) || ''), life: authorLife(b.authors && b.authors[0]), subjects: tidySubjects(b.subjects), textUrls: urls };
+        return { src: 'pg', id: String(b.id), key: 'pg:' + b.id, title: b.title, author: flipName((b.authors && b.authors[0] && b.authors[0].name) || ''), cover: f['image/jpeg'] || '', desc: cleanSummary((b.summaries && b.summaries[0]) || ''), life: authorLife(b.authors && b.authors[0]), subjects: tidySubjects(b.subjects), textUrls: urls, copyright: b.copyright === true };
       }) };
     });
   }
@@ -642,13 +663,14 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
       return { year: yrs.length ? Math.min.apply(null, yrs) : 0, subjects: tidySubjects(docs[0] && docs[0].subject) };
     }).catch(function () { return { year: 0, subjects: [] }; });
   }
-  function yearOf(it) { return cachedJson('year:' + it.key, 30 * 86400000, function () { return olYear(it.title, it.author).then(function (r) { return r.year || 0; }); }); }
+  function yearOf(it) { if (it.yr) return Promise.resolve(it.yr); return cachedJson('year:' + it.key, 30 * 86400000, function () { return olYear(it.title, it.author).then(function (r) { return r.year || 0; }); }); }
   function gutendexOne(id) {
     return getJson(['https://gutendex.com/books/' + encodeURIComponent(id) + '/'], 15000).then(function (b) {
       return { desc: cleanSummary(b.summaries && b.summaries[0]), life: authorLife(b.authors && b.authors[0]), subjects: tidySubjects(b.subjects) };
     }).catch(function () { return {}; });
   }
   function fetchAbout(it) {
+    if (it.src === 'pod' || it.src === 'pdf' || it.src === 'txt') return Promise.resolve({ year: it.yr || it.year || 0, desc: it.desc || '', life: '', subjects: it.genres || [] });
     return cachedJson('about:' + it.key, 30 * 86400000, function () {
       var jobs = [olYear(it.title, it.author)];
       if (it.src === 'pg' && (!it.desc || !it.life)) jobs.push(gutendexOne(it.id));
@@ -657,6 +679,109 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
         return { year: ol.year || 0, desc: gd.desc || '', life: gd.life || it.life || '', subjects: (gd.subjects && gd.subjects.length ? gd.subjects : (it.subjects && it.subjects.length ? it.subjects : ol.subjects)) || [] };
       });
     });
+  }
+  /* ---------- PDF reading (pdf.js, loaded on first use) ---------- */
+  var pdfP = null;
+  function loadPdfjs() {
+    if (!pdfP) pdfP = import(PDFJS).then(function (m) {
+      var lib = m.getDocument ? m : m.default;
+      lib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER; // pdf.js wraps a cross-site worker itself and falls back to the main thread if it must
+      return lib;
+    }).catch(function (e) { pdfP = null; throw new Error('Couldn’t load the PDF reader (' + e.message + ')'); });
+    return pdfP;
+  }
+  function pdfLines(items) {
+    var lines = [], cur = '', lastY = null, lastEnd = null;
+    items.forEach(function (it) {
+      if (typeof it.str !== 'string') return;
+      var tr = it.transform || [1, 0, 0, 1, 0, 0], y = Math.round(tr[5]), x = tr[4], size = Math.abs(tr[3]) || 10;
+      if (lastY !== null && Math.abs(y - lastY) > size * 0.4) { if (cur.trim()) lines.push(cur); cur = ''; lastEnd = null; }
+      if (cur && lastEnd !== null && x - lastEnd > size * 0.15 && !/\s$/.test(cur) && !/^\s/.test(it.str)) cur += ' ';
+      cur += it.str; lastY = y; lastEnd = x + (it.width || 0);
+      if (it.hasEOL) { if (cur.trim()) lines.push(cur); cur = ''; lastEnd = null; }
+    });
+    if (cur.trim()) lines.push(cur);
+    return lines.map(function (l) { return l.replace(/\s+/g, ' ').trim(); }).filter(Boolean);
+  }
+  function cleanPdf(pages) { // drop repeated headers/footers and page numbers, rebuild paragraphs
+    var freq = {}, norm = function (l) { return l.toLowerCase().replace(/\d+/g, '#'); };
+    function edge(ls, i) { return i < 2 || i >= ls.length - 3; } // headers/footers live at the top or bottom of a page
+    pages.forEach(function (ls) { var seen = {}; ls.forEach(function (l, i) { if (!edge(ls, i)) return; var k = norm(l); if (!seen[k]) { seen[k] = 1; freq[k] = (freq[k] || 0) + 1; } }); });
+    var minRep = Math.max(3, Math.ceil(pages.length * 0.3));
+    var all = [];
+    pages.forEach(function (ls) { ls.forEach(function (l, i) {
+      if (/^(page\s*)?[\divxlc]{1,5}$/i.test(l)) return;
+      if (edge(ls, i) && l.length < 120 && pages.length >= 4 && freq[norm(l)] >= minRep) return;
+      all.push(l);
+    }); });
+    var lens = all.map(function (l) { return l.length; }).sort(function (a, b) { return a - b; }), med = lens.length ? lens[Math.floor(lens.length / 2)] : 60;
+    var out = [], para = '';
+    function flush() { if (para.trim()) out.push(para.trim()); para = ''; }
+    all.forEach(function (l) {
+      var heading = l.length < 70 && !/[.,;:!?)"”]$/.test(l) && /^[A-Z0-9]/.test(l) && (l === l.toUpperCase() || /^(chapter|part|guide|section|module|unit|lesson|appendix)\b/i.test(l) || /^\d+(\.\d+)*\s+[A-Z]/.test(l));
+      if (heading) { flush(); out.push(l); return; }
+      if (para && /[A-Za-z]-$/.test(para) && /^[a-z]/.test(l)) para = para.slice(0, -1) + l;
+      else para += (para ? ' ' : '') + l;
+      if (/[.?!:"”]$/.test(l) && l.length < med * 0.75) flush();
+    });
+    flush();
+    return out.join('\n\n');
+  }
+  function pdfToText(buf, onP) {
+    return loadPdfjs().then(function (lib) { return lib.getDocument({ data: new Uint8Array(buf), isEvalSupported: false }).promise; }).then(function (doc) {
+      var pages = [], i = 1;
+      function next() {
+        if (i > doc.numPages) return Promise.resolve();
+        return doc.getPage(i).then(function (pg) { return pg.getTextContent(); }).then(function (tc) { pages.push(pdfLines(tc.items)); if (onP) onP(i / doc.numPages); i++; return next(); });
+      }
+      return next().then(function () { var t = cleanPdf(pages); if (t.replace(/\s/g, '').length < 200) throw new Error('This PDF has no readable text (it may be scanned images)'); return t; });
+    });
+  }
+
+  /* ---------- Podcasts (Apple's free podcast directory) ---------- */
+  var jsonpN = 0;
+  function jsonp(url, ms) { // Apple's directory answers script-tag requests, so no cross-site blocking
+    return new Promise(function (res, rej) {
+      var cb = '__llj' + (++jsonpN) + '_' + now(), s = document.createElement('script'), done = false;
+      var t = setTimeout(function () { fin(); rej(new Error('timed out')); }, ms || 15000);
+      function fin() { done = true; clearTimeout(t); try { delete window[cb]; } catch (e) { window[cb] = undefined; } if (s.parentNode) s.parentNode.removeChild(s); }
+      window[cb] = function (data) { if (done) return; fin(); res(data); };
+      s.onerror = function () { if (done) return; fin(); rej(new Error('The podcast directory isn’t reachable')); };
+      s.src = url + (url.indexOf('?') >= 0 ? '&' : '?') + 'callback=' + cb;
+      document.head.appendChild(s);
+    });
+  }
+  function podSearch(qs, topic, page) {
+    if (page > 1) return Promise.resolve({ items: [], more: false });
+    var term = String(qs || topic || 'homesteading').trim();
+    var u = 'https://itunes.apple.com/search?media=podcast&entity=podcast&limit=50&country=US&term=' + encodeURIComponent(term);
+    return cachedJson(u, 6 * 3600000, function () {
+      return jsonp(u).then(function (j) {
+        return { more: false, items: (j.results || []).filter(function (p) { return p.collectionId; }).map(function (p) {
+          var dt = Date.parse(p.releaseDate) || 0;
+          return { src: 'pod', id: String(p.collectionId), key: 'pod:' + p.collectionId, title: p.collectionName || p.trackName, author: p.artistName || '', cover: p.artworkUrl600 || p.artworkUrl100 || '',
+            yr: dt ? new Date(dt).getFullYear() : 0, sortT: dt, latest: dt, count: p.trackCount || 0, genres: (p.genres || []).filter(function (g) { return g !== 'Podcasts'; }).slice(0, 4), desc: '' };
+        }) };
+      });
+    });
+  }
+  function podEpisodes(id) {
+    return jsonp('https://itunes.apple.com/lookup?entity=podcastEpisode&limit=200&country=US&id=' + encodeURIComponent(id), 20000).then(function (j) {
+      var r = j.results || [], show = r[0] || {};
+      var eps = r.filter(function (x) { return x.wrapperType === 'podcastEpisode' && x.episodeUrl; }).map(function (e) {
+        return { title: e.trackName || 'Episode', url: e.episodeUrl, dur: (e.trackTimeMillis || 0) / 1000, date: Date.parse(e.releaseDate) || 0, eid: String(e.trackId), desc: stripHtml(e.description || e.shortDescription || '').slice(0, 1500) };
+      });
+      eps.sort(function (a, b) { return b.date - a.date; }); // newest first
+      return { chapters: eps, desc: '', count: show.trackCount || eps.length };
+    });
+  }
+  function mergePod(bb, info) { // new episodes appear at the top; keep your place by episode, not position
+    var cur = bb.chapters[bb.pos.ch], eid = bb.pos.eid || (cur && cur.eid), playingEid = S.play.key === bb.key && bb.chapters[S.play.ch] ? bb.chapters[S.play.ch].eid : null;
+    bb.chapters = info.chapters; if (info.count) bb.count = info.count;
+    function idx(e) { for (var i = 0; i < bb.chapters.length; i++) if (bb.chapters[i].eid === e) return i; return -1; }
+    if (eid) { var k = idx(eid); if (k >= 0) bb.pos.ch = k; }
+    if (playingEid) { var q = idx(playingEid); if (q >= 0) S.play.ch = q; }
+    touch(bb); saveLib();
   }
   function textUrlsFor(b) {
     var urls = (b.textUrls || []).slice();
@@ -683,7 +808,7 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
     var e = t.search(/\*\*\*\s*END OF (THE|THIS) PROJECT GUTENBERG/i); if (e >= 0) t = t.slice(0, e);
     e = t.search(/\n\s*End of (the )?Project Gutenberg/i); if (e >= 0) t = t.slice(0, e);
     var lines = t.split('\n');
-    var re = /^\s*(chapter|book|part|letter|stave|canto|volume|section|act)\s+([ivxlcdm]+|\d+|the\s+[a-z]+|[a-z]+)\b[^\n]{0,70}$/i;
+    var re = /^\s*(chapter|book|part|letter|stave|canto|volume|section|act|guide|module|unit|lesson)\s+([ivxlcdm]+|\d+|the\s+[a-z]+|[a-z]+)\b[^\n]{0,70}$/i;
     var heads = [];
     for (var i = 0; i < lines.length; i++) { var L = lines[i].trim(); if (L && L.length < 90 && re.test(L) && (i === 0 || !lines[i - 1].trim())) heads.push(i); }
     if (heads.length < 2) {
@@ -739,7 +864,7 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
   function roman(r) { var v = { i: 1, v: 5, x: 10, l: 50, c: 100, d: 500, m: 1000 }, n = 0, s = r.toLowerCase(); for (var i = 0; i < s.length; i++) { var a = v[s[i]], b = v[s[i + 1]] || 0; n += a < b ? -a : a; } return n; }
   function niceTitle(t) {
     return t.split(' · ').map(function (part) {
-      return part.replace(/^(chapter|book|part|letter|stave|canto|volume|section|act)\s+([ivxlcdm]+|\d+)\b[.:]?\s*(.*)$/i, function (m, w, n, rest) {
+      return part.replace(/^(chapter|book|part|letter|stave|canto|volume|section|act|guide|module|unit|lesson)\s+([ivxlcdm]+|\d+)\b[.:]?\s*(.*)$/i, function (m, w, n, rest) {
         rest = rest.replace(/^[\-—–:.\s]+/, '');
         return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() + ' ' + (/^\d+$/.test(n) ? n : roman(n)) + (rest ? ' — ' + rest : '');
       }).replace(/^([A-Z0-9 ,'’\-]{4,})$/, function (m) { return m.toLowerCase().replace(/\b[a-z]/g, function (c) { return c.toUpperCase(); }); });
@@ -886,7 +1011,7 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
   function retryUploads() { // anything converted while offline gets pushed up later
     if (S.acct.mode !== 'google' || !S.token) return;
     Object.keys(S.lib.books).forEach(function (k) {
-      var b = S.lib.books[k]; if (b.src === 'lv') return;
+      var b = S.lib.books[k]; if (isStream(b.src)) return;
       b.chapters.forEach(function (c, ch) {
         var rk = k + '#' + ch; if (c.driveId || !S.local[audioKey(k, ch)] || retrying[rk]) return; retrying[rk] = 1;
         getBlob(audioKey(k, ch)).then(function (bl) { if (!bl) return; return uploadNew(safeName(b.title) + ' - ' + pad(ch + 1) + ' ' + safeName(c.title) + '.mp3', bl, bl.type).then(function (id) { var fb = book(k); if (fb && fb.chapters[ch]) { fb.chapters[ch].driveId = id; touch(fb); saveLib(); } }); }).catch(function () {});
@@ -899,7 +1024,7 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
     var k = item.key, b = book(k);
     if (b) return b;
     b = { key: k, src: item.src, id: item.id, title: item.title, author: item.author, cover: item.cover || '', desc: (info && info.desc) || item.desc || '',
-      textUrls: item.textUrls || [], curated: !!item.curated, year: item.yr || 0, cols: ['Up Next'], addedAt: now(), updatedAt: now(), pos: { ch: 0, t: 0 }, chapters: (info && info.chapters) || [], finished: false };
+      textUrls: item.textUrls || [], curated: !!item.curated, year: item.yr || 0, copyright: !!item.copyright, license: item.license || '', pageUrl: item.pageUrl || '', pdfUrl: item.pdfUrl || '', genres: item.genres || [], count: item.count || 0, latest: item.latest || 0, cols: ['Up Next'], addedAt: now(), updatedAt: now(), pos: { ch: 0, t: 0 }, chapters: (info && info.chapters) || [], finished: false };
     S.lib.books[k] = b; delete S.lib.deleted[k]; saveLib();
     return b;
   }
@@ -916,11 +1041,23 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
     touch(b); saveLib();
   }
   function checkTitle(b, raw) {
-    if (!b.curated) return;
+    if (!b.curated || b.src !== 'pg') return;
     var head = raw.slice(0, 6000).toLowerCase();
     var words = b.title.toLowerCase().replace(/[^a-z ]/g, ' ').split(' ').filter(function (w) { return w.length > 3 && ['with', 'from', 'that', 'their', 'book'].indexOf(w) < 0; });
     var hits = words.filter(function (w) { return head.indexOf(w) >= 0; }).length;
     if (words.length && hits < Math.ceil(words.length / 2)) throw assign(new Error('The downloaded text doesn\u2019t look like \u201c' + b.title + '\u201d, so it wasn\u2019t added. Search for it by name instead.'), { mismatch: true });
+  }
+  function prepareParts(b, parts) {
+    if (parts.length === 1) return prepareText(b, parts[0].text);
+    var all = [];
+    parts.forEach(function (pt) {
+      var nm = pt.name.replace(/\.(txt|pdf)$/i, '').replace(/[_-]+/g, ' ').trim(), ch = parseBook(pt.text);
+      ch.forEach(function (c) { c.title = ch.length === 1 ? nm : nm + ' \u00b7 ' + c.title; });
+      all = all.concat(ch);
+    });
+    if (!all.length) return Promise.reject(new Error('No readable text found'));
+    b.chapters = all.map(function (c) { return { title: c.title, words: c.words }; }); touch(b); saveLib();
+    return storeText(b, all);
   }
   function prepareText(b, raw) {
     var ch = parseBook(raw);
@@ -947,7 +1084,7 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
   function srcFor(b, ch) {
     var ak = audioKey(b.key, ch);
     if (S.local[ak]) return getBlob(ak).then(function (bl) { if (bl) return URL.createObjectURL(bl); delete S.local[ak]; return srcFor(b, ch); });
-    if (b.src === 'lv') return Promise.resolve(b.chapters[ch].url);
+    if (isStream(b.src)) return Promise.resolve(b.chapters[ch].url);
     if (b.chapters[ch].driveId && S.acct.mode === 'google') return download(b.chapters[ch].driveId).then(function (bl) { putBlob(ak, bl).then(function () { S.local[ak] = bl.size; saveSizes(); }); return URL.createObjectURL(bl); });
     var e = new Error('not ready'); e.notReady = true; return Promise.reject(e);
   }
@@ -966,7 +1103,7 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
     stopSpeech();
     S.play.key = key; S.play.ch = ch; S.play.waiting = false;
     b.pos = { ch: ch, t: t || 0 };
-    S.play.mode = (b.src !== 'lv' && set().voice === 'device' && !chapterReady(b, ch)) ? 'speech' : 'audio';
+    S.play.mode = (!isStream(b.src) && set().voice === 'device' && !chapterReady(b, ch)) ? 'speech' : 'audio';
     renderPlayerBits();
     if (S.play.mode === 'speech') { speakChapter(b, ch); return; }
     srcFor(b, ch).then(function (url) {
@@ -984,7 +1121,7 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
       toast('Could not load audio: ' + e.message);
     });
   }
-  function prefetch(b, ch) { if (b.src !== 'lv' && set().voice !== 'device') { enqueue(b.key, ch + 1); enqueue(b.key, ch + 2); } }
+  function prefetch(b, ch) { if (!isStream(b.src) && set().voice !== 'device') { enqueue(b.key, ch + 1); enqueue(b.key, ch + 2); } }
   function stopPlayback() { au.pause(); stopSpeech(); S.play.key = null; S.play.waiting = false; renderPlayerBits(); }
   function isPlaying() { return S.play.mode === 'speech' ? speech.on && !speech.paused : !au.paused && !au.ended; }
   function togglePlay() {
@@ -1004,13 +1141,13 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
   au.addEventListener('timeupdate', function () {
     if (!S.play.key || au.src === silentUrl) return;
     var b = book(S.play.key); if (!b) return;
-    b.pos = { ch: S.play.ch, t: au.currentTime };
+    b.pos = { ch: S.play.ch, t: au.currentTime, eid: (b.chapters[S.play.ch] || {}).eid };
     if (now() - lastSave > 5000) { lastSave = now(); touch(b); saveLib({ progress: true }); }
     if (S.sleepUntil && now() >= S.sleepUntil) { au.pause(); S.sleepUntil = 0; S.sleepIdx = 0; toast('Sleep timer: paused'); }
     updatePlayerTime();
   });
   au.addEventListener('play', renderPlayerBits);
-  au.addEventListener('pause', function () { if (S.play.key && au.src !== silentUrl) { var b = book(S.play.key); if (b) { b.pos = { ch: S.play.ch, t: au.currentTime }; touch(b); saveLib({ progress: true }); } } renderPlayerBits(); });
+  au.addEventListener('pause', function () { if (S.play.key && au.src !== silentUrl) { var b = book(S.play.key); if (b) { b.pos = { ch: S.play.ch, t: au.currentTime, eid: (b.chapters[S.play.ch] || {}).eid }; touch(b); saveLib({ progress: true }); } } renderPlayerBits(); });
   au.addEventListener('ended', function () {
     if (au.src === silentUrl || !S.play.key) return;
     if (S.sleepEnd) { S.sleepEnd = false; S.sleepIdx = 0; var b = book(S.play.key); if (b && S.play.ch + 1 < b.chapters.length) { b.pos = { ch: S.play.ch + 1, t: 0 }; touch(b); saveLib(); } toast('Sleep timer: stopped at end of chapter'); renderPlayerBits(); return; }
@@ -1068,8 +1205,9 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
     return '<button class="tile" data-act="' + (act || 'open') + '" data-key="' + esc(b.key) + '">' + coverHtml(b) +
       '<span class="bar" style="' + (pct > 0 && pct < 100 ? '' : 'visibility:hidden') + '"><i style="width:' + pct + '%"></i></span>' +
       '<span class="t">' + esc(b.title) + '</span><span class="a ell">' + esc(b.author || '') + '</span>' +
-      ((b.yr || b.year || (inLib && book(b.key).year)) ? '<span class="a yr">First published ' + (b.yr || b.year || book(b.key).year) + '</span>' : '') +
-      '<span class="row" style="gap:6px">' + (b.src === 'lv' ? '<span class="badge">Human-read</span>' : '<span class="badge ai">AI voice</span>') + (inLib ? '<span class="badge ok">' + IC.check.replace('<svg', '<svg width="12" height="12"') + ' Saved</span>' : '') + '</span></button>';
+      (b.src === 'pod' ? ((b.latest || (inLib && book(b.key).latest)) ? '<span class="a yr">Updated ' + shortDate(b.latest || book(b.key).latest) + '</span>' : '') :
+      ((b.yr || b.year || (inLib && book(b.key).year)) ? '<span class="a yr">First published ' + (b.yr || b.year || book(b.key).year) + '</span>' : '')) +
+      '<span class="row" style="gap:6px">' + (b.src === 'lv' ? '<span class="badge">Human-read</span>' : b.src === 'pod' ? '<span class="badge pod">Podcast</span>' : '<span class="badge ai">AI voice</span>') + (inLib ? '<span class="badge ok">' + IC.check.replace('<svg', '<svg width="12" height="12"') + ' Saved</span>' : '') + '</span></button>';
   }
   function show(v) {
     S.view = v;
@@ -1120,15 +1258,16 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
     box.innerHTML = '<div class="card"><div class="sec-h"><h3>Making AI-voice audio</h3><span class="tiny faint">Keep this app open</span></div><div class="list">' + rows + '</div></div>';
   }
   function renderDiscover() {
-    var d = S.disc, topics = d.src === 'lv' ? TOPICS_LV : TOPICS_PG;
-    var h = '<div class="seg" role="group"><button data-act="src" data-src="lv" aria-pressed="' + (d.src === 'lv') + '">Human-read</button><button data-act="src" data-src="pg" aria-pressed="' + (d.src === 'pg') + '">AI-voice classics</button></div>' +
-      '<p class="small muted">' + (d.src === 'lv' ? 'Free, volunteer-read recordings from LibriVox. They stream right away.' : 'Free public-domain ebooks from Project Gutenberg, read aloud by a natural AI voice. Each chapter is made the first time you play it.') + '</p>' +
-      '<form class="search" id="disc-form">' + IC.search + '<input class="input" id="disc-q" type="search" enterkeyhint="search" placeholder="Search title or author" value="' + esc(d.q) + '"></form>' +
+    var d = S.disc, topics = d.src === 'lv' ? TOPICS_LV : d.src === 'pod' ? TOPICS_POD : TOPICS_PG;
+    if (d.shelf != null && !shelfAvail(SHELVES[d.shelf], d.src)) d.shelf = null;
+    var h = '<div class="seg" role="group"><button data-act="src" data-src="lv" aria-pressed="' + (d.src === 'lv') + '">Human-read</button><button data-act="src" data-src="pg" aria-pressed="' + (d.src === 'pg') + '">AI voice</button><button data-act="src" data-src="pod" aria-pressed="' + (d.src === 'pod') + '">Podcasts</button></div>' +
+      '<p class="small muted">' + (d.src === 'lv' ? 'Free, volunteer-read recordings from LibriVox. They stream right away.' : d.src === 'pod' ? 'Free podcasts on the topics you choose, newest episodes first. They stream right away.' : 'Free books read aloud by a natural AI voice: classics from Project Gutenberg, plus newer free guides and Creative Commons books. Each chapter is made the first time you play it.') + '</p>' +
+      '<form class="search" id="disc-form">' + IC.search + '<input class="input" id="disc-q" type="search" enterkeyhint="search" placeholder="' + (d.src === 'pod' ? 'Search podcasts' : 'Search title or author') + '" value="' + esc(d.q) + '"></form>' +
       '<div class="chips">' + '<button class="chip" data-act="topic" data-topic="Popular" aria-pressed="' + (!d.topic && d.shelf == null) + '">Popular</button>' +
-        SHELVES.map(function (sh, i) { return '<button class="chip shelf" data-act="shelf" data-shelf="' + i + '" aria-pressed="' + (d.shelf === i) + '">\u2605 ' + esc(sh.name) + '</button>'; }).join('') +
+        SHELVES.map(function (sh, i) { if (!shelfAvail(sh, d.src)) return ''; return '<button class="chip shelf" data-act="shelf" data-shelf="' + i + '" aria-pressed="' + (d.shelf === i) + '">\u2605 ' + esc(sh.name) + '</button>'; }).join('') +
         topics.map(function (t) { return '<button class="chip" data-act="topic" data-topic="' + esc(t) + '" aria-pressed="' + (t === d.topic) + '">' + esc(t) + '</button>'; }).join('') + '</div>' +
-      (d.shelf != null ? '<p class="small ' + (d.shelf === 1 ? 'shelf-warn' : 'muted') + '">' + esc(SHELVES[d.shelf].note) + '</p>' : '') +
-      (d.src === 'pg' ? '<button class="btn sm ghost" data-act="addtxt" style="align-self:flex-start">' + IC.file + 'Add your own .txt book</button>' : '') +
+      (d.shelf != null ? '<p class="small ' + (SHELVES[d.shelf].warn && d.src !== 'pod' ? 'shelf-warn' : 'muted') + '">' + esc(d.src === 'pod' ? 'Podcasts about ' + SHELVES[d.shelf].name.toLowerCase() + '.' : SHELVES[d.shelf].note) + '</p>' : '') +
+      (d.src === 'pg' ? '<button class="btn sm ghost" data-act="addtxt" style="align-self:flex-start">' + IC.file + 'Add your own book (.txt or .pdf)</button>' : '') +
       '<div id="disc-res"></div>';
     $('#v-discover').innerHTML = h;
     $('#disc-form').addEventListener('submit', function (e) { e.preventDefault(); d.q = $('#disc-q').value.trim(); d.topic = ''; d.shelf = null; $('#disc-q').blur(); runSearch(true); });
@@ -1136,9 +1275,9 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
   }
   function renderDiscoverResults() {
     var box = $('#disc-res'); if (!box) return; var d = S.disc, h = '';
-    if (d.err && !d.items.length) h = '<div class="card empty"><h3>Couldn’t reach the ' + (d.src === 'lv' ? 'audiobook' : 'ebook') + ' catalog</h3><p class="small">' + esc(d.err) + '</p><p style="margin-top:12px"><button class="btn" data-act="research">Try again</button></p></div>';
+    if (d.err && !d.items.length) h = '<div class="card empty"><h3>Couldn’t reach the ' + (d.src === 'lv' ? 'audiobook' : d.src === 'pod' ? 'podcast' : 'ebook') + ' catalog</h3><p class="small">' + esc(d.err) + '</p><p style="margin-top:12px"><button class="btn" data-act="research">Try again</button></p></div>';
     else if (!d.items.length && !d.loading && d.loaded) h = '<div class="empty"><h3>No matches</h3><p>Try a shorter title or just the author’s last name.</p></div>';
-    else h = (d.items.length ? '<p class="tiny faint" style="margin:0 0 10px">' + (d.sorting ? '<span class="spin" style="width:12px;height:12px;vertical-align:-2px"></span> Sorting newest to oldest\u2026' : 'Newest published first') + '</p>' : '') +
+    else h = (d.items.length ? '<p class="tiny faint" style="margin:0 0 10px">' + (d.sorting ? '<span class="spin" style="width:12px;height:12px;vertical-align:-2px"></span> Sorting newest to oldest\u2026' : d.src === 'pod' ? 'Most recently updated first' : 'Newest published first') + '</p>' : '') +
       '<div class="grid">' + d.items.map(function (b) { return tileHtml(b, 'peek'); }).join('') + '</div>';
     if (d.loading) h += '<div class="row" style="justify-content:center;padding:18px;text-align:center"><span class="spin"></span><span class="muted">' + (d.slow ? (d.src === 'pg' ? 'The Gutenberg catalog is slow right now. If it doesn\u2019t answer soon, a backup catalog takes over.' : 'The audiobook catalog is slow right now\u2026') : 'Loading\u2026') + '</span></div>';
     else if (d.more) h += '<div class="row" style="justify-content:center;padding:14px"><button class="btn" data-act="more">Load more</button></div>';
@@ -1150,12 +1289,14 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
     if (reset) { d.items = []; d.page = 1; d.more = false; }
     d.loading = true; d.slow = false; d.err = ''; renderDiscoverResults();
     setTimeout(function () { if (seq === searchSeq && d.loading) { d.slow = true; renderDiscoverResults(); } }, 5000);
-    var sh = d.shelf != null ? SHELVES[d.shelf] : null, topic = sh ? (d.src === 'lv' ? sh.lvTopic : sh.pgTopic) : d.topic;
-    var picksP = (sh && d.page === 1) ? (d.src === 'pg' ? Promise.resolve(shelfPg(sh)) : iaTitles(sh.lv).catch(function () { return []; })) : Promise.resolve([]);
+    var sh = d.shelf != null ? SHELVES[d.shelf] : null, fn = d.src === 'lv' ? iaSearch : d.src === 'pod' ? podSearch : pgSearch;
+    var topic = sh ? (d.src === 'lv' ? sh.lvTopic : d.src === 'pod' ? sh.pod : sh.pgTopic) : d.topic, opts = sh && sh.cc && d.src === 'pg' ? { cc: true } : null;
+    var picksP = (sh && d.page === 1) ? (d.src === 'pg' ? Promise.resolve(shelfPicksPg(sh)) : d.src === 'lv' ? iaTitles(sh.lv).catch(function () { return []; }) : Promise.resolve([])) : Promise.resolve([]);
     picksP.then(function (picks) {
       if (seq !== searchSeq) return;
       if (picks.length) { d.items = picks; renderDiscoverResults(); }
-      return (d.src === 'lv' ? iaSearch : pgSearch)(d.q, topic, d.page).catch(function (e) { if (picks.length) return { items: [], more: false }; throw e; });
+      if (sh && d.src === 'pg' && !topic && !opts) return { items: [], more: false }; // guides shelf: hand-picked only
+      return fn(d.q, topic, d.page, opts).catch(function (e) { if (picks.length) return { items: [], more: false }; throw e; });
     }).then(function (r) {
       if (!r) return;
       if (seq !== searchSeq) return;
@@ -1189,7 +1330,8 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
   }
   function applyYearSort() {
     var d = S.disc;
-    d.items = d.items.map(function (x, n) { return { x: x, n: n }; }).sort(function (a, b) { var ya = a.x.yr || 0, yb = b.x.yr || 0; return ya === yb ? a.n - b.n : yb - ya; }).map(function (o) { return o.x; });
+    function key(x) { return x.sortT || (x.yr ? Date.UTC(x.yr, 0, 1) : 0); }
+    d.items = d.items.map(function (x, n) { return { x: x, n: n }; }).sort(function (a, b) { var ya = key(a.x), yb = key(b.x); return ya === yb ? a.n - b.n : yb - ya; }).map(function (o) { return o.x; });
   }
   function renderLibrary() {
     var cols = ['All'].concat(S.lib.collections), c = cols.indexOf(S.libCol) >= 0 ? S.libCol : 'All', bs = booksIn(c), srt = set().libSort || 'recent';
@@ -1309,6 +1451,15 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
       var bb = book(item.key); if (bb) { var ch = false; if (!bb.year && a.year) { bb.year = a.year; ch = true; } if (!bb.desc && a.desc) { bb.desc = a.desc; ch = true; } if (!bb.life && a.life) { bb.life = a.life; ch = true; } if (ch) { touch(bb); saveLib(); } }
       renderDetail();
     }, function () { if (S.detail) { S.detail.aboutLoading = false; renderDetail(); } });
+    if (item.src === 'pod') {
+      if (!b) { S.detail.loading = true; renderDetail(); }
+      podEpisodes(item.id).then(function (info) {
+        if (!S.detail || S.detail.item.key !== item.key) return;
+        S.detail.info = info; S.detail.loading = false;
+        var bb = book(item.key); if (bb) mergePod(bb, info);
+        renderDetail();
+      }, function (e) { if (!S.detail) return; S.detail.loading = false; if (!book(item.key)) S.detail.err = 'Couldn’t load the episode list (' + e.message + ').'; renderDetail(); });
+    }
     if (item.src === 'lv' && (!b || !b.chapters.length)) {
       S.detail.loading = true; renderDetail();
       iaItem(item.id).then(function (info) {
@@ -1319,51 +1470,80 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
       }, function (e) { if (!S.detail) return; S.detail.loading = false; S.detail.err = 'Couldn’t load the chapter list (' + e.message + ').'; renderDetail(); });
     }
   }
+  var SRC_BADGE = { lv: ['', 'Human-read · LibriVox'], pg: ['ai', 'AI voice · Gutenberg'], pdf: ['ai', 'AI voice · Free guide'], txt: ['ai', 'AI voice · Your file'], pod: ['pod', 'Podcast'] };
+  function isStream(s) { return s === 'lv' || s === 'pod'; }
+  function licenseText(src) {
+    if (src.src === 'lv') return 'Public domain recording (LibriVox)';
+    if (src.src === 'pod') return 'Free podcast, streamed from the publisher';
+    if (src.src === 'pdf') return src.license || 'Free to use';
+    if (src.src === 'txt') return 'Your own file';
+    return src.copyright ? 'Copyrighted — shared free on Project Gutenberg with the author’s permission. For personal listening.' : 'Public domain in the USA';
+  }
+  function shortDate(t) { return t ? new Date(t).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : ''; }
+  function textNeededBox(b, d) {
+    if (b.src === 'pg') {
+      return d.textErr ? '<div class="note" style="margin-bottom:12px"><b>Project Gutenberg didn’t let this app download the book text directly.</b><ol style="margin:8px 0 0;padding-left:20px"><li>Tap <a class="link" href="https://www.gutenberg.org/ebooks/' + esc(b.id) + '.txt.utf-8" target="_blank" rel="noopener">Open the book text</a> and save the page/file (on iPhone: Share → Save to Files).</li><li>Come back and tap <b>Choose the .txt file</b>.</li></ol><p style="margin-top:10px"><button class="btn sm primary" data-act="picktxt" data-key="' + esc(b.key) + '">' + IC.file + 'Choose the .txt file</button></p></div>'
+        : '<div class="note" style="margin-bottom:12px"><div class="row"><span class="spin"></span><b>Getting the book text and finding chapters…</b></div></div>';
+    }
+    if (d.pdfBusy) return '<div class="note" style="margin-bottom:12px"><div class="row"><span class="spin"></span><b>Reading the PDF and finding sections… ' + (d.pdfP ? Math.round(d.pdfP * 100) + '%' : '') + '</b></div></div>';
+    if (b.src === 'pdf') return '<div class="note" style="margin-bottom:12px"><b>This guide is a free PDF.</b><ol style="margin:8px 0 0;padding-left:20px"><li>Tap <a class="link" href="' + esc(b.pageUrl || b.pdfUrl) + '" target="_blank" rel="noopener">Open the free download page</a> and save the PDF (on iPhone: Share → Save to Files).</li><li>Come back and tap <b>Choose PDF file(s)</b>. If the guide comes in parts, pick them all at once.</li></ol><p style="margin-top:10px"><button class="btn sm primary" data-act="picktxt" data-key="' + esc(b.key) + '">' + IC.file + 'Choose PDF file(s)</button></p></div>';
+    return '<div class="note" style="margin-bottom:12px"><button class="btn sm primary" data-act="picktxt" data-key="' + esc(b.key) + '">' + IC.file + 'Choose the file</button></div>';
+  }
   function renderDetail() {
     if (!S.detail) return;
-    var d = S.detail, it = d.item, b = book(it.key), src = b || it, info = d.info, chapters = b && b.chapters.length ? b.chapters : (info ? info.chapters : []);
+    var d = S.detail, it = d.item, b = book(it.key), src = b || it, info = d.info, kind = src.src;
+    var chapters = b && b.chapters.length ? b.chapters : (info ? info.chapters : []);
     var ab = d.about || {}, desc = (b && b.desc) || (info && info.desc) || it.desc || ab.desc || '';
-    var year = (b && b.year) || ab.year || 0, life = (b && b.life) || ab.life || it.life || '', subj = ab.subjects || [];
+    var year = (b && b.year) || it.yr || ab.year || 0, life = (b && b.life) || ab.life || it.life || '', subj = (ab.subjects && ab.subjects.length ? ab.subjects : (src.genres || []));
     var total = 0; chapters.forEach(function (c) { total += c.dur || (c.words ? c.words / 2.6 : 0); });
-    var h = '<div class="detail-top">' + coverHtml(src) + '<div class="stack" style="gap:6px;min-width:0">' + (src.src === 'lv' ? '<span class="badge" style="align-self:flex-start">Human-read · LibriVox</span>' : '<span class="badge ai" style="align-self:flex-start">AI voice · ' + (src.src === 'pg' ? 'Gutenberg' : 'Your file') + '</span>') +
-      '<h2 style="line-height:1.2">' + esc(src.title) + '</h2><p class="muted">' + esc(src.author || '') + '</p>' + (chapters.length ? '<p class="small faint">' + chapters.length + ' chapters' + (total ? ' · ' + (src.src === 'lv' ? '' : 'about ') + fmtDur(total) : '') + '</p>' : '') + '</div></div>';
+    var bd = SRC_BADGE[kind] || SRC_BADGE.pg, pod = kind === 'pod', unit = pod ? 'episodes' : 'chapters';
+    var h = '<div class="detail-top">' + coverHtml(src) + '<div class="stack" style="gap:6px;min-width:0"><span class="badge ' + bd[0] + '" style="align-self:flex-start">' + bd[1] + '</span>' +
+      '<h2 style="line-height:1.2">' + esc(src.title) + '</h2><p class="muted">' + esc(src.author || '') + '</p>' + (chapters.length ? '<p class="small faint">' + chapters.length + ' ' + unit + (total && !pod ? ' · ' + (isStream(kind) ? '' : 'about ') + fmtDur(total) : '') + '</p>' : '') + '</div></div>';
     h += '<div class="actions">';
     if (b) {
       var resume = b.pos.ch || b.pos.t;
-      h += '<button class="btn primary" data-act="play" data-key="' + esc(b.key) + '"' + (chapters.length ? '' : ' disabled') + '>' + IC.play + (resume && !b.finished ? 'Resume' : 'Play') + '</button>';
-      if (b.src === 'lv' && chapters.length) h += '<button class="btn" data-act="offline" data-key="' + esc(b.key) + '">' + IC.down + 'Save for offline</button>';
-      if (b.src !== 'lv' && chapters.length) h += '<button class="btn" data-act="convall" data-key="' + esc(b.key) + '">' + IC.wave + 'Make all audio</button>';
+      h += '<button class="btn primary" data-act="play" data-key="' + esc(b.key) + '"' + (chapters.length ? '' : ' disabled') + '>' + IC.play + (resume && !b.finished ? 'Resume' : pod ? 'Play latest' : 'Play') + '</button>';
+      if (isStream(kind) && chapters.length) h += '<button class="btn" data-act="offline" data-key="' + esc(b.key) + '">' + IC.down + (pod ? 'Save next 3 offline' : 'Save for offline') + '</button>';
+      if (!isStream(kind) && chapters.length) h += '<button class="btn" data-act="convall" data-key="' + esc(b.key) + '">' + IC.wave + 'Make all audio</button>';
     } else {
-      h += '<button class="btn primary" data-act="add" data-key="' + esc(it.key) + '"' + (it.src === 'lv' && !info ? ' disabled' : '') + '>' + IC.plus + 'Add to library</button>';
-      if (it.src === 'lv' && info && info.chapters.length) h += '<button class="btn" data-act="addplay" data-key="' + esc(it.key) + '">' + IC.play + 'Play now</button>';
+      h += '<button class="btn primary" data-act="add" data-key="' + esc(it.key) + '"' + (isStream(kind) && !info ? ' disabled' : '') + '>' + IC.plus + (pod ? 'Follow podcast' : 'Add to library') + '</button>';
+      if (isStream(kind) && info && info.chapters.length) h += '<button class="btn" data-act="addplay" data-key="' + esc(it.key) + '">' + IC.play + (pod ? 'Play latest' : 'Play now') + '</button>';
     }
     h += '</div>';
     if (b) h += '<div class="chips" style="flex-wrap:wrap;margin-bottom:12px">' + S.lib.collections.map(function (c) { return '<button class="chip" data-act="col" data-key="' + esc(b.key) + '" data-col="' + esc(c) + '" aria-pressed="' + (b.cols.indexOf(c) >= 0) + '">' + (b.cols.indexOf(c) >= 0 ? '✓ ' : '') + esc(c) + '</button>'; }).join('') + '</div>';
-    if (b && b.src === 'pg' && !b.chapters.length) {
-      h += d.textErr ? '<div class="note" style="margin-bottom:12px"><b>Project Gutenberg didn’t let this app download the book text directly.</b><ol style="margin:8px 0 0;padding-left:20px"><li>Tap <a class="link" href="https://www.gutenberg.org/ebooks/' + esc(b.id) + '.txt.utf-8" target="_blank" rel="noopener">Open the book text</a> and save the page/file (on iPhone: Share → Save to Files).</li><li>Come back and tap <b>Choose the .txt file</b>.</li></ol><p style="margin-top:10px"><button class="btn sm primary" data-act="picktxt" data-key="' + esc(b.key) + '">' + IC.file + 'Choose the .txt file</button></p></div>'
-        : '<div class="note" style="margin-bottom:12px"><div class="row"><span class="spin"></span><b>Getting the book text and finding chapters…</b></div></div>';
+    if (b && !isStream(kind) && !b.chapters.length) h += textNeededBox(b, d);
+    var rows;
+    if (pod) {
+      var latest = (chapters[0] && chapters[0].date) || src.latest || 0, oldest = chapters.length ? chapters[chapters.length - 1].date : 0;
+      rows = '<dt>Latest episode</dt><dd>' + (latest ? shortDate(latest) : '<span class="faint">' + (d.loading ? 'Looking up…' : 'Not listed') + '</span>') + '</dd>' +
+        '<dt>Publisher</dt><dd>' + esc(src.author || 'Unknown') + '</dd>' +
+        '<dt>Episodes</dt><dd>' + (src.count || chapters.length || '?') + (src.count && chapters.length && src.count > chapters.length ? ' <span class="faint">(newest ' + chapters.length + ' available here' + (oldest ? ', back to ' + new Date(oldest).getFullYear() : '') + ')</span>' : '') + '</dd>' +
+        '<dt>Format</dt><dd>' + licenseText(src) + '</dd>';
+      if (!desc && chapters[0] && chapters[0].desc) desc = 'Latest episode — ' + chapters[0].title + ': ' + chapters[0].desc;
+    } else {
+      rows = '<dt>First published</dt><dd>' + (year ? year : d.aboutLoading ? '<span class="faint">Looking up…</span>' : '<span class="faint">Not listed</span>') + '</dd>' +
+        '<dt>Author</dt><dd>' + esc(src.author || 'Unknown') + (life ? ' <span class="faint">(' + esc(life) + ')</span>' : '') + '</dd>' +
+        '<dt>Format</dt><dd>' + (kind === 'lv' ? 'Human-read by LibriVox volunteers' : 'Read aloud by an AI voice from the free text') + '</dd>' +
+        '<dt>License</dt><dd>' + esc(licenseText(src)) + '</dd>';
     }
-    h += '<section class="about"><h3>About this book</h3><dl>' +
-      '<dt>First published</dt><dd>' + (year ? year : d.aboutLoading ? '<span class="faint">Looking up\u2026</span>' : '<span class="faint">Not listed</span>') + '</dd>' +
-      '<dt>Author</dt><dd>' + esc(src.author || 'Unknown') + (life ? ' <span class="faint">(' + esc(life) + ')</span>' : '') + '</dd>' +
-      '<dt>Format</dt><dd>' + (src.src === 'lv' ? 'Human-read by LibriVox volunteers' : 'Read aloud by an AI voice from the free text') + '</dd>' +
-      (subj.length ? '<dt>Subjects</dt><dd>' + subj.map(esc).join(' \u00b7 ') + '</dd>' : '') + '</dl>' +
+    if (subj.length) rows += '<dt>' + (pod ? 'Genres' : 'Subjects') + '</dt><dd>' + subj.map(esc).join(' · ') + '</dd>';
+    h += '<section class="about"><h3>About this ' + (pod ? 'podcast' : 'book') + '</h3><dl>' + rows + '</dl>' +
       (desc ? '<p class="desc' + (d.descOpen ? ' open' : '') + '">' + esc(desc).replace(/\n/g, '<br>') + '</p>' + (desc.length > 360 ? '<button class="link small" data-act="moredesc" style="margin-top:4px">' + (d.descOpen ? 'Show less' : 'Show more') + '</button>' : '')
-        : (d.aboutLoading || d.loading ? '<p class="desc faint">Looking up a description\u2026</p>' : '<p class="desc faint">No description available for this one.</p>')) + '</section>';
-    if (d.loading) h += '<div class="row" style="padding:16px 0"><span class="spin"></span><span class="muted">Loading chapters…</span></div>';
+        : (d.aboutLoading || d.loading ? '<p class="desc faint">Looking up a description…</p>' : '<p class="desc faint">No description available for this one.</p>')) + '</section>';
+    if (d.loading) h += '<div class="row" style="padding:16px 0"><span class="spin"></span><span class="muted">Loading ' + unit + '…</span></div>';
     if (d.err) h += '<div class="note" style="margin-top:12px">' + esc(d.err) + ' <button class="link" data-act="reopen">Try again</button></div>';
     if (chapters.length) {
-      h += '<h3 style="margin:18px 0 4px">Chapters</h3><div class="list">' + chapters.map(function (c, i) {
+      h += '<h3 style="margin:18px 0 4px">' + (pod ? 'Episodes · newest first' : 'Chapters') + '</h3><div class="list">' + chapters.map(function (c, i) {
         var cur = b && (S.play.key === b.key ? S.play.ch === i : b.pos.ch === i), st = '';
-        if (src.src !== 'lv') {
+        if (!isStream(kind)) {
           var p = b && S.prog[progKey(b.key, i)];
           st = p ? (p.state === 'converting' ? '<span class="stat work">' + esc(p.note || Math.round(p.p * 100) + '%') + '</span>' : p.state === 'queued' ? '<span class="stat work">Waiting</span>' : '<span class="stat">Problem</span>')
             : (b && chapterReady(b, i) ? '<span class="stat ready">Ready</span>' : '<span class="stat">~' + Math.max(1, Math.round((c.words || 0) / 155)) + ' min</span>');
-        } else st = '<span class="stat' + (b && S.local[audioKey(b.key, i)] ? ' ready">Offline · ' : '">') + (c.dur ? fmt(c.dur) : '') + '</span>';
+        } else st = '<span class="stat' + (b && S.local[audioKey(b.key, i)] ? ' ready">Offline · ' : '">') + (pod && c.date ? shortDate(c.date) + (c.dur ? ' · ' : '') : '') + (c.dur ? (pod ? fmtDur(c.dur) : fmt(c.dur)) : '') + '</span>';
         return '<button class="li' + (cur ? ' now' : '') + '" data-act="playch" data-key="' + esc(it.key) + '" data-ch="' + i + '"><span class="num">' + (i + 1) + '</span><span class="grow"><b class="ell" style="display:block;font-weight:' + (cur ? 700 : 500) + '">' + esc(c.title) + '</b></span>' + st + '</button>';
       }).join('') + '</div>';
     }
-    if (b) h += '<div class="actions" style="margin-top:20px"><button class="btn sm ghost" data-act="remove" data-key="' + esc(b.key) + '">' + IC.trash + 'Remove from library</button></div>';
+    if (b) h += '<div class="actions" style="margin-top:20px"><button class="btn sm ghost" data-act="remove" data-key="' + esc(b.key) + '">' + IC.trash + (pod ? 'Unfollow podcast' : 'Remove from library') + '</button></div>';
     $('#sheet-body').innerHTML = h;
   }
 
@@ -1379,6 +1559,7 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
     if (d.about) { if (!b.year && d.about.year) b.year = d.about.year; if (!b.desc && d.about.desc) b.desc = d.about.desc; if (!b.life && d.about.life) b.life = d.about.life; touch(b); saveLib(); }
     toast('Added to Up Next');
     if (b.src === 'pg' && !b.chapters.length) { renderDetail(); getPgText(b, play); return; }
+    if (b.src === 'pdf' && !b.chapters.length) { getPdf(b, play); return; }
     renderDetail(); renderSoft();
     if (play) playBook(b.key, 0, 0);
   }
@@ -1388,22 +1569,46 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
       if (play) playBook(b.key, 0, 0);
     }, function (e) { if (e.mismatch) { removeBook(b.key); closeSheet(); render(); toast(e.message, 6000); return; } if (S.detail && S.detail.item.key === b.key) { S.detail.textErr = true; if (!e.blocked) toast(e.message); renderDetail(); } });
   }
+  function getPdf(b, play) {
+    var d = S.detail;
+    if (!b.pdfUrl) { renderDetail(); return; }
+    if (d) { d.pdfBusy = true; d.pdfP = 0; } renderDetail();
+    fetchT(b.pdfUrl, 30000).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })
+      .then(function (buf) { return pdfToText(buf, function (p) { if (S.detail) { S.detail.pdfP = p; renderDetail(); } }); })
+      .then(function (t) { return prepareParts(b, [{ name: b.title, text: t }]); })
+      .then(function () { if (S.detail) S.detail.pdfBusy = false; renderDetail(); renderSoft(); toast('Ready: ' + b.chapters.length + ' sections'); if (play) playBook(b.key, 0, 0); },
+        function (e) { if (S.detail) S.detail.pdfBusy = false; renderDetail(); toast('Couldn\u2019t download the PDF directly (' + (e && e.message || 'blocked') + '). Use the two steps below.', 6000); console.warn('pdf', e); });
+  }
+  function readPart(f, onP) {
+    var isPdf = /\.pdf$/i.test(f.name) || f.type === 'application/pdf';
+    return new Promise(function (res, rej) { var r = new FileReader(); r.onload = function () { res(r.result); }; r.onerror = function () { rej(r.error); }; if (isPdf) r.readAsArrayBuffer(f); else r.readAsText(f); })
+      .then(function (data) { return isPdf ? pdfToText(data, onP).then(function (t) { return { name: f.name, text: t, pdf: true }; }) : { name: f.name, text: data }; });
+  }
   var pickFor = null;
   $('#file-in').addEventListener('change', function () {
-    var f = this.files && this.files[0]; this.value = ''; if (!f) return;
-    var r = new FileReader();
-    r.onload = function () {
-      var b;
-      try {
-        if (pickFor) b = book(pickFor);
-        else { var nm = f.name.replace(/\.txt$/i, '').replace(/[_-]+/g, ' '); var k = 'txt:' + now(); b = addBook({ key: k, src: 'txt', id: k, title: nm, author: '' }); }
-        prepareText(b, r.result).then(function () { toast('Ready: ' + b.chapters.length + ' chapters'); if (S.detail && S.detail.item.key === b.key) { S.detail.textErr = false; renderDetail(); } else openDetail(b); renderSoft(); }, function (e) { toast(e.message); });
-      } catch (e) { toast(e.message); }
-    };
-    r.readAsText(f);
+    var files = Array.prototype.slice.call(this.files || []); this.value = ''; if (!files.length) return;
+    files.sort(function (a, b) { return a.name.localeCompare(b.name, undefined, { numeric: true }); });
+    var target = pickFor ? book(pickFor) : null, parts = [], i = 0;
+    if (S.detail && target) { S.detail.pdfBusy = true; S.detail.pdfP = 0; renderDetail(); }
+    toast('Reading ' + (files.length > 1 ? files.length + ' files' : 'the file') + '…', 3000);
+    (function next() {
+      if (i >= files.length) return Promise.resolve();
+      var f = files[i];
+      return readPart(f, function (p) { if (S.detail) { S.detail.pdfP = (i + p) / files.length; renderDetail(); } }).then(function (pt) { parts.push(pt); i++; return next(); });
+    })().then(function () {
+      if (!target) {
+        var nm = files[0].name.replace(/\.(txt|pdf)$/i, '').replace(/[_-]+/g, ' '), k = 'txt:' + now();
+        target = addBook({ key: k, src: 'txt', id: k, title: nm, author: '' });
+      } else if (target.src === 'pg') checkTitle(target, parts[0].text);
+      return prepareParts(target, parts);
+    }).then(function () {
+      toast('Ready: ' + target.chapters.length + (target.src === 'pg' ? ' chapters' : ' sections'));
+      if (S.detail && S.detail.item.key === target.key) { S.detail.textErr = false; S.detail.pdfBusy = false; renderDetail(); } else openDetail(target);
+      renderSoft();
+    }).catch(function (e) { if (S.detail) { S.detail.pdfBusy = false; renderDetail(); } toast(e.message, 5000); });
   });
   function saveOffline(b) {
-    var todo = b.chapters.map(function (c, i) { return i; }).filter(function (i) { return !S.local[audioKey(b.key, i)]; });
+    var todo = b.chapters.map(function (c, i) { return i; }).filter(function (i) { return !S.local[audioKey(b.key, i)] && (b.src !== 'pod' || (i >= (b.pos.ch || 0) && i < (b.pos.ch || 0) + 3)); });
     if (!todo.length) { toast('Already saved for offline'); return; }
     var n = 0; toast('Saving ' + todo.length + ' chapters for offline…', 4000);
     (function next() {
