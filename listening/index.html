@@ -365,7 +365,7 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
   };
   function newLib() {
     return { books: {}, deleted: {}, collections: DEFAULT_COLS.slice(), collectionsAt: 0, current: null, currentAt: 0,
-      settings: { speed: 1, voice: VOICES[0].id, english: true, relay: '' }, settingsAt: 0, updatedAt: 0 };
+      settings: { speed: 1, voice: VOICES[0].id, english: true, relay: '', libSort: 'recent' }, settingsAt: 0, updatedAt: 0 };
   }
   function libKey() { return 'lib:' + S.aid; }
   function audioKey(key, ch) { return 'audio:' + S.aid + ':' + key + ':' + ch; }
@@ -1067,7 +1067,8 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
     var inLib = !!book(b.key), pct = inLib ? progressPct(book(b.key)) : 0;
     return '<button class="tile" data-act="' + (act || 'open') + '" data-key="' + esc(b.key) + '">' + coverHtml(b) +
       '<span class="bar" style="' + (pct > 0 && pct < 100 ? '' : 'visibility:hidden') + '"><i style="width:' + pct + '%"></i></span>' +
-      '<span class="t">' + esc(b.title) + '</span><span class="a ell">' + esc(b.author || '') + ((b.yr || b.year || (inLib && book(b.key).year)) ? ' \u00b7 ' + (b.yr || b.year || book(b.key).year) : '') + '</span>' +
+      '<span class="t">' + esc(b.title) + '</span><span class="a ell">' + esc(b.author || '') + '</span>' +
+      ((b.yr || b.year || (inLib && book(b.key).year)) ? '<span class="a yr">First published ' + (b.yr || b.year || book(b.key).year) + '</span>' : '') +
       '<span class="row" style="gap:6px">' + (b.src === 'lv' ? '<span class="badge">Human-read</span>' : '<span class="badge ai">AI voice</span>') + (inLib ? '<span class="badge ok">' + IC.check.replace('<svg', '<svg width="12" height="12"') + ' Saved</span>' : '') + '</span></button>';
   }
   function show(v) {
@@ -1191,13 +1192,23 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
     d.items = d.items.map(function (x, n) { return { x: x, n: n }; }).sort(function (a, b) { var ya = a.x.yr || 0, yb = b.x.yr || 0; return ya === yb ? a.n - b.n : yb - ya; }).map(function (o) { return o.x; });
   }
   function renderLibrary() {
-    var cols = ['All'].concat(S.lib.collections), c = cols.indexOf(S.libCol) >= 0 ? S.libCol : 'All', bs = booksIn(c);
-    var h = '<div class="chips">' + cols.map(function (x) { return '<button class="chip" data-act="libcol" data-col="' + esc(x) + '" aria-pressed="' + (x === c) + '">' + esc(x) + ' <span class="faint">' + booksIn(x).length + '</span></button>'; }).join('') +
+    var cols = ['All'].concat(S.lib.collections), c = cols.indexOf(S.libCol) >= 0 ? S.libCol : 'All', bs = booksIn(c), srt = set().libSort || 'recent';
+    if (srt === 'newest') { bs = bs.map(function (b, n) { return { b: b, n: n }; }).sort(function (x, y) { var a = x.b.year || 0, z = y.b.year || 0; return a === z ? x.n - y.n : z - a; }).map(function (o) { return o.b; }); fillYears(); }
+    var h = '<div class="seg" role="group" aria-label="Sort library"><button data-act="libsort" data-sort="recent" aria-pressed="' + (srt === 'recent') + '">Recently listened</button><button data-act="libsort" data-sort="newest" aria-pressed="' + (srt === 'newest') + '">Newest published</button></div>' +
+      '<div class="chips">' + cols.map(function (x) { return '<button class="chip" data-act="libcol" data-col="' + esc(x) + '" aria-pressed="' + (x === c) + '">' + esc(x) + ' <span class="faint">' + booksIn(x).length + '</span></button>'; }).join('') +
       '<button class="chip" data-act="newcol">' + '+ New</button></div>';
     if (!bs.length) h += '<div class="card empty"><h3>' + (c === 'All' ? 'Nothing saved yet' : 'Nothing in “' + esc(c) + '” yet') + '</h3><p>Open any book and tap a collection to add it here.</p><p style="margin-top:14px"><button class="btn primary" data-act="go" data-v="discover">Discover books</button></p></div>';
     else h += '<div class="grid">' + bs.map(function (b) { return tileHtml(b); }).join('') + '</div>';
     if (c !== 'All' && DEFAULT_COLS.indexOf(c) < 0) h += '<div><button class="btn sm ghost" data-act="delcol" data-col="' + esc(c) + '">' + IC.trash + 'Delete collection “' + esc(c) + '”</button></div>';
     $('#v-library').innerHTML = h;
+  }
+  var fillingYears = false;
+  function fillYears() { // books saved before years were tracked get looked up once
+    if (fillingYears) return;
+    var todo = Object.keys(S.lib.books).map(function (k) { return S.lib.books[k]; }).filter(function (b) { return !b.year && !b.yearChecked; });
+    if (!todo.length) return; fillingYears = true;
+    Promise.all(todo.map(function (b) { return yearOf(b).then(function (y) { var fb = book(b.key); if (fb) { fb.yearChecked = true; if (y) { fb.year = y; touch(fb); } } }, function () {}); }))
+      .then(function () { fillingYears = false; saveLib(); if (S.view === 'library') renderLibrary(); });
   }
   function renderSettings() {
     var a = S.acct, s = set(), h = authBanner(), mb = 0;
@@ -1455,6 +1466,7 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
       case 'more': S.disc.page++; runSearch(false); break;
       case 'research': runSearch(true); break;
       case 'libcol': S.libCol = t.getAttribute('data-col'); renderLibrary(); break;
+      case 'libsort': set().libSort = t.getAttribute('data-sort'); S.lib.settingsAt = now(); saveLib(); renderLibrary(); break;
       case 'gocol': S.libCol = t.getAttribute('data-col'); show('library'); break;
       case 'newcol': { var nm = prompt('Name the new collection'); nm = nm && nm.trim().slice(0, 40); if (nm && S.lib.collections.indexOf(nm) < 0) { S.lib.collections.push(nm); S.lib.collectionsAt = now(); saveLib(); S.libCol = nm; renderLibrary(); } break; }
       case 'delcol': { var c = t.getAttribute('data-col'); if (confirm('Delete the collection “' + c + '”? Books stay in your library.')) { S.lib.collections = S.lib.collections.filter(function (x) { return x !== c; }); S.lib.collectionsAt = now(); Object.keys(S.lib.books).forEach(function (k) { var bk = S.lib.books[k], j = bk.cols.indexOf(c); if (j >= 0) { bk.cols.splice(j, 1); touch(bk); } }); saveLib(); S.libCol = 'All'; renderLibrary(); } break; }
