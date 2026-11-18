@@ -94,7 +94,9 @@ main{padding:16px 16px calc(var(--nav-h) + var(--mini-h) + 28px + env(safe-area-
 .cover .badge{position:absolute;top:6px;left:6px}
 
 /* ---------- Chips / segmented ---------- */
-.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+@media (hover:hover) and (pointer:fine){.chips{flex-wrap:wrap;overflow:visible}}
 .chip{flex:none;min-height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--s-line);background:transparent;color:var(--s-muted);font-weight:600;font-size:13.5px;white-space:nowrap}
 .chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
 .seg{display:flex;background:var(--s-card);border:1px solid var(--s-line);border-radius:999px;padding:3px;gap:3px}
@@ -490,15 +492,26 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
   }
 
   /* ================= Sources ================= */
-  function getJson(urls) {
+  function fetchT(url, ms) { // fetch with a time limit (some catalogs can hang)
+    if (!ms || typeof AbortController === 'undefined') return fetch(url);
+    var c = new AbortController(), t = setTimeout(function () { c.abort(); }, ms);
+    return fetch(url, { signal: c.signal }).then(function (r) { clearTimeout(t); return r; }, function (e) { clearTimeout(t); throw (e && e.name === 'AbortError') ? new Error('timed out') : e; });
+  }
+  function getJson(urls, ms) {
     var i = 0, lastErr;
     function next() {
       if (i >= urls.length) return Promise.reject(lastErr || new Error('Not reachable'));
       var u = urls[i++];
-      return fetch(u).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }).catch(function (e) { lastErr = e; return next(); });
+      return fetchT(u, ms || 20000).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }).catch(function (e) { lastErr = e; return next(); });
     }
     return next();
   }
+  function cachedJson(key, maxAgeMs, loader) { // remembers catalog pages for a day so repeat visits are instant
+    var c = lsGet('ll-cache:' + key, null);
+    if (c && now() - c.at < maxAgeMs) return Promise.resolve(c.v);
+    return loader().then(function (v) { try { localStorage.setItem('ll-cache:' + key, JSON.stringify({ at: now(), v: v })); } catch (e) { pruneCache(); } return v; });
+  }
+  function pruneCache() { try { for (var i = localStorage.length - 1; i >= 0; i--) { var k = localStorage.key(i); if (k && k.indexOf('ll-cache:') === 0) localStorage.removeItem(k); } } catch (e) {} }
   function iaSearch(qs, topic, page) {
     var parts = ['collection:(librivoxaudio)'];
     if (set().english) parts.push('language:(English OR eng)');
@@ -533,8 +546,27 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
     });
   }
   function pgSearch(qs, topic, page) {
-    var u = 'https://gutendex.com/books/?page=' + page + (set().english ? '&languages=en' : '') + (qs ? '&search=' + encodeURIComponent(qs) : '') + (topic ? '&topic=' + encodeURIComponent(topic) : '');
-    return getJson([u]).then(function (j) {
+    var u = 'https://gutendex.com/books/?page=' + page + (set().english ? '&languages=en' : '') + (qs ? '&search=' + encodeURIComponent(qs) : '') + (topic ? '&topic=' + encodeURIComponent(topic.toLowerCase()) : '');
+    return cachedJson(u, 86400000, function () { return gutendex(u).catch(function () { return olSearch(qs, topic, page); }); });
+  }
+  function olSearch(qs, topic, page) { // backup catalog: Open Library, keeping only books that have a Project Gutenberg edition
+    var parts = []; var t = String(qs || '').replace(/[():"\[\]{}^~*?\\\/]/g, ' ').trim();
+    if (t) parts.push('(' + t + ')');
+    if (topic) parts.push('subject:"' + topic.toLowerCase() + '"');
+    if (set().english) parts.push('language:eng');
+    parts.push('id_project_gutenberg:[* TO *]');
+    var base = 'https://openlibrary.org/search.json?fields=key,title,author_name,cover_i,id_project_gutenberg,first_sentence&limit=30&page=' + page + '&sort=editions&q=';
+    function map(j) {
+      var docs = (j.docs || []).filter(function (d) { return d.id_project_gutenberg && d.id_project_gutenberg.length; });
+      return { more: page * 30 < (j.numFound || 0), via: 'ol', items: docs.map(function (d) {
+        var id = String(d.id_project_gutenberg[0]).replace(/\D/g, '');
+        return { src: 'pg', id: id, key: 'pg:' + id, title: d.title, author: (d.author_name || [])[0] || '', cover: d.cover_i ? 'https://covers.openlibrary.org/b/id/' + d.cover_i + '-M.jpg' : '', desc: '', textUrls: [] };
+      }).filter(function (x) { return x.id; }) };
+    }
+    return getJson([base + encodeURIComponent(parts.join(' AND '))], 20000).then(map);
+  }
+  function gutendex(u) {
+    return getJson([u], 15000).then(function (j) {
       return { more: !!j.next, items: (j.results || []).filter(function (b) { return !b.copyright; }).map(function (b) {
         var f = b.formats || {}, urls = [];
         for (var k in f) if (/^text\/plain/.test(k) && !/\.zip$/i.test(f[k])) urls.push(f[k]);
@@ -1010,7 +1042,7 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
     if (d.err && !d.items.length) h = '<div class="card empty"><h3>Couldn’t reach the ' + (d.src === 'lv' ? 'audiobook' : 'ebook') + ' catalog</h3><p class="small">' + esc(d.err) + '</p><p style="margin-top:12px"><button class="btn" data-act="research">Try again</button></p></div>';
     else if (!d.items.length && !d.loading && d.loaded) h = '<div class="empty"><h3>No matches</h3><p>Try a shorter title or just the author’s last name.</p></div>';
     else h = '<div class="grid">' + d.items.map(function (b) { return tileHtml(b, 'peek'); }).join('') + '</div>';
-    if (d.loading) h += '<div class="row" style="justify-content:center;padding:18px"><span class="spin"></span><span class="muted">Loading…</span></div>';
+    if (d.loading) h += '<div class="row" style="justify-content:center;padding:18px;text-align:center"><span class="spin"></span><span class="muted">' + (d.slow ? (d.src === 'pg' ? 'The Gutenberg catalog is slow right now. If it doesn\u2019t answer soon, a backup catalog takes over.' : 'The audiobook catalog is slow right now\u2026') : 'Loading\u2026') + '</span></div>';
     else if (d.more) h += '<div class="row" style="justify-content:center;padding:14px"><button class="btn" data-act="more">Load more</button></div>';
     box.innerHTML = h;
   }
@@ -1018,7 +1050,8 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
   function runSearch(reset) {
     var d = S.disc, seq = ++searchSeq;
     if (reset) { d.items = []; d.page = 1; d.more = false; }
-    d.loading = true; d.err = ''; renderDiscoverResults();
+    d.loading = true; d.slow = false; d.err = ''; renderDiscoverResults();
+    setTimeout(function () { if (seq === searchSeq && d.loading) { d.slow = true; renderDiscoverResults(); } }, 5000);
     (d.src === 'lv' ? iaSearch : pgSearch)(d.q, d.topic, d.page).then(function (r) {
       if (seq !== searchSeq) return;
       var seen = {}; d.items.forEach(function (x) { seen[x.key] = 1; });
